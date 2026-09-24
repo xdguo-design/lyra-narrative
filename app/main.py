@@ -18,6 +18,13 @@ from app.services.content_repository import (
     preflight_content_repository,
     project_content_status,
 )
+from app.services.production_pipeline import (
+    ProductionConfigurationError,
+    ProductionStateError,
+    approve_production_run,
+    get_production_run,
+    start_production,
+)
 from app.services.workflow_service import WorkflowStateError
 from app.services.workflow_service import get_task as get_workflow_task
 from app.services.workflow_service import run_task as execute_workflow_task
@@ -118,6 +125,15 @@ class SkillPatch(BaseModel):
 
 class ContentLinkCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=120)
+
+
+class ProductionRunCreate(BaseModel):
+    brief: str = Field(min_length=1)
+
+
+class ProductionRunApproval(BaseModel):
+    decision: str = Field(pattern="^(approved|rejected)$")
+    note: str = ""
 
 
 def _row(row):
@@ -971,3 +987,35 @@ def restore_skill_version(skill_id: int, version: int):
             (source["content"], next_version, skill_id),
         )
         return _row(conn.execute("SELECT * FROM skills WHERE id=?", (skill_id,)).fetchone())
+
+@app.post("/api/projects/{project_id}/production-runs", status_code=201)
+async def create_production_run(project_id: int, payload: ProductionRunCreate):
+    with connect() as conn:
+        _require_project(conn, project_id)
+    try:
+        return await start_production(project_id, payload.brief)
+    except ProductionConfigurationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProductionStateError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/api/production-runs/{run_id}")
+def read_production_run(run_id: int):
+    run = get_production_run(run_id)
+    if not run:
+        raise HTTPException(404, "production run not found")
+    return run
+
+
+@app.post("/api/production-runs/{run_id}/approval")
+def decide_production_run(run_id: int, payload: ProductionRunApproval):
+    try:
+        return approve_production_run(run_id, payload.decision, payload.note)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ProductionStateError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
