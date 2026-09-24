@@ -14,15 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       NOVEL_DB_PATH: /tmp/zero-platform-rewrite.db
       NOVEL_SEED_DEMO: "0"
-      NOVEL_AI_KIND: openai
-      NOVEL_AI_MODEL: gpt-5.6-sol
-      NOVEL_AI_BASE_URL: https://api.openai.com/v1
-      NOVEL_AI_API_KEY_ENV: OPENAI_API_KEY
-      NOVEL_AI_REASONING_EFFORT: high
-      NOVEL_AI_MAX_TOKENS: "8000"
+      NOVEL_AI_KIND: ${{ vars.NOVEL_AI_KIND || 'openai' }}
+      NOVEL_AI_MODEL: ${{ vars.NOVEL_AI_MODEL || 'gpt-5.6-sol' }}
+      NOVEL_AI_BASE_URL: ${{ vars.NOVEL_AI_BASE_URL || 'https://api.openai.com/v1' }}
+      NOVEL_AI_API_KEY_ENV: ${{ vars.NOVEL_AI_API_KEY_ENV || 'OPENAI_API_KEY' }}
+      NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
+      NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
       NARRATIVE_OUTPUT_DIR: artifacts/zero-platform-platform-rewrite
 
     steps:
@@ -36,12 +35,13 @@ jobs:
       - name: Install NarrativeOS
         run: pip install -r requirements.txt
 
-      - name: Require OpenAI API secret
+      - name: Require configured provider key
         shell: bash
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "::error::OPENAI_API_KEY is not configured for this repository."
-            echo "::error::Add it in GitHub Settings -> Secrets and variables -> Actions, then rerun this workflow."
+          KEY_NAME="${NOVEL_AI_API_KEY_ENV}"
+          if [ -z "${!KEY_NAME}" ]; then
+            echo "::error::Missing API key secret: ${KEY_NAME}"
+            echo "::error::Configure provider variables and matching repository secret."
             exit 2
           fi
 
