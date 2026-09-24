@@ -980,3 +980,36 @@ def test_zero_platform_full_production_acceptance_flow():
                 os.environ.pop("NOVEL_CONTENT_ROOT", None)
             else:
                 os.environ["NOVEL_CONTENT_ROOT"] = previous
+
+
+def test_full_novel_pipeline_rejects_demo_provider():
+    previous = os.environ.get("NOVEL_AI_KIND")
+    os.environ["NOVEL_AI_KIND"] = "demo"
+    try:
+        with TestClient(app) as client:
+            project_id = client.post(
+                "/api/projects",
+                json={"title": "完整流水线测试", "genre": "科幻"},
+            ).json()["id"]
+            chapter_id = client.get(
+                f"/api/projects/{project_id}/chapters"
+            ).json()[0]["id"]
+            task = client.post(
+                f"/api/projects/{project_id}/tasks",
+                json={
+                    "chapter_id": chapter_id,
+                    "goal": "从架构开始生成第一章",
+                    "instruction": "必须经过完整创作流水线。",
+                },
+            )
+            assert task.status_code == 201
+            response = client.post(
+                f"/api/tasks/{task.json()['id']}/run-full-pipeline"
+            )
+            assert response.status_code == 409
+            assert "real AI provider" in response.json()["detail"]
+    finally:
+        if previous is None:
+            os.environ.pop("NOVEL_AI_KIND", None)
+        else:
+            os.environ["NOVEL_AI_KIND"] = previous

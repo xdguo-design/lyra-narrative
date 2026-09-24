@@ -18,6 +18,7 @@ from app.services.content_repository import (
     preflight_content_repository,
     project_content_status,
 )
+from app.services.full_novel_pipeline import run_full_novel_pipeline
 from app.services.workflow_service import WorkflowStateError
 from app.services.workflow_service import get_task as get_workflow_task
 from app.services.workflow_service import run_task as execute_workflow_task
@@ -513,6 +514,20 @@ async def run_writing_task(task_id: int):
         raise HTTPException(404, "task not found")
     try:
         return await execute_workflow_task(task_id)
+    except WorkflowStateError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/tasks/{task_id}/run-full-pipeline")
+async def run_full_pipeline(task_id: int):
+    if not get_workflow_task(task_id):
+        raise HTTPException(404, "task not found")
+    try:
+        return await run_full_novel_pipeline(task_id)
     except WorkflowStateError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
