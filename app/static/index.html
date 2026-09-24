@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#12120f" />
+  <title>NarrativeOS · 长篇小说创作工作台</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-area">
+        <div class="brand">
+          <span class="brand-mark">N</span>
+          <div class="brand-copy">
+            <strong>NarrativeOS</strong>
+            <small>长篇小说创作工作台</small>
+          </div>
+        </div>
+        <div class="top-divider"></div>
+        <div class="current-project">
+          <span class="eyebrow">当前作品</span>
+          <strong id="currentProjectName">载入中…</strong>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="mobileNavBtn" class="ghost mobile-nav-btn" aria-label="打开作品与章节">☰</button>
+        <label class="theme-control" for="themeSelect">
+          <span>主题</span>
+          <select id="themeSelect" aria-label="切换界面主题">
+            <option value="ink">墨白</option>
+            <option value="space">深空</option>
+            <option value="paper">纸页</option>
+            <option value="neo">Neo Pop</option>
+          </select>
+        </label>
+        <span id="saveState" class="save-state"><span class="status-dot"></span>已保存</span>
+        <button id="focusBtn" class="ghost" title="专注模式">◫ 专注模式</button>
+        <button id="newProjectBtn" class="primary">＋ 新建作品</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar panel">
+        <div class="sidebar-scroll">
+          <section class="sidebar-section">
+            <div class="section-label">作品</div>
+            <select id="projectSelect" class="project-select" aria-label="选择作品"></select>
+
+            <div class="project-card">
+              <div class="project-card-head">
+                <div>
+                  <div id="projectGenre" class="project-genre">未分类</div>
+                  <div id="projectTitle" class="project-title">—</div>
+                </div>
+                <button id="deleteProjectBtn" class="icon-danger" title="删除当前作品">⌫</button>
+              </div>
+              <p id="projectDescription" class="project-description">暂无作品简介。</p>
+              <div class="project-stats">
+                <div><strong id="statChapters">0</strong><span>章节</span></div>
+                <div><strong id="statChars">0</strong><span>字符</span></div>
+                <div><strong id="statProgress">—</strong><span>状态</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="sidebar-section chapters-section">
+            <div class="section-head">
+              <div>
+                <div class="section-label">章节</div>
+                <strong class="section-title">目录</strong>
+              </div>
+              <button id="addChapterBtn" class="compact primary" title="新建章节">＋ 新章节</button>
+            </div>
+
+            <div class="search-box">
+              <span>⌕</span>
+              <input id="chapterSearch" type="search" placeholder="搜索章节标题" autocomplete="off" />
+            </div>
+
+            <div id="chapterList" class="chapter-list" aria-live="polite"></div>
+          </section>
+        </div>
+
+        <div class="sidebar-footer">
+          <span>数据保存在本地 SQLite</span>
+          <span class="local-badge">LOCAL</span>
+        </div>
+      </aside>
+
+      <section class="editor-wrap panel">
+        <div class="editor-toolbar">
+          <div class="editor-heading">
+            <span class="eyebrow">正在写作</span>
+            <input id="chapterTitle" class="chapter-title" autocomplete="off" aria-label="章节标题" />
+          </div>
+
+          <div class="editor-actions">
+            <div class="metric-pill">
+              <span>本章</span>
+              <strong id="charCount">0</strong>
+              <small>字符</small>
+            </div>
+            <button id="historyBtn" class="ghost compact">↶ 版本历史</button>
+            <button id="deleteChapterBtn" class="ghost danger compact">删除章节</button>
+          </div>
+        </div>
+
+        <div class="editor-canvas">
+          <div class="paper-topline">
+            <span id="chapterPosition">第 1 章</span>
+            <span id="chapterStatus">草稿</span>
+          </div>
+          <textarea
+            id="editor"
+            class="editor"
+            spellcheck="false"
+            placeholder="从这里开始写作……"
+            aria-label="小说正文编辑器"
+          ></textarea>
+        </div>
+
+        <div class="editor-footer">
+          <div class="shortcut-hints">
+            <span><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>S</kbd> 保存</span>
+            <span>停止输入约 0.85 秒自动保存</span>
+          </div>
+          <div class="editor-meta">
+            <span id="chapterUpdated">尚未保存</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="assistant panel">
+        <div class="assistant-header">
+          <div>
+            <span class="eyebrow">创作辅助</span>
+            <strong>灵感与设定</strong>
+          </div>
+          <div id="aiProviderBadge" class="provider-badge">DEMO</div>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="ai">AI</button>
+          <button class="tab" data-tab="tasks">任务 <span id="taskCount" class="tab-count">0</span></button>
+          <button class="tab" data-tab="memory">记忆 <span id="memoryCount" class="tab-count">0</span></button>
+          <button class="tab" data-tab="skills">技能 <span id="skillCount" class="tab-count">0</span></button>
+          <button class="tab" data-tab="characters">人物 <span id="characterCount" class="tab-count">0</span></button>
+          <button class="tab" data-tab="world">世界观 <span id="worldCount" class="tab-count">0</span></button>
+        </div>
+
+        <section id="tab-ai" class="tab-pane active">
+          <div class="assist-intro">
+            <strong>针对当前章节操作</strong>
+            <p>AI 不会直接改写原稿。结果会先出现在预览区，由你决定是否应用。</p>
+          </div>
+
+          <div class="ai-actions">
+            <button data-ai="continue">
+              <span class="action-icon">→</span>
+              <span><strong>续写</strong><small>延续当前剧情</small></span>
+            </button>
+            <button data-ai="polish">
+              <span class="action-icon">✦</span>
+              <span><strong>润色</strong><small>改善表达节奏</small></span>
+            </button>
+            <button data-ai="check">
+              <span class="action-icon">✓</span>
+              <span><strong>一致性</strong><small>查设定与逻辑</small></span>
+            </button>
+          </div>
+
+          <label class="field-label" for="aiInstruction">补充要求</label>
+          <textarea
+            id="aiInstruction"
+            class="mini-input"
+            placeholder="例如：保持第三人称、加强悬疑感、不要增加新人物……"
+          ></textarea>
+
+          <div class="result-head">
+            <div>
+              <span class="eyebrow">AI 输出</span>
+              <strong id="aiResultTitle">等待任务</strong>
+            </div>
+            <span id="aiModelInfo" class="model-info">未连接真实模型</span>
+          </div>
+
+          <div id="aiResult" class="ai-result">
+            <div class="empty-state">
+              <div class="empty-icon">✧</div>
+              <strong>还没有生成内容</strong>
+              <p>选择“续写 / 润色 / 一致性检查”开始。</p>
+            </div>
+          </div>
+
+          <div class="result-actions">
+            <button id="replaceAiBtn" class="ghost full" disabled>用结果替换正文</button>
+            <button id="insertAiBtn" class="primary full" disabled>追加到正文末尾</button>
+          </div>
+        </section>
+
+        <section id="tab-tasks" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">Writer · Reviewer · Revision</span>
+              <strong>创作任务</strong>
+            </div>
+            <button id="newTaskBtn" class="compact primary">＋ 任务</button>
+          </div>
+          <div class="workflow-note">
+            <strong>正文保护</strong>
+            <p>Writer 和 Reviewer 的结果先进入任务。只有人工确认后，修订稿才会写入章节并生成正式版本。</p>
+          </div>
+          <div class="content-repo-row">
+            <div>
+              <span class="eyebrow">作品内容库</span>
+              <strong id="contentRepoStatus">未绑定</strong>
+            </div>
+            <div class="content-repo-actions">
+              <button id="preflightContentRepoBtn" class="ghost compact">预检</button>
+              <button id="importContentRepoBtn" class="ghost compact">导入资料</button>
+              <button id="linkContentRepoBtn" class="ghost compact">绑定</button>
+            </div>
+          </div>
+          <div id="taskList" class="card-list"></div>
+        </section>
+
+        <section id="tab-memory" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">Memory Engine</span>
+              <strong>作品记忆</strong>
+            </div>
+            <button id="addMemoryBtn" class="compact primary">＋ 记忆</button>
+          </div>
+          <div class="workflow-note">
+            <strong>确认后才进入 Agent 上下文</strong>
+            <p>候选记忆不会自动覆盖设定；只有已确认记忆会进入 Writer / Reviewer 的任务上下文。</p>
+          </div>
+          <div id="memoryList" class="card-list"></div>
+        </section>
+
+        <section id="tab-skills" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">Skill Engine</span>
+              <strong>写作技能</strong>
+            </div>
+            <button id="addSkillBtn" class="compact primary">＋ 技能</button>
+          </div>
+          <div class="workflow-note">
+            <strong>版本化技能</strong>
+            <p>每次任务会记录实际运行结果；技能升级不会改写历史任务，可按版本持续演进。</p>
+          </div>
+          <div id="skillList" class="card-list"></div>
+        </section>
+
+        <section id="tab-characters" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">Characters</span>
+              <strong>人物卡</strong>
+            </div>
+            <button id="addCharacterBtn" class="compact primary">＋ 人物</button>
+          </div>
+          <div id="characterList" class="card-list"></div>
+        </section>
+
+        <section id="tab-world" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">World Bible</span>
+              <strong>世界设定</strong>
+            </div>
+            <button id="addWorldBtn" class="compact primary">＋ 设定</button>
+          </div>
+          <div id="worldList" class="card-list"></div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="taskDialog" class="dialog task-dialog">
+    <div class="dialog-head">
+      <div>
+        <span class="eyebrow">NarrativeOS Workflow</span>
+        <strong id="taskDialogTitle">创作任务</strong>
+      </div>
+      <button id="closeTaskBtn" class="dialog-close" aria-label="关闭">×</button>
+    </div>
+    <div id="taskDialogBody" class="task-dialog-body"></div>
+    <div class="task-dialog-actions">
+      <button id="rejectTaskBtn" class="ghost danger">退回</button>
+      <button id="approveTaskBtn" class="primary">确认写入章节</button>
+    </div>
+  </dialog>
+
+  <dialog id="historyDialog" class="dialog">
+    <div class="dialog-head">
+      <div>
+        <span class="eyebrow">Version History</span>
+        <strong>章节版本历史</strong>
+      </div>
+      <button id="closeHistoryBtn" class="dialog-close" aria-label="关闭">×</button>
+    </div>
+    <div class="dialog-help">恢复旧版本不会删除现有版本，可以随时再次切换。</div>
+    <div id="historyList" class="history-list"></div>
+  </dialog>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
