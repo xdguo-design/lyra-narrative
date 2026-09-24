@@ -1,0 +1,58 @@
+name: Zero Platform NarrativeOS Rewrite
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/zero-platform-rewrite.request"
+
+permissions:
+  contents: read
+
+jobs:
+  rewrite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NOVEL_DB_PATH: /tmp/zero-platform-rewrite.db
+      NOVEL_SEED_DEMO: "0"
+      NOVEL_AI_KIND: openai
+      NOVEL_AI_MODEL: gpt-5.6-sol
+      NOVEL_AI_BASE_URL: https://api.openai.com/v1
+      NOVEL_AI_API_KEY_ENV: OPENAI_API_KEY
+      NOVEL_AI_REASONING_EFFORT: high
+      NOVEL_AI_MAX_TOKENS: "8000"
+      NARRATIVE_OUTPUT_DIR: artifacts/zero-platform-platform-rewrite
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Require OpenAI API secret
+        shell: bash
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::OPENAI_API_KEY is not configured for this repository."
+            echo "::error::Add it in GitHub Settings -> Secrets and variables -> Actions, then rerun this workflow."
+            exit 2
+          fi
+
+      - name: Run NarrativeOS full book pipeline
+        run: python scripts/run_zero_platform_rewrite.py
+
+      - name: Upload platform outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-platform-platform-rewrite
+          path: artifacts/zero-platform-platform-rewrite
+          if-no-files-found: ignore
+          retention-days: 14

@@ -1,0 +1,4 @@
+request: zero-platform-platform-rewrite
+model: gpt-5.6-sol
+mode: full-book
+chapters: 8

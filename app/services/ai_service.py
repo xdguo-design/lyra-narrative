@@ -59,12 +59,20 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
     user_prompt = f"当前正文：\n{content[-12000:]}"
     if instruction.strip():
         user_prompt += f"\n\n额外要求：\n{instruction.strip()}"
+    extra: dict[str, str] = {}
+    if kind == "openai" and model.lower().startswith(("gpt-5", "gpt-6")):
+        extra["reasoning_effort"] = os.getenv(
+            "NOVEL_AI_REASONING_EFFORT", "medium"
+        ).strip() or "medium"
+
+    max_tokens = int(os.getenv("NOVEL_AI_MAX_TOKENS", "6000"))
     response = await provider.chat(
         ChatRequest(
             system=_system_prompt(mode),
             messages=[ChatMessage(role="user", content=user_prompt)],
             temperature=0.72 if mode == "continue" else 0.35,
-            max_tokens=2200,
+            max_tokens=max_tokens,
+            extra=extra,
         )
     )
     return AssistResult(content=response.content, provider=response.provider, model=response.model)

@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.db import connect, init_db
 from app.services.ai_service import assist
+from app.services.book_pipeline import run_book_pipeline
 from app.services.content_repository import (
     archive_task,
     import_content_repository,
@@ -83,6 +84,12 @@ class WritingTaskCreate(BaseModel):
 class ApprovalRequest(BaseModel):
     decision: str = Field(pattern="^(approved|rejected)$")
     note: str = ""
+
+
+class BookPipelineRequest(BaseModel):
+    goal: str = Field(min_length=1, max_length=2000)
+    instruction: str = ""
+    chapter_count: int = Field(default=8, ge=1, le=30)
 
 
 class MemoryCreate(BaseModel):
@@ -532,6 +539,25 @@ async def run_full_pipeline(task_id: int):
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(404, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/run-book-pipeline")
+async def run_project_book_pipeline(project_id: int, payload: BookPipelineRequest):
+    with connect() as conn:
+        _require_project(conn, project_id)
+    try:
+        return await run_book_pipeline(
+            project_id=project_id,
+            goal=payload.goal,
+            instruction=payload.instruction,
+            chapter_count=payload.chapter_count,
+        )
+    except WorkflowStateError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
 

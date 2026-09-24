@@ -1013,3 +1013,29 @@ def test_full_novel_pipeline_rejects_demo_provider():
             os.environ.pop("NOVEL_AI_KIND", None)
         else:
             os.environ["NOVEL_AI_KIND"] = previous
+
+
+def test_book_pipeline_rejects_demo_provider():
+    previous = os.environ.get("NOVEL_AI_KIND")
+    os.environ["NOVEL_AI_KIND"] = "demo"
+    try:
+        with TestClient(app) as client:
+            project_id = client.post(
+                "/api/projects",
+                json={"title": "整书流水线测试", "genre": "科幻"},
+            ).json()["id"]
+            response = client.post(
+                f"/api/projects/{project_id}/run-book-pipeline",
+                json={
+                    "goal": "从架构开始写一部完整小说",
+                    "instruction": "必须走冻结规划与逐章审核。",
+                    "chapter_count": 8,
+                },
+            )
+            assert response.status_code == 409
+            assert "real AI provider" in response.json()["detail"]
+    finally:
+        if previous is None:
+            os.environ.pop("NOVEL_AI_KIND", None)
+        else:
+            os.environ["NOVEL_AI_KIND"] = previous
