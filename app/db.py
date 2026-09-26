@@ -318,6 +318,21 @@ def init_db() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_provider_profiles_default
             ON provider_profiles(is_default, enabled);
+
+            CREATE TABLE IF NOT EXISTS story_state_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                task_id INTEGER NOT NULL UNIQUE REFERENCES writing_tasks(id) ON DELETE CASCADE,
+                chapter_id INTEGER REFERENCES chapters(id) ON DELETE SET NULL,
+                chapter_number INTEGER NOT NULL,
+                state_json TEXT NOT NULL,
+                summary TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_story_state_project_chapter
+            ON story_state_snapshots(project_id, chapter_number DESC, id DESC);
             """
         )
         _seed_demo(conn)
