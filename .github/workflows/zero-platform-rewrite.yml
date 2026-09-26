@@ -16,10 +16,15 @@ jobs:
     env:
       NOVEL_DB_PATH: /tmp/zero-platform-rewrite.db
       NOVEL_SEED_DEMO: "0"
-      NOVEL_AI_KIND: ${{ vars.NOVEL_AI_KIND || 'openai' }}
-      NOVEL_AI_MODEL: ${{ vars.NOVEL_AI_MODEL || 'gpt-5.6-sol' }}
-      NOVEL_AI_BASE_URL: ${{ vars.NOVEL_AI_BASE_URL || 'https://api.openai.com/v1' }}
-      NOVEL_AI_API_KEY_ENV: ${{ vars.NOVEL_AI_API_KEY_ENV || 'OPENAI_API_KEY' }}
+
+      # Provider instance name is user-defined. It is not a vendor name.
+      NARRATIVE_PROVIDER_NAME: ${{ vars.NARRATIVE_PROVIDER_NAME || '默认写作' }}
+      NARRATIVE_PROVIDER_PROTOCOL: ${{ vars.NARRATIVE_PROVIDER_PROTOCOL || 'openai-compatible' }}
+      NARRATIVE_PROVIDER_MODEL: ${{ vars.NARRATIVE_PROVIDER_MODEL || 'gpt-5.6-sol' }}
+      NARRATIVE_PROVIDER_BASE_URL: ${{ vars.NARRATIVE_PROVIDER_BASE_URL || 'https://api.openai.com/v1' }}
+      NARRATIVE_PROVIDER_SECRET_NAME: ${{ vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY' }}
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY'] }}
+
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
       NARRATIVE_OUTPUT_DIR: artifacts/zero-platform-platform-rewrite
@@ -35,15 +40,25 @@ jobs:
       - name: Install NarrativeOS
         run: pip install -r requirements.txt
 
-      - name: Require configured provider key
+      - name: Validate provider selection
         shell: bash
         run: |
-          KEY_NAME="${NOVEL_AI_API_KEY_ENV}"
-          if [ -z "${!KEY_NAME}" ]; then
-            echo "::error::Missing API key secret: ${KEY_NAME}"
-            echo "::error::Configure provider variables and matching repository secret."
+          if [ -z "$NARRATIVE_PROVIDER_NAME" ]; then
+            echo "::error::NARRATIVE_PROVIDER_NAME must not be empty."
             exit 2
           fi
+          if [ -z "$NARRATIVE_PROVIDER_PROTOCOL" ]; then
+            echo "::error::Select a provider protocol before running the workflow."
+            exit 2
+          fi
+          if [ -z "$NARRATIVE_PROVIDER_MODEL" ]; then
+            echo "::error::NARRATIVE_PROVIDER_MODEL must not be empty."
+            exit 2
+          fi
+          echo "Provider instance: $NARRATIVE_PROVIDER_NAME"
+          echo "Protocol: $NARRATIVE_PROVIDER_PROTOCOL"
+          echo "Model: $NARRATIVE_PROVIDER_MODEL"
+          echo "Secret name: $NARRATIVE_PROVIDER_SECRET_NAME"
 
       - name: Run NarrativeOS full book pipeline
         run: python scripts/run_zero_platform_rewrite.py
