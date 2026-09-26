@@ -26,6 +26,7 @@ jobs:
       MODEL_TEST_API_KEY: ${{ secrets.MODEL_TEST_API_KEY }}
       CONFIGURED_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'SENSENOVA'] }}
 
+      NOVEL_AI_REASONING_EFFORT: "none"
       NOVEL_AI_MAX_TOKENS: "8000"
       NARRATIVE_OUTPUT_DIR: artifacts/long-consistency-test
 
