@@ -289,8 +289,33 @@ async def capture_story_state(
         content="",
         instruction=instruction,
     )
+    raw_state = _json_object(result.content)
+    required_keys = {
+        "chapter_summary",
+        "characters",
+        "items",
+        "locations",
+        "world_counters",
+        "revealed_facts",
+        "open_threads",
+        "closed_threads",
+        "last_scene",
+        "do_not_reset",
+    }
+    missing = sorted(required_keys - raw_state.keys())
+    if missing:
+        raise ContinuityStateError(
+            "story state updater omitted required keys: " + ", ".join(missing)
+        )
+    returned_chapter = raw_state.get("chapter_number")
+    if returned_chapter not in {None, chapter_number}:
+        raise ContinuityStateError(
+            f"story state updater returned chapter {returned_chapter}, "
+            f"expected {chapter_number}"
+        )
+
     state = normalize_story_state(
-        _json_object(result.content),
+        raw_state,
         chapter_number=chapter_number,
     )
     persist_story_state(
