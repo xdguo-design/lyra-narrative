@@ -128,6 +128,33 @@ def _create_run(task_id: int, role: str, stage: str, input_text: str) -> int:
                     ),
                 )
 
+            story_state = conn.execute(
+                """
+                SELECT id,chapter_number,state_json
+                FROM story_state_snapshots
+                WHERE project_id=?
+                ORDER BY chapter_number DESC,id DESC
+                LIMIT 1
+                """,
+                (task["project_id"],),
+            ).fetchone()
+            if story_state:
+                conn.execute(
+                    """
+                    INSERT INTO agent_run_resources(
+                        run_id,resource_type,resource_id,version,title,content
+                    ) VALUES(?,?,?,?,?,?)
+                    """,
+                    (
+                        run_id,
+                        "story_state",
+                        story_state["id"],
+                        story_state["chapter_number"],
+                        f"Story State after chapter {story_state['chapter_number']}",
+                        story_state["state_json"],
+                    ),
+                )
+
             skills = _selected_skills(
                 conn,
                 task_id,
