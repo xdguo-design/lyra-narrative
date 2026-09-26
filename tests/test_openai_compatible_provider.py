@@ -1,8 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from app.ai.providers.base import ChatMessage, ChatRequest, ProviderConfig, ProviderError
-from app.ai.providers.openai_compatible import OpenAICompatibleProvider
+from app.ai.providers.base import (\n    ChatMessage,\n    ChatRequest,\n    ProviderConfig,\n    ProviderError,\n)\nfrom app.ai.providers.openai_compatible import OpenAICompatibleProvider
 
 
 class OpenAICompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
@@ -95,11 +94,10 @@ class OpenAICompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
         with patch(
             "app.ai.providers.openai_compatible.request_json",
             new=AsyncMock(return_value=response_json),
-        ):
-            with self.assertRaisesRegex(ProviderError, "empty content"):
-                await provider.chat(
-                    ChatRequest(messages=[ChatMessage(role="user", content="test")])
-                )
+        ), self.assertRaisesRegex(ProviderError, "empty content"):
+            await provider.chat(
+                ChatRequest(messages=[ChatMessage(role="user", content="test")])
+            )
 
 
 if __name__ == "__main__":
