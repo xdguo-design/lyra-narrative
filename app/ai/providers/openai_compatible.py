@@ -46,9 +46,8 @@ class OpenAICompatibleProvider(BaseProvider):
             **request.extra,
         }
         if request.max_tokens is not None:
-            is_openai_reasoning_model = (
-                self.config.kind.strip().lower() == "openai"
-                and model.lower().startswith(("gpt-5", "gpt-6", "o1", "o3", "o4"))
+            is_openai_reasoning_model = model.lower().startswith(
+                ("gpt-5", "gpt-6", "o1", "o3", "o4")
             )
             token_key = (
                 "max_completion_tokens" if is_openai_reasoning_model else "max_tokens"
