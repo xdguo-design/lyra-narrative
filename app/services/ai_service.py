@@ -96,9 +96,9 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
     ).strip()
     if model.lower().startswith(("gpt-5", "gpt-6")):
         extra["reasoning_effort"] = configured_reasoning_effort or "medium"
-    elif configured_reasoning_effort:
+    elif configured_reasoning_effort and kind == "openai-compatible":
         # Some OpenAI-compatible reasoning models expose the same optional
-        # control. Only forward it for non-OpenAI models when explicitly set.
+        # control. Only forward it when explicitly configured.
         extra["reasoning_effort"] = configured_reasoning_effort
 
     max_tokens = int(os.getenv("NOVEL_AI_MAX_TOKENS", "6000"))
