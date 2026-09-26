@@ -91,10 +91,15 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
     if instruction.strip():
         user_prompt += f"\n\n额外要求：\n{instruction.strip()}"
     extra: dict[str, str] = {}
+    configured_reasoning_effort = os.getenv(
+        "NOVEL_AI_REASONING_EFFORT", ""
+    ).strip()
     if model.lower().startswith(("gpt-5", "gpt-6")):
-        extra["reasoning_effort"] = os.getenv(
-            "NOVEL_AI_REASONING_EFFORT", "medium"
-        ).strip() or "medium"
+        extra["reasoning_effort"] = configured_reasoning_effort or "medium"
+    elif configured_reasoning_effort:
+        # Some OpenAI-compatible reasoning models expose the same optional
+        # control. Only forward it for non-OpenAI models when explicitly set.
+        extra["reasoning_effort"] = configured_reasoning_effort
 
     max_tokens = int(os.getenv("NOVEL_AI_MAX_TOKENS", "6000"))
     response = await provider.chat(
