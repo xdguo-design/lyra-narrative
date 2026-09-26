@@ -145,6 +145,122 @@ def latest_story_state(
     )
 
 
+def _named_entries(state: dict[str, Any], key: str) -> dict[str, dict[str, Any]]:
+    entries = state.get(key)
+    if not isinstance(entries, list):
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        if name:
+            result[name] = item
+    return result
+
+
+def validate_story_state_transition(
+    previous: dict[str, Any],
+    current: dict[str, Any],
+) -> None:
+    if int(previous.get("chapter_number") or 0) <= 0:
+        return
+
+    problems: list[str] = []
+
+    for key, label in (
+        ("characters", "人物"),
+        ("items", "道具"),
+        ("locations", "地点"),
+        ("world_counters", "世界计数"),
+    ):
+        previous_items = _named_entries(previous, key)
+        current_items = _named_entries(current, key)
+        missing = sorted(set(previous_items) - set(current_items))
+        if missing:
+            problems.append(f"{label}状态被遗漏: {', '.join(missing)}")
+
+    previous_characters = _named_entries(previous, "characters")
+    current_characters = _named_entries(current, "characters")
+    for name, old in previous_characters.items():
+        new = current_characters.get(name)
+        if not new:
+            continue
+        for field, label in (
+            ("knowledge", "已知信息"),
+            ("relationship_changes", "关系变化"),
+        ):
+            old_values = {
+                str(item).strip()
+                for item in (old.get(field) or [])
+                if str(item).strip()
+            }
+            new_values = {
+                str(item).strip()
+                for item in (new.get(field) or [])
+                if str(item).strip()
+            }
+            lost = sorted(old_values - new_values)
+            if lost:
+                problems.append(
+                    f"{name}{label}发生回退: {', '.join(lost)}"
+                )
+
+    old_revealed = {
+        str(item).strip()
+        for item in (previous.get("revealed_facts") or [])
+        if str(item).strip()
+    }
+    new_revealed = {
+        str(item).strip()
+        for item in (current.get("revealed_facts") or [])
+        if str(item).strip()
+    }
+    lost_revealed = sorted(old_revealed - new_revealed)
+    if lost_revealed:
+        problems.append(
+            "已揭露事实被遗忘: " + ", ".join(lost_revealed)
+        )
+
+    old_closed = {
+        str(item).strip()
+        for item in (previous.get("closed_threads") or [])
+        if str(item).strip()
+    }
+    new_closed = {
+        str(item).strip()
+        for item in (current.get("closed_threads") or [])
+        if str(item).strip()
+    }
+    lost_closed = sorted(old_closed - new_closed)
+    if lost_closed:
+        problems.append(
+            "已回收伏笔被重新打开: " + ", ".join(lost_closed)
+        )
+
+    old_open = {
+        str(item).strip()
+        for item in (previous.get("open_threads") or [])
+        if str(item).strip()
+    }
+    new_open = {
+        str(item).strip()
+        for item in (current.get("open_threads") or [])
+        if str(item).strip()
+    }
+    silently_lost = sorted(old_open - new_open - new_closed)
+    if silently_lost:
+        problems.append(
+            "未回收伏笔被静默丢失: " + ", ".join(silently_lost)
+        )
+
+    if problems:
+        raise ContinuityStateError(
+            "story state transition is not monotonic: "
+            + "；".join(problems)
+        )
+
+
 def render_story_state(state: dict[str, Any]) -> str:
     if int(state.get("chapter_number") or 0) <= 0:
         return "【Story State】这是第一章，目前没有动态连续性状态。"
@@ -318,6 +434,7 @@ async def capture_story_state(
         raw_state,
         chapter_number=chapter_number,
     )
+    validate_story_state_transition(previous, state)
     persist_story_state(
         project_id=project_id,
         task_id=task_id,
