@@ -65,7 +65,7 @@ jobs:
             RUNTIME_KEY="$CONFIGURED_PROVIDER_API_KEY"
           fi
           export NARRATIVE_PROVIDER_API_KEY="$RUNTIME_KEY"
-          python scripts/run_long_consistency_test.py | tee /tmp/long-consistency-test.log
+          PYTHONPATH=. python scripts/run_long_consistency_test.py | tee /tmp/long-consistency-test.log
 
       - name: Print report
         if: always()
