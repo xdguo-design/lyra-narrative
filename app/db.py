@@ -7,6 +7,13 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from app.services.default_skills import (
+    BUILTIN_WRITING_SKILL_CONTENT,
+    BUILTIN_WRITING_SKILL_NAME,
+    BUILTIN_WRITING_SKILL_PURPOSE,
+    BUILTIN_WRITING_SKILL_VERSION,
+)
+
 
 def db_path() -> Path:
     configured = os.getenv("NOVEL_DB_PATH", "data/novel_workbench.db")
@@ -25,6 +32,75 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.commit()
     finally:
         conn.close()
+
+
+def _ensure_builtin_skills(conn: sqlite3.Connection) -> None:
+    skill = conn.execute(
+        """
+        SELECT id,current_version,content
+        FROM skills
+        WHERE project_id IS NULL AND name=?
+        ORDER BY id
+        LIMIT 1
+        """,
+        (BUILTIN_WRITING_SKILL_NAME,),
+    ).fetchone()
+    if skill is None:
+        cur = conn.execute(
+            """
+            INSERT INTO skills(
+                project_id,name,purpose,content,enabled,current_version
+            ) VALUES(NULL,?,?,?,?,?)
+            """,
+            (
+                BUILTIN_WRITING_SKILL_NAME,
+                BUILTIN_WRITING_SKILL_PURPOSE,
+                BUILTIN_WRITING_SKILL_CONTENT,
+                1,
+                BUILTIN_WRITING_SKILL_VERSION,
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO skill_versions(skill_id,version,content,note)
+            VALUES(?,?,?,?)
+            """,
+            (
+                cur.lastrowid,
+                BUILTIN_WRITING_SKILL_VERSION,
+                BUILTIN_WRITING_SKILL_CONTENT,
+                "NarrativeOS built-in writing skill",
+            ),
+        )
+        return
+
+    if int(skill["current_version"]) < BUILTIN_WRITING_SKILL_VERSION:
+        conn.execute(
+            """
+            INSERT INTO skill_versions(skill_id,version,content,note)
+            VALUES(?,?,?,?)
+            """,
+            (
+                skill["id"],
+                BUILTIN_WRITING_SKILL_VERSION,
+                BUILTIN_WRITING_SKILL_CONTENT,
+                "NarrativeOS built-in writing skill upgrade",
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE skills
+            SET purpose=?,content=?,enabled=1,current_version=?,
+                updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (
+                BUILTIN_WRITING_SKILL_PURPOSE,
+                BUILTIN_WRITING_SKILL_CONTENT,
+                BUILTIN_WRITING_SKILL_VERSION,
+                skill["id"],
+            ),
+        )
 
 
 def _seed_demo(conn: sqlite3.Connection) -> None:
