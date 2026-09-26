@@ -71,7 +71,7 @@ def configure_runtime() -> dict[str, str]:
     os.environ["NOVEL_AI_API_KEY_ENV"] = "NARRATIVE_PROVIDER_API_KEY"
     if base_url:
         os.environ["NOVEL_AI_BASE_URL"] = base_url
-    os.environ.setdefault("NOVEL_AI_MAX_TOKENS", "3000")
+    os.environ.setdefault("NOVEL_AI_MAX_TOKENS", "8000")
     os.environ.setdefault("NOVEL_SEED_DEMO", "0")
     return {
         "provider": provider,
@@ -234,11 +234,20 @@ async def main() -> None:
                     brief,
                     context,
                     "前文窗口（与生产整书流水线相同，只保留最近 16000 字符）：\n" + prior,
-                    """写 1800-2400 个中文字符的完整章节。必须把既有伤势、道具状态、人物知识差、称谓变化和路线状态当作真实历史继续承接；不得重置人物，不得新增世界规则。用场景和行动体现连续性，不要列清单。只输出正文。""",
+                    """写 2200-2800 个中文字符的完整章节。必须把既有伤势、道具状态、人物知识差、称谓变化和路线状态当作真实历史继续承接；不得重置人物，不得新增世界规则。用场景和行动体现连续性，不要列清单。只输出正文。""",
                 ]
             ),
         )
         chapter = result.content.strip()
+        if not chapter:
+            raise RuntimeError(
+                f"chapter {index} returned empty content; consistency result is invalid"
+            )
+        print(
+            f"chapter {index}: {len(chapter)} chars, "
+            f"prior sent={len(prior)} chars",
+            flush=True,
+        )
         chapters.append(
             {
                 "number": index,
@@ -279,7 +288,17 @@ async def main() -> None:
         if str(audit.get("score", "")).isdigit()
     ]
     minimum_score = min(scores) if scores else 0
-    status = "PASS" if blocking == 0 and major == 0 and minimum_score >= 8 else "DRIFT_DETECTED"
+    stress_reached = any(
+        item["earliest_history_truncated"] for item in chapters
+    )
+    if not stress_reached:
+        status = "INSUFFICIENT_CONTEXT_STRESS"
+    else:
+        status = (
+            "PASS"
+            if blocking == 0 and major == 0 and minimum_score >= 8
+            else "DRIFT_DETECTED"
+        )
 
     report = {
         "status": status,
