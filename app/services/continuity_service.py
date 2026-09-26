@@ -349,12 +349,13 @@ async def capture_story_state(
 规则：
 1. 输出的是“本章结束后完整当前状态”，不是只输出本章增量。
 2. 已发生且没有被正文明确改变的状态必须继承，绝不能恢复成初始状态。
-3. 人物 knowledge 只记录其确实已经知道的信息；秘密一旦揭露不能重新变成未知。
-4. 伤势、道具持有人、剩余次数、地点损坏/封锁、时间、称谓与关系变化必须保留。
-5. 世界硬规则只能记录被正文验证/消耗后的计数或状态，不能创造新规则。
-6. open_threads 是尚未回收的伏笔/承诺；closed_threads 是本章已回收事项。
-7. do_not_reset 写出下一章最容易被错误重置的事实。
-8. 只输出 JSON，不要 Markdown，不要解释。
+3. 继承上一版状态时，已有 characters/items/locations/world_counters 的 name 必须原样保留；已有 knowledge、relationship_changes、revealed_facts、closed_threads 条目必须逐字继承，不要同义改写。
+4. 人物 knowledge 只记录其确实已经知道的信息；秘密一旦揭露不能重新变成未知。
+5. 伤势、道具持有人、剩余次数、地点损坏/封锁、时间、称谓与关系变化必须保留。
+6. 世界硬规则只能记录被正文验证/消耗后的计数或状态，不能创造新规则。
+7. open_threads 是尚未回收的伏笔/承诺；closed_threads 是本章已回收事项。
+8. do_not_reset 写出下一章最容易被错误重置的事实。
+9. 只输出 JSON，不要 Markdown，不要解释。
 
 严格使用以下结构：
 {{
