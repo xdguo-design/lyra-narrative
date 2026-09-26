@@ -74,18 +74,35 @@ class OpenAICompatibleProvider(BaseProvider):
             payload=payload,
             timeout=self.config.timeout_seconds,
         )
+        response_data = data
+        if isinstance(data.get("data"), dict) and "choices" in data["data"]:
+            response_data = data["data"]
+
+        status = data.get("status")
+        if isinstance(status, dict) and status.get("code") not in {None, 0, "0"}:
+            raise ProviderError(
+                str(status.get("message") or "provider returned an error"),
+                provider=self.name,
+            )
+
         try:
-            choice = data["choices"][0]
-            content = choice["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
+            choice = response_data["choices"][0]
+            message = choice.get("message")
+            if isinstance(message, dict):
+                content = message.get("content") or ""
+            elif isinstance(message, str):
+                content = message
+            else:
+                content = choice.get("text") or choice.get("delta") or ""
+        except (KeyError, IndexError, TypeError, AttributeError) as exc:
             raise ProviderError("invalid OpenAI-compatible response", provider=self.name) from exc
 
         return ChatResponse(
-            content=content or "",
-            model=data.get("model", model),
+            content=str(content or ""),
+            model=response_data.get("model") or data.get("model") or model,
             provider=self.name,
             finish_reason=choice.get("finish_reason"),
-            usage=data.get("usage") or {},
+            usage=response_data.get("usage") or data.get("usage") or {},
             raw=data,
         )
 
