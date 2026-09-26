@@ -4,6 +4,8 @@ import asyncio
 import json
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from app.db import connect, init_db
 from app.services.ai_service import AssistResult
 from app.services.continuity_service import (
@@ -291,13 +293,13 @@ def test_story_state_transition_rejects_forgetting():
         "closed_threads": [],
     }
 
-    try:
+    with pytest.raises(
+        ContinuityStateError,
+        match="story state transition is not monotonic",
+    ) as exc_info:
         validate_story_state_transition(previous, current)
-    except ContinuityStateError as exc:
-        message = str(exc)
-    else:
-        raise AssertionError("expected continuity transition failure")
 
+    message = str(exc_info.value)
     assert "人物状态被遗漏" not in message
     assert "道具状态被遗漏" in message
     assert "已知信息发生回退" in message
