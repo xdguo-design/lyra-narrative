@@ -94,7 +94,12 @@ def _create_run(task_id: int, role: str, stage: str, input_text: str) -> int:
         )
         run_id = int(cur.lastrowid)
         task = conn.execute(
-            "SELECT project_id FROM writing_tasks WHERE id=?",
+            """
+            SELECT wt.project_id,wt.chapter_id,c.position AS chapter_position
+            FROM writing_tasks wt
+            LEFT JOIN chapters c ON c.id=wt.chapter_id
+            WHERE wt.id=?
+            """,
             (task_id,),
         ).fetchone()
         if task:
@@ -128,16 +133,28 @@ def _create_run(task_id: int, role: str, stage: str, input_text: str) -> int:
                     ),
                 )
 
-            story_state = conn.execute(
-                """
-                SELECT id,chapter_number,state_json
-                FROM story_state_snapshots
-                WHERE project_id=?
-                ORDER BY chapter_number DESC,id DESC
-                LIMIT 1
-                """,
-                (task["project_id"],),
-            ).fetchone()
+            if task["chapter_position"] is None:
+                story_state = conn.execute(
+                    """
+                    SELECT id,chapter_number,state_json
+                    FROM story_state_snapshots
+                    WHERE project_id=?
+                    ORDER BY chapter_number DESC,id DESC
+                    LIMIT 1
+                    """,
+                    (task["project_id"],),
+                ).fetchone()
+            else:
+                story_state = conn.execute(
+                    """
+                    SELECT id,chapter_number,state_json
+                    FROM story_state_snapshots
+                    WHERE project_id=? AND chapter_number<?
+                    ORDER BY chapter_number DESC,id DESC
+                    LIMIT 1
+                    """,
+                    (task["project_id"], task["chapter_position"]),
+                ).fetchone()
             if story_state:
                 conn.execute(
                     """
