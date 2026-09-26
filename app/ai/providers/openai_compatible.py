@@ -25,8 +25,20 @@ class OpenAICompatibleProvider(BaseProvider):
     def _headers(self) -> dict[str, str]:
         headers = dict(self.config.headers)
         api_key = self._api_key()
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
+        if not api_key:
+            return headers
+
+        auth_mode = str(self.config.options.get("auth_mode", "bearer")).strip().lower()
+        if auth_mode in {"", "none"}:
+            return headers
+        if auth_mode == "header":
+            header_name = str(
+                self.config.options.get("api_key_header", "api-key")
+            ).strip() or "api-key"
+            headers[header_name] = api_key
+            return headers
+
+        headers["Authorization"] = f"Bearer {api_key}"
         return headers
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
