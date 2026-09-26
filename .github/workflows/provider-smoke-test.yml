@@ -138,6 +138,76 @@ jobs:
           print("Resolved model:", result.get("model"))
           print("Response characters:", len(str(result.get("content") or "")))
 
+          def call_json(path, method="GET", payload=None, timeout=120):
+              data = None
+              headers = {}
+              if payload is not None:
+                  data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                  headers["Content-Type"] = "application/json"
+              request = urllib.request.Request(
+                  "http://127.0.0.1:8000" + path,
+                  data=data,
+                  headers=headers,
+                  method=method,
+              )
+              with urllib.request.urlopen(request, timeout=timeout) as response:
+                  return json.loads(response.read().decode("utf-8"))
+
+          project = call_json(
+              "/api/projects",
+              "POST",
+              {"title": "SenseNova smoke project", "genre": "科幻"},
+          )
+          project_id = project["id"]
+          chapters = call_json(f"/api/projects/{project_id}/chapters")
+          chapter_id = chapters[0]["id"]
+          call_json(
+              f"/api/chapters/{chapter_id}",
+              "PATCH",
+              {
+                  "title": "第一章",
+                  "content": "零点后的站台空无一人，尽头却亮起一盏本不该亮的灯。",
+                  "note": "SenseNova smoke baseline",
+              },
+          )
+          task = call_json(
+              f"/api/projects/{project_id}/tasks",
+              "POST",
+              {
+                  "chapter_id": chapter_id,
+                  "goal": "续写一小段并完成审稿与修订，用于真实链路测试。",
+                  "instruction": "正文尽量控制在120字以内，不新增复杂设定。",
+              },
+          )
+          task_result = call_json(
+              f"/api/tasks/{task['id']}/run",
+              "POST",
+              timeout=300,
+          )
+
+          runs = task_result.get("runs") or []
+          if len(runs) != 5:
+              raise SystemExit(f"Expected 5 AgentRun records, got {len(runs)}")
+          bad_runs = [
+              {
+                  "role": run.get("role"),
+                  "provider": run.get("provider"),
+                  "model": run.get("model"),
+                  "status": run.get("status"),
+              }
+              for run in runs
+              if run.get("status") != "completed"
+              or run.get("provider") != result.get("provider")
+              or run.get("model") != result.get("model")
+          ]
+          if bad_runs:
+              raise SystemExit("AgentRun provenance mismatch: " + json.dumps(bad_runs, ensure_ascii=False))
+
+          print("Writer/Reviewer/Revision chain: OK")
+          print("Task status:", task_result.get("status"))
+          print("AgentRun count:", len(runs))
+          print("Review finding count:", len(task_result.get("findings") or []))
+
           with open("/tmp/provider-smoke-result.json", "w", encoding="utf-8") as fh:
               json.dump(
                   {
@@ -145,6 +215,9 @@ jobs:
                       "provider": result.get("provider"),
                       "model": result.get("model"),
                       "response_characters": len(str(result.get("content") or "")),
+                      "workflow_task_status": task_result.get("status"),
+                      "agent_run_count": len(runs),
+                      "review_finding_count": len(task_result.get("findings") or []),
                   },
                   fh,
                   ensure_ascii=False,
@@ -162,6 +235,7 @@ jobs:
 
       - name: Upload smoke result
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: provider-smoke-result
