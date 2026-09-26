@@ -214,6 +214,11 @@ def list_provider_profiles():
 def create_provider_profile(payload: ProviderProfileCreate):
     name = payload.name.strip()
     protocol = _validate_provider_protocol(payload.protocol)
+    if payload.is_default and (not protocol or not payload.default_model.strip()):
+        raise HTTPException(
+            400,
+            "default provider requires a protocol and default model",
+        )
     with connect() as conn:
         if conn.execute(
             "SELECT 1 FROM provider_profiles WHERE name=?",
@@ -301,6 +306,11 @@ def update_provider_profile(provider_id: int, payload: ProviderProfilePatch):
             if payload.options is not None
             else current["options_json"]
         )
+        if is_default and (not protocol or not default_model):
+            raise HTTPException(
+                400,
+                "default provider requires a protocol and default model",
+            )
         if is_default:
             conn.execute(
                 "UPDATE provider_profiles SET is_default=0 WHERE id<>?",
