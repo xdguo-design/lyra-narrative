@@ -97,12 +97,23 @@ class OpenAICompatibleProvider(BaseProvider):
         except (KeyError, IndexError, TypeError, AttributeError) as exc:
             raise ProviderError("invalid OpenAI-compatible response", provider=self.name) from exc
 
+        normalized_content = str(content or "")
+        finish_reason = choice.get("finish_reason")
+        usage = response_data.get("usage") or data.get("usage") or {}
+        if not normalized_content.strip():
+            total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
+            raise ProviderError(
+                "provider returned empty content "
+                f"(finish_reason={finish_reason!r}, total_tokens={total_tokens!r})",
+                provider=self.name,
+            )
+
         return ChatResponse(
-            content=str(content or ""),
+            content=normalized_content,
             model=response_data.get("model") or data.get("model") or model,
             provider=self.name,
-            finish_reason=choice.get("finish_reason"),
-            usage=response_data.get("usage") or data.get("usage") or {},
+            finish_reason=finish_reason,
+            usage=usage,
             raw=data,
         )
 
