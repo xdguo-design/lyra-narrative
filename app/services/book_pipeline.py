@@ -280,7 +280,11 @@ async def _run_frozen_chapter(
 
     project_id = int(task["project_id"])
     context = _task_context(task_id, project_id)
-    story_state = latest_story_state(\n        project_id,\n        before_chapter_number=chapter_number,\n    )\n    story_state_context = render_story_state(story_state)
+    story_state = latest_story_state(
+        project_id,
+        before_chapter_number=chapter_number,
+    )
+    story_state_context = render_story_state(story_state)
     review_context = context + "\n\n" + story_state_context
     prior = prior_manuscript[-6000:] if prior_manuscript else "这是第一章，没有前文。"
     writer = await _run_step(
