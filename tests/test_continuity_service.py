@@ -303,3 +303,86 @@ def test_story_state_transition_rejects_forgetting():
     assert "已知信息发生回退" in message
     assert "已揭露事实被遗忘" in message
     assert "未回收伏笔被静默丢失" in message
+
+
+def test_agent_run_uses_only_story_state_before_current_chapter(monkeypatch, tmp_path):
+    monkeypatch.setenv("NOVEL_DB_PATH", str(tmp_path / "chapter-boundary.db"))
+    monkeypatch.setenv("NOVEL_SEED_DEMO", "0")
+    init_db()
+
+    with connect() as conn:
+        project = conn.execute(
+            "INSERT INTO projects(title,genre) VALUES(?,?)",
+            ("章节边界", "科幻"),
+        )
+        project_id = int(project.lastrowid)
+        chapter2 = conn.execute(
+            """
+            INSERT INTO chapters(project_id,title,position,content,status)
+            VALUES(?,?,?,?,?)
+            """,
+            (project_id, "第二章", 2, "", "draft"),
+        )
+        chapter2_id = int(chapter2.lastrowid)
+
+        task1 = conn.execute(
+            """
+            INSERT INTO writing_tasks(project_id,goal,instruction,status)
+            VALUES(?,?,?,?)
+            """,
+            (project_id, "第一章状态", "", "pending"),
+        )
+        task1_id = int(task1.lastrowid)
+        task2 = conn.execute(
+            """
+            INSERT INTO writing_tasks(project_id,goal,instruction,status)
+            VALUES(?,?,?,?)
+            """,
+            (project_id, "第二章状态", "", "pending"),
+        )
+        task2_id = int(task2.lastrowid)
+
+    persist_story_state(
+        project_id=project_id,
+        task_id=task1_id,
+        chapter_id=None,
+        chapter_number=1,
+        state={"chapter_summary": "第一章状态"},
+    )
+    persist_story_state(
+        project_id=project_id,
+        task_id=task2_id,
+        chapter_id=None,
+        chapter_number=2,
+        state={"chapter_summary": "第二章未来状态"},
+    )
+
+    with connect() as conn:
+        current_task = conn.execute(
+            """
+            INSERT INTO writing_tasks(project_id,chapter_id,goal,instruction,status)
+            VALUES(?,?,?,?,?)
+            """,
+            (project_id, chapter2_id, "重跑第二章", "", "pending"),
+        )
+        current_task_id = int(current_task.lastrowid)
+
+    run_id = _create_run(
+        current_task_id,
+        "writer",
+        "chapter-02-draft",
+        "",
+    )
+    with connect() as conn:
+        resource = conn.execute(
+            """
+            SELECT version,content
+            FROM agent_run_resources
+            WHERE run_id=? AND resource_type='story_state'
+            """,
+            (run_id,),
+        ).fetchone()
+
+    assert resource is not None
+    assert resource["version"] == 1
+    assert json.loads(resource["content"])["chapter_number"] == 1
