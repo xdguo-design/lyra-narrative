@@ -8,9 +8,11 @@ from app.db import connect, init_db
 from app.services.ai_service import AssistResult
 from app.services.continuity_service import (
     capture_story_state,
+    ContinuityStateError,
     latest_story_state,
     persist_story_state,
     repetition_report,
+    validate_story_state_transition,
 )
 from app.services.workflow_service import _create_run
 
@@ -209,3 +211,95 @@ def test_capture_story_state_updates_full_snapshot(monkeypatch, tmp_path):
     assert state["chapter_number"] == 1
     assert state["items"][0]["uses_remaining"] == 2
     assert latest_story_state(project_id)["last_scene"]["time"] == "00:07:47"
+
+
+def test_latest_story_state_respects_chapter_boundary(monkeypatch, tmp_path):
+    monkeypatch.setenv("NOVEL_DB_PATH", str(tmp_path / "boundary.db"))
+    monkeypatch.setenv("NOVEL_SEED_DEMO", "0")
+    init_db()
+    project_id, task1 = _seed_project_and_task()
+
+    persist_story_state(
+        project_id=project_id,
+        task_id=task1,
+        chapter_id=None,
+        chapter_number=1,
+        state={
+            "chapter_summary": "第一章",
+            "revealed_facts": ["事实A"],
+        },
+    )
+    with connect() as conn:
+        task = conn.execute(
+            """
+            INSERT INTO writing_tasks(project_id,goal,instruction,status)
+            VALUES(?,?,?,?)
+            """,
+            (project_id, "第二章状态", "", "pending"),
+        )
+        task2 = int(task.lastrowid)
+    persist_story_state(
+        project_id=project_id,
+        task_id=task2,
+        chapter_id=None,
+        chapter_number=2,
+        state={
+            "chapter_summary": "第二章",
+            "revealed_facts": ["事实A", "事实B"],
+        },
+    )
+
+    before_two = latest_story_state(
+        project_id,
+        before_chapter_number=2,
+    )
+    assert before_two["chapter_number"] == 1
+    assert before_two["revealed_facts"] == ["事实A"]
+
+
+def test_story_state_transition_rejects_forgetting():
+    previous = {
+        "chapter_number": 2,
+        "characters": [
+            {
+                "name": "姜岚",
+                "knowledge": ["沈舟参与过实验"],
+                "relationship_changes": ["开始直呼沈砚"],
+            }
+        ],
+        "items": [{"name": "相位票"}],
+        "locations": [{"name": "B出口"}],
+        "world_counters": [{"name": "剩余跨界次数"}],
+        "revealed_facts": ["沈舟参与过实验"],
+        "open_threads": ["沈舟所在分支"],
+        "closed_threads": ["周启明责任已确认"],
+    }
+    current = {
+        "chapter_number": 3,
+        "characters": [
+            {
+                "name": "姜岚",
+                "knowledge": [],
+                "relationship_changes": [],
+            }
+        ],
+        "items": [],
+        "locations": [],
+        "world_counters": [],
+        "revealed_facts": [],
+        "open_threads": [],
+        "closed_threads": [],
+    }
+
+    try:
+        validate_story_state_transition(previous, current)
+    except ContinuityStateError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("expected continuity transition failure")
+
+    assert "人物状态被遗漏" not in message
+    assert "道具状态被遗漏" in message
+    assert "已知信息发生回退" in message
+    assert "已揭露事实被遗忘" in message
+    assert "未回收伏笔被静默丢失" in message
