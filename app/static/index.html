@@ -149,6 +149,7 @@
           <button class="tab" data-tab="skills">技能 <span id="skillCount" class="tab-count">0</span></button>
           <button class="tab" data-tab="characters">人物 <span id="characterCount" class="tab-count">0</span></button>
           <button class="tab" data-tab="world">世界观 <span id="worldCount" class="tab-count">0</span></button>
+          <button class="tab" data-tab="providers">模型 <span id="providerCount" class="tab-count">0</span></button>
         </div>
 
         <section id="tab-ai" class="tab-pane active">
@@ -277,6 +278,58 @@
             <button id="addWorldBtn" class="compact primary">＋ 设定</button>
           </div>
           <div id="worldList" class="card-list"></div>
+        </section>
+
+        <section id="tab-providers" class="tab-pane">
+          <div class="side-section-head">
+            <div>
+              <span class="eyebrow">Model Runtime</span>
+              <strong>Provider 实例</strong>
+            </div>
+            <button id="newProviderBtn" class="compact primary">＋ Provider</button>
+          </div>
+
+          <div class="workflow-note">
+            <strong>名称由你自己定义</strong>
+            <p>例如“主写作”“科学审稿”“国内备用”。协议只是连接方式，不是 Provider 名称；未选择协议的实例不会进入运行链路。</p>
+          </div>
+
+          <div id="providerEditor" class="provider-editor hidden">
+            <label class="field-label" for="providerName">Provider 名称</label>
+            <input id="providerName" class="mini-input single-line" placeholder="例如：主写作" />
+
+            <label class="field-label" for="providerProtocol">协议</label>
+            <select id="providerProtocol" class="mini-input single-line">
+              <option value="">暂不选择</option>
+              <option value="openai-compatible">OpenAI Compatible</option>
+              <option value="anthropic">Anthropic Messages</option>
+              <option value="gemini">Gemini GenerateContent</option>
+              <option value="ollama">Ollama Chat</option>
+            </select>
+
+            <div id="providerProtocolFields" class="provider-protocol-fields hidden">
+              <label class="field-label" for="providerBaseUrl">Base URL</label>
+              <input id="providerBaseUrl" class="mini-input single-line" placeholder="协议服务地址，可按协议留空使用默认值" />
+
+              <label class="field-label" for="providerModel">默认模型</label>
+              <input id="providerModel" class="mini-input single-line" placeholder="例如：你的模型 ID" />
+
+              <label class="field-label" for="providerKeyEnv">API Key 环境变量名</label>
+              <input id="providerKeyEnv" class="mini-input single-line" placeholder="例如：KIMI_API_KEY；这里不保存真实 Key" />
+
+              <div class="provider-flags">
+                <label><input id="providerEnabled" type="checkbox" checked /> 启用</label>
+                <label><input id="providerDefault" type="checkbox" /> 设为默认</label>
+              </div>
+            </div>
+
+            <div class="provider-editor-actions">
+              <button id="cancelProviderBtn" class="ghost compact">取消</button>
+              <button id="saveProviderBtn" class="primary compact">保存</button>
+            </div>
+          </div>
+
+          <div id="providerList" class="card-list"></div>
         </section>
       </aside>
     </main>
