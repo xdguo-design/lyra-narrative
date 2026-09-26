@@ -1,0 +1,170 @@
+name: Provider Backend Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/provider-smoke-test.request"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NOVEL_DB_PATH: /tmp/provider-smoke-test.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROVIDER_NAME: ${{ vars.NARRATIVE_PROVIDER_NAME || '模型测试' }}
+      NARRATIVE_PROVIDER_PROTOCOL: ${{ vars.NARRATIVE_PROVIDER_PROTOCOL || 'openai-compatible' }}
+      NARRATIVE_PROVIDER_MODEL: ${{ vars.NARRATIVE_PROVIDER_MODEL || 'gpt-5.6-sol' }}
+      NARRATIVE_PROVIDER_BASE_URL: ${{ vars.NARRATIVE_PROVIDER_BASE_URL || 'https://api.openai.com/v1' }}
+      NARRATIVE_PROVIDER_SECRET_NAME: ${{ vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY' }}
+
+      MODEL_TEST_API_KEY: ${{ secrets.MODEL_TEST_API_KEY }}
+      CONFIGURED_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY'] }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install backend
+        run: pip install -r requirements.txt
+
+      - name: Validate provider configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "$NARRATIVE_PROVIDER_PROTOCOL" ]; then
+            echo "::error::Provider protocol is empty."
+            exit 2
+          fi
+          if [ -z "$NARRATIVE_PROVIDER_MODEL" ]; then
+            echo "::error::Provider model is empty."
+            exit 2
+          fi
+
+          if [ -n "$MODEL_TEST_API_KEY" ]; then
+            echo "Using repository secret: MODEL_TEST_API_KEY"
+          elif [ -n "$CONFIGURED_PROVIDER_API_KEY" ]; then
+            echo "Using repository secret name configured by NARRATIVE_PROVIDER_SECRET_NAME."
+          else
+            echo "::error::No API key is available. Add MODEL_TEST_API_KEY or configure NARRATIVE_PROVIDER_SECRET_NAME to an existing Actions Secret."
+            exit 3
+          fi
+
+          echo "Provider name: $NARRATIVE_PROVIDER_NAME"
+          echo "Protocol: $NARRATIVE_PROVIDER_PROTOCOL"
+          echo "Model: $NARRATIVE_PROVIDER_MODEL"
+          echo "Base URL: $NARRATIVE_PROVIDER_BASE_URL"
+          echo "Configured secret name: $NARRATIVE_PROVIDER_SECRET_NAME"
+
+      - name: Start backend and call real model
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RUNTIME_KEY="$MODEL_TEST_API_KEY"
+          if [ -z "$RUNTIME_KEY" ]; then
+            RUNTIME_KEY="$CONFIGURED_PROVIDER_API_KEY"
+          fi
+
+          export NARRATIVE_PROVIDER_API_KEY="$RUNTIME_KEY"
+          export NOVEL_AI_PROVIDER_NAME="$NARRATIVE_PROVIDER_NAME"
+          export NOVEL_AI_KIND="$NARRATIVE_PROVIDER_PROTOCOL"
+          export NOVEL_AI_MODEL="$NARRATIVE_PROVIDER_MODEL"
+          export NOVEL_AI_BASE_URL="$NARRATIVE_PROVIDER_BASE_URL"
+          export NOVEL_AI_API_KEY_ENV="NARRATIVE_PROVIDER_API_KEY"
+          export NOVEL_AI_MAX_TOKENS="128"
+
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/lyra-provider-smoke.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          python - <<'PY'
+          import json
+          import time
+          import urllib.error
+          import urllib.request
+
+          for _ in range(40):
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=2) as response:
+                      body = json.loads(response.read().decode("utf-8"))
+                      if body.get("ok") is True:
+                          print("Backend health: OK")
+                          break
+              except Exception:
+                  time.sleep(0.25)
+          else:
+              raise SystemExit("Backend failed to become healthy")
+
+          payload = json.dumps(
+              {
+                  "mode": "continue",
+                  "content": "深夜，车站已经停运。值班室的时钟刚好跳到零点。",
+                  "instruction": "只续写一句中文，用于连通性测试，不要解释。",
+              },
+              ensure_ascii=False,
+          ).encode("utf-8")
+          request = urllib.request.Request(
+              "http://127.0.0.1:8000/api/ai/assist",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=90) as response:
+                  result = json.loads(response.read().decode("utf-8"))
+          except urllib.error.HTTPError as exc:
+              body = exc.read().decode("utf-8", errors="replace")
+              print(f"Assist HTTP status: {exc.code}")
+              print(body[:2000])
+              raise
+
+          if result.get("demo") is True:
+              raise SystemExit("Smoke test unexpectedly used demo provider")
+          if not str(result.get("content") or "").strip():
+              raise SystemExit("Real provider returned empty content")
+
+          print("Real model call: OK")
+          print("Resolved provider:", result.get("provider"))
+          print("Resolved model:", result.get("model"))
+          print("Response characters:", len(str(result.get("content") or "")))
+
+          with open("/tmp/provider-smoke-result.json", "w", encoding="utf-8") as fh:
+              json.dump(
+                  {
+                      "ok": True,
+                      "provider": result.get("provider"),
+                      "model": result.get("model"),
+                      "response_characters": len(str(result.get("content") or "")),
+                  },
+                  fh,
+                  ensure_ascii=False,
+                  indent=2,
+              )
+          PY
+
+      - name: Show backend log on failure
+        if: failure()
+        shell: bash
+        run: |
+          if [ -f /tmp/lyra-provider-smoke.log ]; then
+            tail -n 200 /tmp/lyra-provider-smoke.log
+          fi
+
+      - name: Upload smoke result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-smoke-result
+          path: /tmp/provider-smoke-result.json
+          if-no-files-found: ignore
+          retention-days: 7
