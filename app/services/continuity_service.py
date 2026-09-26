@@ -101,23 +101,36 @@ def normalize_story_state(
     return state
 
 
-def latest_story_state_record(project_id: int) -> dict[str, Any] | None:
+def latest_story_state_record(
+    project_id: int,
+    *,
+    before_chapter_number: int | None = None,
+) -> dict[str, Any] | None:
+    query = """
+        SELECT *
+        FROM story_state_snapshots
+        WHERE project_id=?
+    """
+    params: list[Any] = [project_id]
+    if before_chapter_number is not None:
+        query += " AND chapter_number<?"
+        params.append(before_chapter_number)
+    query += " ORDER BY chapter_number DESC,id DESC LIMIT 1"
+
     with connect() as conn:
-        row = conn.execute(
-            """
-            SELECT *
-            FROM story_state_snapshots
-            WHERE project_id=?
-            ORDER BY chapter_number DESC,id DESC
-            LIMIT 1
-            """,
-            (project_id,),
-        ).fetchone()
+        row = conn.execute(query, tuple(params)).fetchone()
     return dict(row) if row else None
 
 
-def latest_story_state(project_id: int) -> dict[str, Any]:
-    row = latest_story_state_record(project_id)
+def latest_story_state(
+    project_id: int,
+    *,
+    before_chapter_number: int | None = None,
+) -> dict[str, Any]:
+    row = latest_story_state_record(
+        project_id,
+        before_chapter_number=before_chapter_number,
+    )
     if not row:
         return empty_story_state()
     try:
@@ -203,7 +216,10 @@ async def capture_story_state(
     chapter_number: int,
     chapter_content: str,
 ) -> dict[str, Any]:
-    previous = latest_story_state(project_id)
+    previous = latest_story_state(
+        project_id,
+        before_chapter_number=chapter_number,
+    )
     instruction = f"""你是长篇小说 Story State 更新器。你的任务不是评价文字，而是把第 {chapter_number} 章结束后的客观连续性状态整理成结构化 JSON。
 
 上一章结束后的权威 Story State：
