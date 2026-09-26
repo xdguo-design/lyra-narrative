@@ -301,7 +301,7 @@ async def _run_frozen_chapter(
                 context,
                 story_state_context,
                 "最近前文片段（只负责语气、场景和章末承接；事实状态以 Story State 为准，不得复制前文）：\n" + prior,
-                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文。Story State 中已经发生的伤势、知识、关系、道具消耗、地点损坏和伏笔状态都是不可逆历史，除非本章明确发生新的事件改变它。不得重复已经发生过的“第一次”、揭密、交接或跨界场景；不得提前消耗后续章节核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动。只输出当前章节正文，严禁复制前文章节。""",
+                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文，并执行本次冻结的写作 Skill。Story State 中已经发生的伤势、知识、关系、道具消耗、地点损坏和伏笔状态都是不可逆历史，除非本章明确发生新的事件改变它。不得重复已经发生过的“第一次”、揭密、交接或跨界场景；不得提前消耗后续章节核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动。普通叙事不要默认切成碎短句；让动作、感觉、观察和人物关系形成完整语流。陌生术语首次出现必须落到读者能立即理解的语境中；对白必须有情绪目的和人物关系，禁止资料问答式推进。只输出当前章节正文，严禁复制前文章节。""",
             ]
         ),
     )
@@ -325,7 +325,7 @@ async def _run_frozen_chapter(
         content=enriched.content,
         instruction=f"""{review_context}
 
-只做语言层编辑：改善长短句组合、节奏、意象、对白质感、信息密度和重复。禁止新增/删除关键事件，禁止修改世界规则、人物动机、伏笔位置和结局方向。只输出完整正文。""",
+只做语言层编辑，并严格执行本次冻结写作 Skill：改善长短句组合、节奏、意象、对白质感、信息密度和重复。重点清理连续碎短句/单句段落、只靠“不像A、也不像B”成立的空洞描写、第一次出现却没有落地解释的陌生术语、缺乏人物意图的功能性对白，以及高频“不是A，是B”等模型腔结构。优先使用具体、正向、可感知的形象，让情绪通过动作和关系发生。禁止新增/删除关键事件，禁止修改世界规则、人物动机、伏笔位置和结局方向。只输出完整正文。""",
     )
     draft, _ = await repair_repetition(
         task_id=task_id,
@@ -418,116 +418,3 @@ async def _run_frozen_chapter(
                 chapter_id=int(chapter["id"]),
                 chapter_number=chapter_number,
                 chapter_content=final_content,
-            )
-        except ContinuityStateError as exc:
-            final_blocking = True
-            with connect() as conn:
-                conn.execute(
-                    """
-                    INSERT INTO review_findings(
-                        task_id,reviewer,category,severity,summary,suggestion,status
-                    ) VALUES(?,?,?,?,?,?,?)
-                    """,
-                    (
-                        task_id,
-                        "continuity-state-updater",
-                        "continuity",
-                        "blocking",
-                        f"Story State 更新失败：{exc}",
-                        "修复状态提取后才能继续生成下一章。",
-                        "open",
-                    ),
-                )
-
-    with connect() as conn:
-        conn.execute(
-            """
-            UPDATE writing_tasks
-            SET revised_content=?,status=?,updated_at=CURRENT_TIMESTAMP
-            WHERE id=?
-            """,
-            (
-                final_content,
-                "reviewed" if final_blocking else "awaiting_approval",
-                task_id,
-            ),
-        )
-    return get_task(task_id) or {}
-
-
-async def run_book_pipeline(
-    *,
-    project_id: int,
-    goal: str,
-    instruction: str,
-    chapter_count: int,
-) -> dict:
-    _require_real_provider()
-    if chapter_count < 1 or chapter_count > 30:
-        raise ValueError("chapter_count must be between 1 and 30")
-
-    with connect() as conn:
-        project = conn.execute(
-            "SELECT * FROM projects WHERE id=?",
-            (project_id,),
-        ).fetchone()
-        if not project:
-            raise ValueError("project not found")
-
-    planning_task_id = await _plan_book(
-        project_id=project_id,
-        project_title=project["title"],
-        genre=project["genre"],
-        goal=goal,
-        instruction=instruction,
-        chapter_count=chapter_count,
-    )
-    with connect() as conn:
-        outline = conn.execute(
-            """
-            SELECT content FROM memories
-            WHERE project_id=? AND kind='outline' AND confirmed=1
-            ORDER BY updated_at DESC,id DESC LIMIT 1
-            """,
-            (project_id,),
-        ).fetchone()["content"]
-
-    titles = _chapter_titles(outline, chapter_count)
-    chapter_ids = _ensure_chapters(project_id, titles)
-
-    task_ids: list[int] = []
-    prior_manuscript = ""
-    stopped_on_blocking = False
-    for index, chapter_id in enumerate(chapter_ids, start=1):
-        task_id = _create_task(
-            project_id=project_id,
-            chapter_id=chapter_id,
-            goal=f"依据冻结整卷规划完成第 {index} 章候选稿",
-            instruction=(
-                f"这是第 {index}/{chapter_count} 章。必须遵守冻结架构、世界观、人物矛盾"
-                "和整卷大纲；本轮不自动人工批准。"
-            ),
-        )
-        task_ids.append(task_id)
-        result = await _run_frozen_chapter(
-            task_id=task_id,
-            chapter_number=index,
-            prior_manuscript=prior_manuscript,
-        )
-        candidate = str(result.get("revised_content") or result.get("draft") or "")
-        prior_manuscript += (
-            f"\n\n# 第 {index} 章 {titles[index - 1]}\n\n{candidate}"
-        )
-        if result.get("status") == "reviewed":
-            stopped_on_blocking = True
-            break
-
-    return {
-        "project_id": project_id,
-        "planning_task_id": planning_task_id,
-        "chapter_task_ids": task_ids,
-        "planned_chapters": chapter_count,
-        "generated_chapters": len(task_ids),
-        "stopped_on_blocking": stopped_on_blocking,
-        "status": "needs_revision" if stopped_on_blocking else "awaiting_human_approval",
-    }
