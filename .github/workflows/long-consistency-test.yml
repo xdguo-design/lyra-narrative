@@ -1,0 +1,85 @@
+name: Long Form Consistency Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/long-consistency-test.request"
+
+permissions:
+  contents: read
+
+jobs:
+  consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NOVEL_DB_PATH: /tmp/long-consistency-test.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROVIDER_NAME: ${{ vars.NARRATIVE_PROVIDER_NAME || '主写作-SenseNova' }}
+      NARRATIVE_PROVIDER_PROTOCOL: ${{ vars.NARRATIVE_PROVIDER_PROTOCOL || 'openai-compatible' }}
+      NARRATIVE_PROVIDER_MODEL: ${{ vars.NARRATIVE_PROVIDER_MODEL || 'sensenova-6.8-flash-lite' }}
+      NARRATIVE_PROVIDER_BASE_URL: ${{ vars.NARRATIVE_PROVIDER_BASE_URL || 'https://token.sensenova.cn/v1' }}
+      NARRATIVE_PROVIDER_SECRET_NAME: ${{ vars.NARRATIVE_PROVIDER_SECRET_NAME || 'SENSENOVA' }}
+
+      MODEL_TEST_API_KEY: ${{ secrets.MODEL_TEST_API_KEY }}
+      CONFIGURED_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'SENSENOVA'] }}
+
+      NOVEL_AI_MAX_TOKENS: "3000"
+      NARRATIVE_OUTPUT_DIR: artifacts/long-consistency-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Validate provider configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "$MODEL_TEST_API_KEY" ]; then
+            echo "Using repository secret: MODEL_TEST_API_KEY"
+          elif [ -n "$CONFIGURED_PROVIDER_API_KEY" ]; then
+            echo "Using configured repository secret."
+          else
+            echo "::error::No provider API key is available."
+            exit 3
+          fi
+          echo "Provider: $NARRATIVE_PROVIDER_NAME"
+          echo "Protocol: $NARRATIVE_PROVIDER_PROTOCOL"
+          echo "Model: $NARRATIVE_PROVIDER_MODEL"
+
+      - name: Run eight-chapter consistency stress test
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUNTIME_KEY="$MODEL_TEST_API_KEY"
+          if [ -z "$RUNTIME_KEY" ]; then
+            RUNTIME_KEY="$CONFIGURED_PROVIDER_API_KEY"
+          fi
+          export NARRATIVE_PROVIDER_API_KEY="$RUNTIME_KEY"
+          python scripts/run_long_consistency_test.py | tee /tmp/long-consistency-test.log
+
+      - name: Print report
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/long-consistency-test/report.json ]; then
+            cat artifacts/long-consistency-test/report.json
+          fi
+
+      - name: Upload consistency artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: long-consistency-test
+          path: artifacts/long-consistency-test
+          if-no-files-found: ignore
+          retention-days: 14
