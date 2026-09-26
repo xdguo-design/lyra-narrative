@@ -10,6 +10,13 @@ from typing import Any
 from app.db import connect, init_db
 from app.services.ai_service import assist
 from app.services.book_pipeline import _create_task
+from app.services.continuity_service import (
+    capture_story_state,
+    latest_story_state,
+    repair_repetition,
+    render_story_state,
+    repetition_report,
+)
 from app.services.workflow_service import _run_step, _task_context
 
 
@@ -221,7 +228,9 @@ async def main() -> None:
             instruction=brief,
         )
         context = _task_context(task_id, project_id)
-        prior = prior_manuscript[-PRIOR_WINDOW:] if prior_manuscript else "这是第一章，没有前文。"
+        story_state = latest_story_state(project_id)
+        story_state_context = render_story_state(story_state)
+        prior = prior_manuscript[-6000:] if prior_manuscript else "这是第一章，没有前文。"
         result = await _run_step(
             task_id=task_id,
             role="writer",
@@ -233,8 +242,9 @@ async def main() -> None:
                     f"当前为第 {index}/{CHAPTER_COUNT} 章。",
                     brief,
                     context,
-                    "前文窗口（与生产整书流水线相同，只保留最近 16000 字符）：\n" + prior,
-                    """写 2200-2800 个中文字符的完整章节。必须把既有伤势、道具状态、人物知识差、称谓变化和路线状态当作真实历史继续承接；不得重置人物，不得新增世界规则。用场景和行动体现连续性，不要列清单。只输出正文。""",
+                    story_state_context,
+                    "最近前文片段（仅用于语气与章末承接；事实以 Story State 为准，不得复制）：\n" + prior,
+                    """写 2200-2800 个中文字符的完整章节。Story State 是权威历史：既有伤势、道具状态、人物知识差、称谓变化和路线状态不得重置。不得重复已经发生过的“第一次”、揭密、交接、跨界或对峙场景；不得新增世界规则。用场景和行动体现连续性，不要列清单。只输出当前章节正文。""",
                 ]
             ),
         )
@@ -243,9 +253,31 @@ async def main() -> None:
             raise RuntimeError(
                 f"chapter {index} returned empty content; consistency result is invalid"
             )
+
+        chapter, repeat = await repair_repetition(
+            task_id=task_id,
+            chapter_number=index,
+            draft=chapter,
+            prior_manuscript=prior_manuscript,
+            story_state_context=story_state_context,
+        )
+        if repetition_report(chapter, prior_manuscript)["blocking"]:
+            raise RuntimeError(
+                f"chapter {index} still has blocking repetition after repair"
+            )
+
+        new_state = await capture_story_state(
+            task_id=task_id,
+            project_id=project_id,
+            chapter_id=None,
+            chapter_number=index,
+            chapter_content=chapter,
+        )
+
         print(
             f"chapter {index}: {len(chapter)} chars, "
-            f"prior sent={len(prior)} chars",
+            f"recent prose sent={len(prior)} chars, "
+            f"state chapter={new_state['chapter_number']}",
             flush=True,
         )
         chapters.append(
@@ -256,6 +288,8 @@ async def main() -> None:
                 "prior_chars_sent": len(prior),
                 "earliest_history_truncated": len(prior_manuscript) > PRIOR_WINDOW,
                 "characters": len(chapter),
+                "repetition": repeat,
+                "story_state": new_state,
                 "content": chapter,
             }
         )
@@ -322,7 +356,11 @@ async def main() -> None:
         "audits": audits,
         "audit_models": audit_models,
         "chapters": [
-            {key: value for key, value in item.items() if key != "content"}
+            {
+                key: value
+                for key, value in item.items()
+                if key not in {"content", "story_state"}
+            }
             for item in chapters
         ],
     }
