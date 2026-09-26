@@ -451,7 +451,7 @@ def _paragraphs(text: str) -> list[str]:
     return [
         re.sub(r"\s+", " ", part).strip()
         for part in parts
-        if len(re.sub(r"\s+", " ", part).strip()) >= 80
+        if len(re.sub(r"\s+", " ", part).strip()) >= 40
     ]
 
 
