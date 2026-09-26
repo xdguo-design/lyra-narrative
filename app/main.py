@@ -12,6 +12,10 @@ from pydantic import BaseModel, Field
 from app.db import connect, init_db
 from app.services.ai_service import assist
 from app.services.book_pipeline import run_book_pipeline
+from app.services.continuity_service import (
+    latest_story_state,
+    latest_story_state_record,
+)
 from app.services.content_repository import (
     archive_task,
     import_content_repository,
@@ -868,6 +872,45 @@ def import_project_content(project_id: int):
         return import_content_repository(project_id)
     except (OSError, ValueError, UnicodeError) as exc:
         raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/story-state")
+def get_story_state(project_id: int):
+    with connect() as conn:
+        project = conn.execute(
+            "SELECT id FROM projects WHERE id=?",
+            (project_id,),
+        ).fetchone()
+    if not project:
+        raise HTTPException(status_code=404, detail="project not found")
+
+    record = latest_story_state_record(project_id)
+    return {
+        "snapshot": record,
+        "state": latest_story_state(project_id),
+    }
+
+
+@app.get("/api/projects/{project_id}/story-states")
+def list_story_states(project_id: int):
+    with connect() as conn:
+        project = conn.execute(
+            "SELECT id FROM projects WHERE id=?",
+            (project_id,),
+        ).fetchone()
+        if not project:
+            raise HTTPException(status_code=404, detail="project not found")
+        rows = conn.execute(
+            """
+            SELECT id,project_id,task_id,chapter_id,chapter_number,
+                   summary,created_at,updated_at
+            FROM story_state_snapshots
+            WHERE project_id=?
+            ORDER BY chapter_number,id
+            """,
+            (project_id,),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 @app.get("/api/projects/{project_id}/memories")
