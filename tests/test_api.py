@@ -86,6 +86,8 @@ def test_workbench_page_is_served():
         assert 'id="tab-tasks"' in response.text
         assert 'id="tab-memory"' in response.text
         assert 'id="tab-skills"' in response.text
+        assert 'id="tab-providers"' in response.text
+        assert 'id="providerProtocol"' in response.text
         assert 'id="taskDialog"' in response.text
 
 
@@ -1039,3 +1041,86 @@ def test_book_pipeline_rejects_demo_provider():
             os.environ.pop("NOVEL_AI_KIND", None)
         else:
             os.environ["NOVEL_AI_KIND"] = previous
+
+
+def test_provider_profile_name_is_custom_and_protocol_is_optional():
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/providers",
+            json={
+                "name": "主写作",
+                "protocol": "",
+                "enabled": True,
+            },
+        )
+        assert created.status_code == 201
+        body = created.json()
+        assert body["name"] == "主写作"
+        assert body["protocol"] == ""
+        assert body["is_default"] is False
+
+        incomplete_default = client.patch(
+            f"/api/providers/{body['id']}",
+            json={"is_default": True},
+        )
+        assert incomplete_default.status_code == 400
+
+        configured = client.patch(
+            f"/api/providers/{body['id']}",
+            json={
+                "protocol": "openai-compatible",
+                "base_url": "https://example.invalid/v1",
+                "api_key_env": "WRITER_MODEL_KEY",
+                "default_model": "writer-model",
+                "is_default": True,
+            },
+        )
+        assert configured.status_code == 200
+        configured_body = configured.json()
+        assert configured_body["name"] == "主写作"
+        assert configured_body["protocol"] == "openai-compatible"
+        assert configured_body["api_key_env"] == "WRITER_MODEL_KEY"
+        assert configured_body["is_default"] is True
+
+
+def test_provider_default_switches_between_user_named_instances():
+    with TestClient(app) as client:
+        writer = client.post(
+            "/api/providers",
+            json={
+                "name": "主写作",
+                "protocol": "openai-compatible",
+                "default_model": "writer-model",
+                "is_default": True,
+            },
+        ).json()
+        reviewer = client.post(
+            "/api/providers",
+            json={
+                "name": "科学审稿",
+                "protocol": "anthropic",
+                "default_model": "review-model",
+                "is_default": True,
+            },
+        )
+        assert reviewer.status_code == 201
+
+        rows = client.get("/api/providers").json()
+        by_name = {item["name"]: item for item in rows}
+        assert by_name["主写作"]["is_default"] is False
+        assert by_name["科学审稿"]["is_default"] is True
+
+        duplicate = client.post(
+            "/api/providers",
+            json={"name": "主写作"},
+        )
+        assert duplicate.status_code == 409
+
+        invalid = client.post(
+            "/api/providers",
+            json={"name": "错误协议", "protocol": "kimi"},
+        )
+        assert invalid.status_code == 400
+
+        deleted = client.delete(f"/api/providers/{writer['id']}")
+        assert deleted.status_code == 200

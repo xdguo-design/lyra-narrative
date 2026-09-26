@@ -301,6 +301,23 @@ def init_db() -> None:
                 duration_ms INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS provider_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                protocol TEXT NOT NULL DEFAULT '',
+                base_url TEXT NOT NULL DEFAULT '',
+                api_key_env TEXT NOT NULL DEFAULT '',
+                default_model TEXT NOT NULL DEFAULT '',
+                enabled INTEGER NOT NULL DEFAULT 1,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                options_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_provider_profiles_default
+            ON provider_profiles(is_default, enabled);
             """
         )
         _seed_demo(conn)

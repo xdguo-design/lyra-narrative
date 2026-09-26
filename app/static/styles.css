@@ -1551,3 +1551,111 @@ select:focus-visible {
   font-size: 9px;
   line-height: 1.55;
 }
+
+
+/* Provider profile management */
+.hidden {
+  display: none !important;
+}
+
+.mini-input.single-line {
+  min-height: 36px;
+  height: 36px;
+  resize: none;
+}
+
+select.mini-input.single-line {
+  padding-right: 28px;
+}
+
+.provider-editor {
+  margin-bottom: 12px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.provider-protocol-fields {
+  margin-top: 2px;
+}
+
+.provider-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.provider-flags label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.provider-editor-actions,
+.provider-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.provider-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  padding: 11px;
+}
+
+.provider-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.provider-card-head strong,
+.provider-card-head small {
+  display: block;
+}
+
+.provider-card-head strong {
+  font-size: 11px;
+}
+
+.provider-card-head small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.provider-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.mini-badge {
+  display: inline-flex;
+  padding: 2px 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.mini-badge.muted {
+  color: var(--muted);
+}
+
+.provider-card-meta {
+  display: grid;
+  gap: 3px;
+  margin: 9px 0;
+  color: var(--faint);
+  font-size: 8px;
+  overflow-wrap: anywhere;
+}

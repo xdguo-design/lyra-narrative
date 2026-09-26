@@ -128,6 +128,48 @@ class ContentLinkCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=120)
 
 
+class ProviderProfileCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    protocol: str = ""
+    base_url: str = ""
+    api_key_env: str = ""
+    default_model: str = ""
+    enabled: bool = True
+    is_default: bool = False
+    options: dict[str, object] = Field(default_factory=dict)
+
+
+class ProviderProfilePatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    protocol: str | None = None
+    base_url: str | None = None
+    api_key_env: str | None = None
+    default_model: str | None = None
+    enabled: bool | None = None
+    is_default: bool | None = None
+    options: dict[str, object] | None = None
+
+
+PROVIDER_PROTOCOLS = {"", "openai-compatible", "anthropic", "gemini", "ollama"}
+
+
+def _validate_provider_protocol(protocol: str) -> str:
+    value = protocol.strip().lower()
+    if value not in PROVIDER_PROTOCOLS:
+        raise HTTPException(400, f"unsupported provider protocol: {protocol}")
+    return value
+
+
+def _provider_row(row):
+    item = _row(row)
+    if item is None:
+        return None
+    item["enabled"] = bool(item["enabled"])
+    item["is_default"] = bool(item["is_default"])
+    item["options"] = json.loads(item.pop("options_json") or "{}")
+    return item
+
+
 def _row(row):
     return dict(row) if row else None
 
@@ -154,6 +196,164 @@ def index():
 @app.get("/api/health")
 def health():
     return {"ok": True, "service": "narrative-os", "version": "1.5.0"}
+
+
+@app.get("/api/providers")
+def list_provider_profiles():
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT * FROM provider_profiles
+            ORDER BY is_default DESC, enabled DESC, id
+            """
+        ).fetchall()
+        return [_provider_row(row) for row in rows]
+
+
+@app.post("/api/providers", status_code=201)
+def create_provider_profile(payload: ProviderProfileCreate):
+    name = payload.name.strip()
+    protocol = _validate_provider_protocol(payload.protocol)
+    if payload.is_default and (not protocol or not payload.default_model.strip()):
+        raise HTTPException(
+            400,
+            "default provider requires a protocol and default model",
+        )
+    with connect() as conn:
+        if conn.execute(
+            "SELECT 1 FROM provider_profiles WHERE name=?",
+            (name,),
+        ).fetchone():
+            raise HTTPException(409, "provider name already exists")
+        if payload.is_default:
+            conn.execute("UPDATE provider_profiles SET is_default=0")
+        cur = conn.execute(
+            """
+            INSERT INTO provider_profiles(
+                name,protocol,base_url,api_key_env,default_model,
+                enabled,is_default,options_json
+            ) VALUES(?,?,?,?,?,?,?,?)
+            """,
+            (
+                name,
+                protocol,
+                payload.base_url.strip(),
+                payload.api_key_env.strip(),
+                payload.default_model.strip(),
+                int(payload.enabled),
+                int(payload.is_default),
+                json.dumps(payload.options, ensure_ascii=False),
+            ),
+        )
+        return _provider_row(
+            conn.execute(
+                "SELECT * FROM provider_profiles WHERE id=?",
+                (cur.lastrowid,),
+            ).fetchone()
+        )
+
+
+@app.patch("/api/providers/{provider_id}")
+def update_provider_profile(provider_id: int, payload: ProviderProfilePatch):
+    with connect() as conn:
+        current = conn.execute(
+            "SELECT * FROM provider_profiles WHERE id=?",
+            (provider_id,),
+        ).fetchone()
+        if not current:
+            raise HTTPException(404, "provider profile not found")
+
+        name = payload.name.strip() if payload.name is not None else current["name"]
+        protocol = (
+            _validate_provider_protocol(payload.protocol)
+            if payload.protocol is not None
+            else current["protocol"]
+        )
+        duplicate = conn.execute(
+            "SELECT 1 FROM provider_profiles WHERE name=? AND id<>?",
+            (name, provider_id),
+        ).fetchone()
+        if duplicate:
+            raise HTTPException(409, "provider name already exists")
+
+        base_url = (
+            payload.base_url.strip()
+            if payload.base_url is not None
+            else current["base_url"]
+        )
+        api_key_env = (
+            payload.api_key_env.strip()
+            if payload.api_key_env is not None
+            else current["api_key_env"]
+        )
+        default_model = (
+            payload.default_model.strip()
+            if payload.default_model is not None
+            else current["default_model"]
+        )
+        enabled = (
+            int(payload.enabled)
+            if payload.enabled is not None
+            else current["enabled"]
+        )
+        is_default = (
+            int(payload.is_default)
+            if payload.is_default is not None
+            else current["is_default"]
+        )
+        options_json = (
+            json.dumps(payload.options, ensure_ascii=False)
+            if payload.options is not None
+            else current["options_json"]
+        )
+        if is_default and (not protocol or not default_model):
+            raise HTTPException(
+                400,
+                "default provider requires a protocol and default model",
+            )
+        if is_default:
+            conn.execute(
+                "UPDATE provider_profiles SET is_default=0 WHERE id<>?",
+                (provider_id,),
+            )
+        conn.execute(
+            """
+            UPDATE provider_profiles
+            SET name=?,protocol=?,base_url=?,api_key_env=?,default_model=?,
+                enabled=?,is_default=?,options_json=?,updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (
+                name,
+                protocol,
+                base_url,
+                api_key_env,
+                default_model,
+                enabled,
+                is_default,
+                options_json,
+                provider_id,
+            ),
+        )
+        return _provider_row(
+            conn.execute(
+                "SELECT * FROM provider_profiles WHERE id=?",
+                (provider_id,),
+            ).fetchone()
+        )
+
+
+@app.delete("/api/providers/{provider_id}")
+def delete_provider_profile(provider_id: int):
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT id FROM provider_profiles WHERE id=?",
+            (provider_id,),
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "provider profile not found")
+        conn.execute("DELETE FROM provider_profiles WHERE id=?", (provider_id,))
+    return {"ok": True}
 
 
 @app.get("/api/projects")

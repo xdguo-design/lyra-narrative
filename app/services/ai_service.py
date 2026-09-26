@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from app.db import connect
+
 
 @dataclass(slots=True)
 class AssistResult:
@@ -36,23 +38,52 @@ def _demo(mode: str, content: str, instruction: str = "") -> AssistResult:
     return AssistResult(content=text, provider="demo", model="local-demo", demo=True)
 
 
+def _default_provider_profile() -> dict | None:
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT * FROM provider_profiles
+            WHERE enabled=1 AND is_default=1 AND protocol<>''
+            ORDER BY id
+            LIMIT 1
+            """
+        ).fetchone()
+        return dict(row) if row else None
+
+
 async def assist(*, mode: str, content: str, instruction: str = "") -> AssistResult:
-    kind = os.getenv("NOVEL_AI_KIND", "demo").strip().lower()
+    profile = _default_provider_profile()
+    if profile:
+        kind = str(profile["protocol"]).strip().lower()
+        provider_name = str(profile["name"]).strip()
+        model = str(profile["default_model"]).strip()
+        base_url = str(profile["base_url"]).strip() or None
+        api_key_env = str(profile["api_key_env"]).strip() or None
+        if not model:
+            raise RuntimeError(
+                f"provider profile '{provider_name}' requires a default model before use"
+            )
+    else:
+        kind = os.getenv("NOVEL_AI_KIND", "demo").strip().lower()
+        provider_name = os.getenv("NOVEL_AI_PROVIDER_NAME", "workbench").strip() or "workbench"
+        model = os.getenv("NOVEL_AI_MODEL", "").strip()
+        base_url = os.getenv("NOVEL_AI_BASE_URL") or None
+        api_key_env = os.getenv("NOVEL_AI_API_KEY_ENV") or None
+
     if kind in {"", "demo", "mock"}:
         return _demo(mode, content, instruction)
 
     from app.ai import ChatMessage, ChatRequest, ProviderConfig, build_provider
 
-    model = os.getenv("NOVEL_AI_MODEL", "").strip()
     if not model:
-        raise RuntimeError("NOVEL_AI_MODEL is required when NOVEL_AI_KIND is configured")
+        raise RuntimeError("NOVEL_AI_MODEL is required when a real provider is configured")
 
     provider = build_provider(
         ProviderConfig(
-            name="workbench",
+            name=provider_name,
             kind=kind,
-            base_url=os.getenv("NOVEL_AI_BASE_URL") or None,
-            api_key_env=os.getenv("NOVEL_AI_API_KEY_ENV") or None,
+            base_url=base_url,
+            api_key_env=api_key_env,
             default_model=model,
         )
     )
@@ -60,7 +91,7 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
     if instruction.strip():
         user_prompt += f"\n\n额外要求：\n{instruction.strip()}"
     extra: dict[str, str] = {}
-    if kind == "openai" and model.lower().startswith(("gpt-5", "gpt-6")):
+    if model.lower().startswith(("gpt-5", "gpt-6")):
         extra["reasoning_effort"] = os.getenv(
             "NOVEL_AI_REASONING_EFFORT", "medium"
         ).strip() or "medium"
