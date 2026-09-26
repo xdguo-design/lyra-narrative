@@ -1,4 +1,5 @@
-run=2026-09-26T19:28:00+08:00
-purpose=8-chapter-character-world-continuity-stress
-retry=3
+run=2026-09-26T20:48:00+08:00
+purpose=story-state-continuity-regression
+retry=4
 reasoning=none
+story_state=enabled
