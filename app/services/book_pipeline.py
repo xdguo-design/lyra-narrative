@@ -3,6 +3,15 @@ from __future__ import annotations
 import re
 
 from app.db import connect
+from app.services.continuity_service import (
+    ContinuityStateError,
+    capture_story_state,
+    latest_story_state,
+    record_repetition_blocking,
+    repair_repetition,
+    render_story_state,
+    repetition_report,
+)
 from app.services.full_novel_pipeline import (
     _persist_memory,
     _require_real_provider,
@@ -269,8 +278,12 @@ async def _run_frozen_chapter(
         )
         conn.execute("DELETE FROM review_findings WHERE task_id=?", (task_id,))
 
-    context = _task_context(task_id, int(task["project_id"]))
-    prior = prior_manuscript[-16000:] if prior_manuscript else "这是第一章，没有前文。"
+    project_id = int(task["project_id"])
+    context = _task_context(task_id, project_id)
+    story_state = latest_story_state(project_id)
+    story_state_context = render_story_state(story_state)
+    review_context = context + "\n\n" + story_state_context
+    prior = prior_manuscript[-6000:] if prior_manuscript else "这是第一章，没有前文。"
     writer = await _run_step(
         task_id=task_id,
         role="writer",
@@ -283,8 +296,9 @@ async def _run_frozen_chapter(
                 task["goal"],
                 task["instruction"],
                 context,
-                "前文候选正文（仅用于连续性，不得改写前文章节）：\n" + prior,
-                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文。不得提前消耗后续章节的核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动，不能为了让剧情顺利而突然讲道理。只输出正文。""",
+                story_state_context,
+                "最近前文片段（只负责语气、场景和章末承接；事实状态以 Story State 为准，不得复制前文）：\n" + prior,
+                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文。Story State 中已经发生的伤势、知识、关系、道具消耗、地点损坏和伏笔状态都是不可逆历史，除非本章明确发生新的事件改变它。不得重复已经发生过的“第一次”、揭密、交接或跨界场景；不得提前消耗后续章节核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动。只输出当前章节正文，严禁复制前文章节。""",
             ]
         ),
     )
@@ -295,7 +309,7 @@ async def _run_frozen_chapter(
         stage=f"chapter-{chapter_number:02d}-enrichment",
         mode="polish",
         content=writer.content,
-        instruction=f"""{context}
+        instruction=f"""{review_context}
 
 不改变事件、规则、人物选择和伏笔，仅增强场景承载力：空间、声音、气味、光线、动作、停顿、潜台词、危险逼近和人物之间的压迫感。删掉可以被现场表现替代的解释性段落。只输出完整正文。""",
     )
@@ -306,11 +320,17 @@ async def _run_frozen_chapter(
         stage=f"chapter-{chapter_number:02d}-prose",
         mode="polish",
         content=enriched.content,
-        instruction=f"""{context}
+        instruction=f"""{review_context}
 
 只做语言层编辑：改善长短句组合、节奏、意象、对白质感、信息密度和重复。禁止新增/删除关键事件，禁止修改世界规则、人物动机、伏笔位置和结局方向。只输出完整正文。""",
     )
-    draft = prose.content
+    draft, _ = await repair_repetition(
+        task_id=task_id,
+        chapter_number=chapter_number,
+        draft=prose.content,
+        prior_manuscript=prior_manuscript,
+        story_state_context=story_state_context,
+    )
     with connect() as conn:
         conn.execute(
             "UPDATE writing_tasks SET draft=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -320,7 +340,7 @@ async def _run_frozen_chapter(
     first_reviews, _ = await _run_review_round(
         task_id=task_id,
         draft=draft,
-        context=context,
+        context=review_context,
         round_no=1,
     )
     revision = await _run_step(
@@ -333,7 +353,7 @@ async def _run_frozen_chapter(
             [
                 """根据五个独立 Reviewer 的问题重写。blocking 必须修复；不能用新增规则绕过问题；不能把冲突改成所有人互相理解。保留未被指出问题的有效部分。只输出完整章节。""",
                 "Reviewer 意见：\n" + "\n\n".join(first_reviews),
-                context,
+                review_context,
             ]
         ),
     )
@@ -346,7 +366,7 @@ async def _run_frozen_chapter(
     second_reviews, second_blocking = await _run_review_round(
         task_id=task_id,
         draft=revision.content,
-        context=context,
+        context=review_context,
         round_no=2,
     )
     final_content = revision.content
@@ -362,7 +382,7 @@ async def _run_frozen_chapter(
                 [
                     """第二轮仍有 blocking。只修 blocking 及其直接后果；不得破坏已经通过的世界规则、人物冲突和章节功能。只输出完整章节。""",
                     "第二轮 Reviewer 意见：\n" + "\n\n".join(second_reviews),
-                    context,
+                    review_context,
                 ]
             ),
         )
@@ -375,9 +395,46 @@ async def _run_frozen_chapter(
         _, final_blocking = await _run_review_round(
             task_id=task_id,
             draft=final_content,
-            context=context,
+            context=review_context,
             round_no=3,
         )
+
+    final_repetition = repetition_report(final_content, prior_manuscript)
+    if final_repetition["blocking"]:
+        record_repetition_blocking(
+            task_id=task_id,
+            report=final_repetition,
+        )
+        final_blocking = True
+
+    if not final_blocking:
+        try:
+            await capture_story_state(
+                task_id=task_id,
+                project_id=project_id,
+                chapter_id=int(chapter["id"]),
+                chapter_number=chapter_number,
+                chapter_content=final_content,
+            )
+        except ContinuityStateError as exc:
+            final_blocking = True
+            with connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO review_findings(
+                        task_id,reviewer,category,severity,summary,suggestion,status
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task_id,
+                        "continuity-state-updater",
+                        "continuity",
+                        "blocking",
+                        f"Story State 更新失败：{exc}",
+                        "修复状态提取后才能继续生成下一章。",
+                        "open",
+                    ),
+                )
 
     with connect() as conn:
         conn.execute(
