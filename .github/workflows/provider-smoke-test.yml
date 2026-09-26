@@ -81,7 +81,7 @@ jobs:
           export NOVEL_AI_MODEL="$NARRATIVE_PROVIDER_MODEL"
           export NOVEL_AI_BASE_URL="$NARRATIVE_PROVIDER_BASE_URL"
           export NOVEL_AI_API_KEY_ENV="NARRATIVE_PROVIDER_API_KEY"
-          export NOVEL_AI_MAX_TOKENS="128"
+          export NOVEL_AI_MAX_TOKENS="2000"
 
           python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 >/tmp/lyra-provider-smoke.log 2>&1 &
           SERVER_PID=$!
