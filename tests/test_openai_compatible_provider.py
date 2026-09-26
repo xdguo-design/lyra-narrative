@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from app.ai.providers.base import ChatMessage, ChatRequest, ProviderConfig
+from app.ai.providers.base import ChatMessage, ChatRequest, ProviderConfig, ProviderError
 from app.ai.providers.openai_compatible import OpenAICompatibleProvider
 
 
@@ -72,6 +72,34 @@ class OpenAICompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.model, "sensenova-model")
         self.assertEqual(result.provider, "主写作-SenseNova")
         self.assertEqual(result.usage["total_tokens"], 12)
+
+    async def test_rejects_empty_content_response(self):
+        provider = OpenAICompatibleProvider(
+            ProviderConfig(
+                name="writer",
+                kind="openai-compatible",
+                base_url="https://example.invalid/v1",
+                default_model="writer-model",
+            )
+        )
+        response_json = {
+            "model": "writer-model",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": ""},
+                    "finish_reason": "length",
+                }
+            ],
+            "usage": {"total_tokens": 3000},
+        }
+        with patch(
+            "app.ai.providers.openai_compatible.request_json",
+            new=AsyncMock(return_value=response_json),
+        ):
+            with self.assertRaisesRegex(ProviderError, "empty content"):
+                await provider.chat(
+                    ChatRequest(messages=[ChatMessage(role="user", content="test")])
+                )
 
 
 if __name__ == "__main__":
