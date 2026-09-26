@@ -12,6 +12,8 @@ const state = {
   tasks: [],
   memories: [],
   skills: [],
+  providers: [],
+  editingProviderId: null,
   contentStatus: null,
   selectedTaskId: null,
   aiText: "",
@@ -1315,6 +1317,166 @@ function toggleFocusMode() {
   toast(enabled ? "已进入专注模式" : "已退出专注模式");
 }
 
+const PROVIDER_PROTOCOL_LABELS = {
+  "openai-compatible": "OpenAI Compatible",
+  anthropic: "Anthropic Messages",
+  gemini: "Gemini GenerateContent",
+  ollama: "Ollama Chat",
+};
+
+function resetProviderEditor() {
+  state.editingProviderId = null;
+  $("#providerName").value = "";
+  $("#providerProtocol").value = "";
+  $("#providerBaseUrl").value = "";
+  $("#providerModel").value = "";
+  $("#providerKeyEnv").value = "";
+  $("#providerEnabled").checked = true;
+  $("#providerDefault").checked = false;
+  $("#providerProtocolFields").classList.add("hidden");
+  $("#providerEditor").classList.add("hidden");
+}
+
+function syncProviderProtocolFields() {
+  const hasProtocol = Boolean($("#providerProtocol").value);
+  $("#providerProtocolFields").classList.toggle("hidden", !hasProtocol);
+}
+
+async function loadProviders() {
+  state.providers = await api("/api/providers");
+  renderProviders();
+}
+
+function renderProviders() {
+  $("#providerCount").textContent = String(state.providers.length);
+  const container = $("#providerList");
+  container.innerHTML = "";
+
+  if (!state.providers.length) {
+    container.innerHTML =
+      '<div class="no-results">还没有 Provider。名称由你自己定义，协议可以稍后再选。</div>';
+    return;
+  }
+
+  for (const provider of state.providers) {
+    const card = document.createElement("div");
+    card.className = "provider-card";
+    const protocolLabel =
+      PROVIDER_PROTOCOL_LABELS[provider.protocol] ||
+      (provider.protocol ? provider.protocol : "未选择协议");
+    const runtimeText = provider.protocol
+      ? protocolLabel + (provider.default_model ? " · " + escapeHtml(provider.default_model) : "")
+      : "未选择协议 · 不进入运行链路";
+
+    card.innerHTML = [
+      '<div class="provider-card-head"><div><strong>',
+      escapeHtml(provider.name),
+      '</strong><small>',
+      runtimeText,
+      '</small></div><div class="provider-badges">',
+      provider.is_default ? '<span class="mini-badge">默认</span>' : "",
+      provider.enabled ? "" : '<span class="mini-badge muted">停用</span>',
+      '</div></div><div class="provider-card-meta"><span>',
+      provider.base_url ? escapeHtml(provider.base_url) : "默认协议地址",
+      '</span><span>',
+      provider.api_key_env ? "Key: " + escapeHtml(provider.api_key_env) : "未配置 Key 环境变量",
+      '</span></div><div class="provider-card-actions">',
+      '<button class="ghost compact" data-action="edit">编辑</button>',
+      provider.is_default ? "" : '<button class="ghost compact" data-action="default">设为默认</button>',
+      '<button class="ghost danger compact" data-action="delete">删除</button>',
+      '</div>',
+    ].join("");
+
+    card.querySelector('[data-action="edit"]').onclick = () => editProvider(provider);
+    const defaultButton = card.querySelector('[data-action="default"]');
+    if (defaultButton) defaultButton.onclick = () => setDefaultProvider(provider);
+    card.querySelector('[data-action="delete"]').onclick = () => deleteProvider(provider);
+    container.appendChild(card);
+  }
+}
+
+function editProvider(provider) {
+  state.editingProviderId = provider.id;
+  $("#providerName").value = provider.name || "";
+  $("#providerProtocol").value = provider.protocol || "";
+  $("#providerBaseUrl").value = provider.base_url || "";
+  $("#providerModel").value = provider.default_model || "";
+  $("#providerKeyEnv").value = provider.api_key_env || "";
+  $("#providerEnabled").checked = Boolean(provider.enabled);
+  $("#providerDefault").checked = Boolean(provider.is_default);
+  $("#providerEditor").classList.remove("hidden");
+  syncProviderProtocolFields();
+}
+
+function newProvider() {
+  resetProviderEditor();
+  $("#providerEditor").classList.remove("hidden");
+  $("#providerName").focus();
+}
+
+async function saveProvider() {
+  const name = $("#providerName").value.trim();
+  if (!name) {
+    toast("请先填写 Provider 名称");
+    return;
+  }
+
+  const protocol = $("#providerProtocol").value;
+  const payload = {
+    name,
+    protocol,
+    base_url: protocol ? $("#providerBaseUrl").value.trim() : "",
+    default_model: protocol ? $("#providerModel").value.trim() : "",
+    api_key_env: protocol ? $("#providerKeyEnv").value.trim() : "",
+    enabled: $("#providerEnabled").checked,
+    is_default: protocol ? $("#providerDefault").checked : false,
+  };
+
+  try {
+    const path = state.editingProviderId
+      ? "/api/providers/" + state.editingProviderId
+      : "/api/providers";
+    await api(path, {
+      method: state.editingProviderId ? "PATCH" : "POST",
+      body: JSON.stringify(payload),
+    });
+    resetProviderEditor();
+    await loadProviders();
+    toast("Provider 已保存");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function setDefaultProvider(provider) {
+  if (!provider.protocol) {
+    toast("请先选择协议并完成连接配置");
+    return;
+  }
+  try {
+    await api("/api/providers/" + provider.id, {
+      method: "PATCH",
+      body: JSON.stringify({ is_default: true }),
+    });
+    await loadProviders();
+    toast("已将“" + provider.name + "”设为默认");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function deleteProvider(provider) {
+  if (!confirm("确定删除 Provider“" + provider.name + "”吗？")) return;
+  try {
+    await api("/api/providers/" + provider.id, { method: "DELETE" });
+    if (state.editingProviderId === provider.id) resetProviderEditor();
+    await loadProviders();
+    toast("Provider 已删除");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
 function switchTab(button) {
   $$(".tab").forEach((tab) => tab.classList.toggle("active", tab === button));
   $$(".tab-pane").forEach((pane) =>
@@ -1363,6 +1525,11 @@ function bind() {
   $("#addCharacterBtn").onclick = createCharacter;
   $("#addWorldBtn").onclick = createWorldNote;
 
+  $("#newProviderBtn").onclick = newProvider;
+  $("#saveProviderBtn").onclick = saveProvider;
+  $("#cancelProviderBtn").onclick = resetProviderEditor;
+  $("#providerProtocol").onchange = syncProviderProtocolFields;
+
   $("#historyBtn").onclick = showHistory;
   $("#closeHistoryBtn").onclick = () => $("#historyDialog").close();
 
@@ -1394,7 +1561,7 @@ function bind() {
 
 initTheme();
 bind();
-loadProjects().catch((error) => {
+Promise.all([loadProjects(), loadProviders()]).catch((error) => {
   clearWorkspace();
   toast(error.message);
 });
