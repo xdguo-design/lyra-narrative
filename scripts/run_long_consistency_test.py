@@ -26,7 +26,7 @@ OUTPUT_DIR = Path(
     os.getenv("NARRATIVE_OUTPUT_DIR", "artifacts/long-consistency-test")
 )
 CHAPTER_COUNT = 8
-PRIOR_WINDOW = 16000
+PRIOR_WINDOW = 6000
 
 CHARACTER_BIBLE = """# 冻结人物卡
 - 沈砚：36 岁，地铁供电工程师；右手食指缺失末节；做决定前会无意识摩挲右手食指残端。七年前弟弟沈舟失踪。沈砚不知道事故真正原因。
