@@ -142,13 +142,11 @@ PASS / STABLE
 Chapter Promise Card
 → Scene Director
 → Writer
-→ Blind Reader A/B/C/D
+→ Blind Reader A/B/C + Reader D Natural First-Read
 → Character / Continuity / Plot / World Review
-→ Editor
-→ Blind Reader Recheck
+→ Editor / Revision
+→ Reader A/B/C + Reader D Recheck
 → Failure Corpus Regression
-→ Final Human Read
-→ Final Human Recheck（如需）
 → Story State 更新
 
 blocking 未清零，不进入下一章。
@@ -167,6 +165,8 @@ blocking 未清零，不进入下一章。
 - 不能用“高级感”删除必要语义支点。
 - 不能以“能猜懂”为理由放过 NATURALNESS_GAP。
 - 开篇前三段不得用作者段子感误导作品类型。
+- Reader D 的任何 NATURALNESS_GAP / TONE_GAP / QUANTITY_GAP / REFERENCE_GAP / MICRO_CONTINUITY_GAP 都视为 blocking。
+- 人工验收发现新漏检时，先升级 Reader Skill 与回归语料，再修改正文；人工阅读不是永久流水线工位。
 
 ## 13. Ready Condition
 
