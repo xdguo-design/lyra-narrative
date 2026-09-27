@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from types import SimpleNamespace
+
 from app.db import connect
 from app.services.default_skills import BUILTIN_WRITER_TRAINING_SKILL_CONTENT
 from app.services.workflow_service import (
@@ -8,6 +11,21 @@ from app.services.workflow_service import (
     _task_context,
     get_task,
 )
+
+
+_LEVELS = {"NEEDS_WORK", "EMERGING", "STABLE", "TRANSFERABLE"}
+
+
+def _diagnosed_level(text: str, label: str) -> str:
+    match = re.search(
+        rf"【{re.escape(label)}】\s*(NEEDS_WORK|EMERGING|STABLE|TRANSFERABLE)",
+        text,
+    )
+    return match.group(1) if match else "NEEDS_WORK"
+
+
+def _needs_coaching(level: str) -> bool:
+    return level not in {"STABLE", "TRANSFERABLE"}
 
 
 def _training_source(task: dict, explicit_source: str) -> str:
@@ -181,7 +199,10 @@ WRITER_TRAINING_DIAGNOSIS_V1
 【影响】...
 【训练目标】...
 最多三项。
-最后分别判断：场景导演 / 人物行为 / 语言节奏 当前为 NEEDS_WORK、EMERGING、STABLE 中哪一级。
+最后严格输出三行能力状态：
+【场景导演】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
+【人物行为】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
+【语言节奏】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
 禁止改写正文，禁止给范文。""",
             ]
         ),
@@ -205,36 +226,42 @@ WRITER_TRAINING_DIAGNOSIS_V1
         ),
     )
 
-    scene_feedback = await _training_step(
-        task_id=task_id,
-        role="scene-coach",
-        stage="training-scene-direction-feedback",
-        mode="check",
-        content=scene_attempt.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                diagnosis.content,
-                """批改 Scene Direction Card。最多指出 3 个问题，每个问题必须说明：哪里没有做取舍、为什么会让正文平均用力/视角漂移/节奏失焦、下一次重写只需要改什么。
+    scene_level = _diagnosed_level(diagnosis.content, "场景导演")
+    if _needs_coaching(scene_level):
+        scene_feedback = await _training_step(
+            task_id=task_id,
+            role="scene-coach",
+            stage="training-scene-direction-feedback",
+            mode="check",
+            content=scene_attempt.content,
+            instruction="\n\n".join(
+                [
+                    training_rules,
+                    diagnosis.content,
+                    """批改 Scene Direction Card。最多指出 3 个问题，每个问题必须说明：哪里没有做取舍、为什么会让正文平均用力/视角漂移/节奏失焦、下一次重写只需要改什么。
 禁止替 Writer 直接写一张更好的卡。""",
-            ]
-        ),
-    )
-
-    scene_rewrite = await _training_step(
-        task_id=task_id,
-        role="writer-trainee",
-        stage="training-scene-direction-rewrite",
-        mode="continue",
-        content=scene_attempt.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                scene_feedback.content,
-                """根据教练意见重写 Scene Direction Card。只解决指出的问题，不扩大设定，不新增关键线索。输出完整修订卡。""",
-            ]
-        ),
-    )
+                ]
+            ),
+        )
+        scene_rewrite = await _training_step(
+            task_id=task_id,
+            role="writer-trainee",
+            stage="training-scene-direction-rewrite",
+            mode="continue",
+            content=scene_attempt.content,
+            instruction="\n\n".join(
+                [
+                    training_rules,
+                    scene_feedback.content,
+                    """根据教练意见重写 Scene Direction Card。只解决指出的问题，不扩大设定，不新增关键线索。输出完整修订卡。""",
+                ]
+            ),
+        )
+    else:
+        scene_feedback = SimpleNamespace(
+            content=f"SKIPPED_COACHING: 场景导演当前为 {scene_level}，保留练习卡并在综合/迁移阶段验证。"
+        )
+        scene_rewrite = scene_attempt
 
     behavior_attempt = await _training_step(
         task_id=task_id,
@@ -254,37 +281,43 @@ WRITER_TRAINING_DIAGNOSIS_V1
         ),
     )
 
-    behavior_feedback = await _training_step(
-        task_id=task_id,
-        role="character-coach",
-        stage="training-character-behavior-feedback",
-        mode="check",
-        content=behavior_attempt.content,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                """只批改人物行为训练。最多 3 个高影响问题。
+    behavior_level = _diagnosed_level(diagnosis.content, "人物行为")
+    if _needs_coaching(behavior_level):
+        behavior_feedback = await _training_step(
+            task_id=task_id,
+            role="character-coach",
+            stage="training-character-behavior-feedback",
+            mode="check",
+            content=behavior_attempt.content,
+            instruction="\n\n".join(
+                [
+                    context,
+                    training_rules,
+                    """只批改人物行为训练。最多 3 个高影响问题。
 重点检查：人物是否按卡行动、是否因为剧情需要突然老实/变笨/变聪明、对白是否退化为问答表、不同人物声音是否可区分、信息是否有承认阈值。
 每项给原文证据和明确重写目标，不提供范文。""",
-            ]
-        ),
-    )
-
-    behavior_rewrite = await _training_step(
-        task_id=task_id,
-        role="writer-trainee",
-        stage="training-character-behavior-rewrite",
-        mode="polish",
-        content=behavior_attempt.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                behavior_feedback.content,
-                """重写训练片段与必要的 Behavior Matrix。必须保留原场景事实和结果，只修人物行为、信息释放和人物声音。输出 Behavior Matrix + 完整训练片段。""",
-            ]
-        ),
-    )
+                ]
+            ),
+        )
+        behavior_rewrite = await _training_step(
+            task_id=task_id,
+            role="writer-trainee",
+            stage="training-character-behavior-rewrite",
+            mode="polish",
+            content=behavior_attempt.content,
+            instruction="\n\n".join(
+                [
+                    training_rules,
+                    behavior_feedback.content,
+                    """重写训练片段与必要的 Behavior Matrix。必须保留原场景事实和结果，只修人物行为、信息释放和人物声音。输出 Behavior Matrix + 完整训练片段。""",
+                ]
+            ),
+        )
+    else:
+        behavior_feedback = SimpleNamespace(
+            content=f"SKIPPED_COACHING: 人物行为当前为 {behavior_level}，保留练习并在综合/迁移阶段验证。"
+        )
+        behavior_rewrite = behavior_attempt
 
     rhythm_attempt = await _training_step(
         task_id=task_id,
@@ -303,36 +336,42 @@ WRITER_TRAINING_DIAGNOSIS_V1
         ),
     )
 
-    rhythm_feedback = await _training_step(
-        task_id=task_id,
-        role="rhythm-coach",
-        stage="training-rhythm-feedback",
-        mode="check",
-        content=rhythm_attempt.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                """只批改语言节奏。最多 3 个问题，必须按句群而不是孤立句判断。
+    rhythm_level = _diagnosed_level(diagnosis.content, "语言节奏")
+    if _needs_coaching(rhythm_level):
+        rhythm_feedback = await _training_step(
+            task_id=task_id,
+            role="rhythm-coach",
+            stage="training-rhythm-feedback",
+            mode="check",
+            content=rhythm_attempt.content,
+            instruction="\n\n".join(
+                [
+                    training_rules,
+                    """只批改语言节奏。最多 3 个问题，必须按句群而不是孤立句判断。
 检查：是否仍连续同句法、是否靠大量单句段制造假节奏、该快处拖、该慢处跳、情绪说满、人物口语被统一抛光。
 给证据和重写目标，不提供整段范文。""",
-            ]
-        ),
-    )
-
-    rhythm_rewrite = await _training_step(
-        task_id=task_id,
-        role="writer-trainee",
-        stage="training-rhythm-rewrite",
-        mode="polish",
-        content=rhythm_attempt.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                rhythm_feedback.content,
-                """按教练反馈做最后一次定向重写。只处理语言节奏和留白，不改变事实、因果、人物行为和信息顺序。输出完整训练片段。""",
-            ]
-        ),
-    )
+                ]
+            ),
+        )
+        rhythm_rewrite = await _training_step(
+            task_id=task_id,
+            role="writer-trainee",
+            stage="training-rhythm-rewrite",
+            mode="polish",
+            content=rhythm_attempt.content,
+            instruction="\n\n".join(
+                [
+                    training_rules,
+                    rhythm_feedback.content,
+                    """按教练反馈做最后一次定向重写。只处理语言节奏和留白，不改变事实、因果、人物行为和信息顺序。输出完整训练片段。""",
+                ]
+            ),
+        )
+    else:
+        rhythm_feedback = SimpleNamespace(
+            content=f"SKIPPED_COACHING: 语言节奏当前为 {rhythm_level}，保留练习并在综合/迁移阶段验证。"
+        )
+        rhythm_rewrite = rhythm_attempt
 
     integrated_scene = await _training_step(
         task_id=task_id,
