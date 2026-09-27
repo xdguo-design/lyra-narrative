@@ -943,6 +943,118 @@ Writer 不得看到上一轮教练的具体改句，只能使用蒸馏后的能�
 """
 
 
+BUILTIN_EDITOR_TRAINING_SKILL_NAME = "小说编辑训练流程"
+BUILTIN_EDITOR_TRAINING_SKILL_VERSION = 1
+BUILTIN_EDITOR_TRAINING_SKILL_PURPOSE = (
+    "通过取舍、声音保护、防过度润色、读者对照与迁移编辑的刻意练习，训练 Editor 在不改事实和人物的前提下提高正文质量。"
+)
+
+BUILTIN_EDITOR_TRAINING_SKILL_CONTENT = """【NarrativeOS Skill：小说编辑训练流程 v1】
+
+目标：训练 Editor 的“判断力”，不是训练 Editor 把句子改得更漂亮。
+每轮必须经历：
+基线诊断 → 取舍练习 → 编辑 Attempt → Editor Coach → 定向重写 → Blind Reader 前后对照 → 迁移编辑 → Editor Craft Profile。
+
+一、硬边界
+1. 不改事实、因果、人物动机、信息来源、事件顺序、世界规则。
+2. 不代替 Writer 补剧情。
+3. 不因为“更文学”就新增比喻、象征、金句或抒情。
+4. 不把口语毛刺、人物回避、身份差异统一成“准确、克制、漂亮”的编辑腔。
+5. 编辑后的 Reader Gate 不得比编辑前更差。
+6. 已经有力的粗糙句子可以保留；“不精致”不是自动修改理由。
+
+二、Stage A：Editor Baseline
+从真实正文中找最多 3 个高杠杆编辑风险：
+- 信息层级平均；
+- 解释重复；
+- 句群拖沓或过碎；
+- 人物声音被修平；
+- 关键处没停、流程处没压；
+- 过度漂亮；
+- 留白被修成语义缺口；
+- 编辑越权改事实。
+必须引用原文，不给范文。
+
+三、Stage B：Selection Exercise
+先不改句子，只给每个段落标：
+PRESERVE / CUT / COMPRESS / SLOW / LOCAL_REWRITE / NO_TOUCH。
+每个判断必须说明“为什么”，且优先保护：
+- 人物特有声音；
+- 关系动作；
+- 因果支点；
+- Reader 已经能懂的有效留白；
+- 本章唯一记忆点。
+如果 Editor 对大部分句子都想动，默认判 NEEDS_WORK。
+
+四、Stage C：Voice Preservation
+对至少三名说话方式明显不同的人物做编辑。
+编辑前后必须能仅凭对白判断说话者。
+禁止：
+- 把赵六改成陈安式简洁；
+- 把周虎改成会解释理由的管理者；
+- 把小满改成会说抽象关系道理的人；
+- 把柳氏改成长篇母爱总结；
+- 把孙成的程序话术改成普通辩解。
+
+五、Stage D：Anti-Overediting
+Editor 必须证明自己知道什么时候不改。
+至少保留三类“有价值的毛刺”：
+- 角色口语；
+- 身份造成的不完整表达；
+- 不漂亮但准确的生活词；
+- 有意重复；
+- 真实尴尬或停顿。
+如果编辑后更顺，但人物更像同一个人，判 FAIL。
+
+六、Stage E：Reader Comparison
+Blind Reader 分别只看 Before 和 After，不知道哪个是编辑稿。
+对照：
+- 首读理解；
+- 人物声音；
+- 关系变化；
+- 记忆点；
+- 阅读动力；
+- Reader Gap。
+通过标准：
+- After 不得新增 critical Reader Gap；
+- After 至少一项明确改善；
+- 不得以牺牲人物声音换清晰；
+- 若 Before 已经更好，Editor 必须接受回退。
+
+七、Stage F：Transfer Edit
+换不同场景类型编辑：
+- 家庭/经济；
+- 上下级/工作；
+- 调查/对峙；
+- 动作/危险。
+不得复用上一题具体改句。
+至少两种场景通过才可 STABLE；跨三种场景主动保持边界才可 TRANSFERABLE。
+
+八、失败记录格式
+每轮必须记录：
+EDITOR_FAILURE_V1
+【ID】
+【原文】
+【编辑稿】
+【失败类型】selection / voice / overedit / reader-gap / fact-drift / rhythm
+【为什么失败】
+【必须保留】
+【重写边界】
+【复审结果】
+
+九、通过标准
+Editor Craft Profile 分维度记录：
+- Selection Judgment
+- Voice Preservation
+- Anti-Overediting
+- Reader Improvement
+- Fact/Intent Preservation
+
+等级：NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE。
+任何 fact-drift 或 critical Reader Gap 出现时，本轮不得高于 EMERGING。
+"""
+
+
 BUILTIN_SKILLS = (
     {
         "name": BUILTIN_WRITING_SKILL_NAME,
@@ -964,6 +1076,13 @@ BUILTIN_SKILLS = (
         "purpose": BUILTIN_WRITER_TRAINING_SKILL_PURPOSE,
         "content": BUILTIN_WRITER_TRAINING_SKILL_CONTENT,
         "note": "NarrativeOS built-in deliberate-practice writer training skill",
+    },
+    {
+        "name": BUILTIN_EDITOR_TRAINING_SKILL_NAME,
+        "version": BUILTIN_EDITOR_TRAINING_SKILL_VERSION,
+        "purpose": BUILTIN_EDITOR_TRAINING_SKILL_PURPOSE,
+        "content": BUILTIN_EDITOR_TRAINING_SKILL_CONTENT,
+        "note": "NarrativeOS built-in deliberate-practice editor training skill",
     },
 )
 
