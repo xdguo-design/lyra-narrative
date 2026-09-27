@@ -3,11 +3,13 @@ from pathlib import Path
 from app.services.default_skills import (
     BUILTIN_REFINEMENT_SKILL_CONTENT,
     BUILTIN_REFINEMENT_SKILL_VERSION,
+    BUILTIN_WRITING_SKILL_CONTENT,
+    BUILTIN_WRITING_SKILL_VERSION,
 )
 
 
-def test_refinement_skill_v6_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 6
+def test_refinement_skill_v7_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 7
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -99,7 +101,7 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "应合并并升级为 REWRITE_BLOCK" in content
 
 
-def test_refinement_skill_v6_has_unified_reviewer_output_contract():
+def test_refinement_skill_v7_has_unified_reviewer_output_contract():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -144,7 +146,7 @@ def test_reviewer_recheck_closes_or_returns_same_issue():
     assert "禁止在 PASS 后继续反复重写同一处" in content
 
 
-def test_refinement_skill_v6_has_reality_and_readability_gate():
+def test_refinement_skill_v7_has_reality_and_readability_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -163,7 +165,7 @@ def test_refinement_skill_v6_has_reality_and_readability_gate():
         assert marker in content
 
 
-def test_refinement_skill_v6_escalates_scene_level_naturalness_failures():
+def test_refinement_skill_v7_escalates_scene_level_naturalness_failures():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     assert "场景中的关键地点、设施、器物或空间关系没有现实锚点" in content
@@ -172,7 +174,7 @@ def test_refinement_skill_v6_escalates_scene_level_naturalness_failures():
     assert "只缺一个孤立锚点 → LOCAL_REWRITE" in content
 
 
-def test_refinement_skill_v6_character_humor_and_ending_rules():
+def test_refinement_skill_v7_character_humor_and_ending_rules():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     for marker in [
         "人物立体化",
@@ -198,6 +200,60 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         "不能因为作者需要信息就突然老实",
         "谨慎/怕事的人是否过早坦白",
         "为了让剧情顺利推进而让人物突然变老实",
+    ]
+    for marker in required:
+        assert marker in source
+
+
+def test_writing_skill_v4_adds_writer_craft():
+    assert BUILTIN_WRITING_SKILL_VERSION == 4
+    content = BUILTIN_WRITING_SKILL_CONTENT
+    required = [
+        "作家能力：选材、视角与叙事取舍",
+        "描写必须经过人物视角过滤",
+        "细节必须有层级",
+        "该快的地方要敢于压缩",
+        "该慢的地方要敢于展开",
+        "潜台词、人物声音与句群",
+        "对话不是把信息从 A 搬到 B",
+        "章节与长篇变化",
+        "连续两章不得机械复用同一种章末钩子",
+        "如果把人物名字替换掉",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_refinement_skill_v7_adds_aesthetic_editing_gate():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+    required = [
+        "阶段 11：编辑审美门槛",
+        "准确 > 华丽",
+        "具体 > 抽象",
+        "克制 > 说透",
+        "人物特有 > 通用漂亮",
+        "层次 > 平均用力",
+        "余味 > 点题",
+        "禁止“过度编辑”",
+        "人物声音没有被编辑同质化",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_full_pipeline_has_scene_director_aesthetic_editor_and_reviewer():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        'role="scene-director"',
+        'stage="scene-blueprint"',
+        'kind="scene-blueprint"',
+        'role="aesthetic-editor"',
+        'stage="aesthetic-edit"',
+        '"aesthetic-reviewer"',
+        '"aesthetic"',
+        "根据七个独立 Reviewer",
+        "主细节要突出",
+        "人物声音被编辑同质化",
     ]
     for marker in required:
         assert marker in source
