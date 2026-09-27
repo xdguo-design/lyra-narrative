@@ -221,7 +221,7 @@ def test_writing_skill_v5_adds_writer_craft_and_human_first_read():
         "如果把人物名字替换掉",
         "自然首读硬门槛（Human First-Read）",
         "意思能懂但第一眼发怪",
-        "对比/转折两端是否同一语义层级",
+        "对比/转折两端是否处于同一语义层级",
         "开篇前三段必须做类型第一印象检查",
         "TONE_GAP",
     ]
