@@ -354,7 +354,7 @@ async def _run_frozen_chapter(
         content=draft,
         instruction="\n\n".join(
             [
-                """根据五个独立 Reviewer 的问题重写。blocking 必须修复；不能用新增规则绕过问题；不能把冲突改成所有人互相理解。保留未被指出问题的有效部分。只输出完整章节。""",
+                """根据五个独立 Reviewer 的结构化审核结果修订，并严格执行冻结的“小说精修流程” Skill。REWRITE_BLOCK 必须重建 Reviewer 指定范围；LOCAL_REWRITE 只修改最小必要范围；DELETE 直接删除无效内容；POLISH 只处理语言层。blocking 必须修复，禁止新增规则绕过问题，禁止越过 Reviewer 的修改边界，也不能把冲突改成所有人互相理解。保留事实锚点和未被指出问题的有效部分。只输出完整章节。""",
                 "Reviewer 意见：\n" + "\n\n".join(first_reviews),
                 review_context,
             ]
@@ -371,6 +371,7 @@ async def _run_frozen_chapter(
         draft=revision.content,
         context=review_context,
         round_no=2,
+        prior_outputs=first_reviews,
     )
     final_content = revision.content
     final_blocking = second_blocking
@@ -383,7 +384,7 @@ async def _run_frozen_chapter(
             content=revision.content,
             instruction="\n\n".join(
                 [
-                    """第二轮仍有 blocking。只修 blocking 及其直接后果；不得破坏已经通过的世界规则、人物冲突和章节功能。只输出完整章节。""",
+                    """第二轮复审仍有 blocking。只处理复审结果为 FAIL 的原问题，沿用原问题的处置级别和修改边界；不得改动已经 PASS 的范围，不得破坏已经通过的世界规则、人物冲突和章节功能。只输出完整章节。""",
                     "第二轮 Reviewer 意见：\n" + "\n\n".join(second_reviews),
                     review_context,
                 ]
@@ -400,6 +401,7 @@ async def _run_frozen_chapter(
             draft=final_content,
             context=review_context,
             round_no=3,
+            prior_outputs=second_reviews,
         )
 
     final_repetition = repetition_report(final_content, prior_manuscript)
