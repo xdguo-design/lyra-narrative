@@ -138,8 +138,9 @@ GP001—GP008 已冻结。
 - 不继续修补旧第一至四章；
 - 从 Chapter 1 全新生成；
 - 保留冻结故事事实，不复制旧措辞；
-- 每章都经过 Reader A/B/C/D + Editor + Failure Corpus + Final Human Read；
+- 每章都经过 Reader A/B/C + Reader D Natural First-Read + Editor/Revision + Reader Recheck + Failure Corpus；
 - blocking 未清零不得进入下一章。
+- 人工发现的新漏检先进入 Reader Skill 自升级流程，不新增永久人工工序。
 
 ## 平台上线门槛
 与小说训练门槛分开。
