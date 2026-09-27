@@ -207,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v6_adds_writer_craft_and_micro_naturalness():
-    assert BUILTIN_WRITING_SKILL_VERSION == 6
+def test_writing_skill_v7_adds_dialogue_authenticity_and_micro_naturalness():
+    assert BUILTIN_WRITING_SKILL_VERSION == 7
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -231,6 +231,11 @@ def test_writing_skill_v6_adds_writer_craft_and_micro_naturalness():
         "微连续性检查",
         "作者造句感检查",
         "最终逐句问",
+        "对话真实性硬门槛（Dialogue Authenticity Gate）",
+        "去名字测试",
+        "换人测试",
+        "DIALOGUE_VOICE_GAP",
+        "RELATIONSHIP_VOICE_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -305,8 +310,8 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_reader_review_skill_v1_learns_from_human_misses():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 1
+def test_reader_review_skill_v2_learns_naturalness_and_dialogue_authenticity():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 2
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -322,6 +327,11 @@ def test_reader_review_skill_v1_learns_from_human_misses():
         "Skill 自升级协议",
         "先记录原句和漏检原因，不先改正文",
         "人工阅读是训练信号，不是永久流水线工位",
+        "B01 去名字测试",
+        "B02 换人测试",
+        "DIALOGUE_AUTHENTICITY_V1",
+        "DIALOGUE_FUNCTIONAL_GAP",
+        "DIALOGUE_STATELESS_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -332,9 +342,13 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
     required = [
         'role="blind-natural-reader"',
         'stage=f"reader-natural-r{round_no}"',
+        'role="blind-dialogue-reader"',
+        'stage=f"reader-dialogue-r{round_no}"',
         "NATURAL_FIRST_READ_V2",
+        "DIALOGUE_AUTHENTICITY_V1",
         "natural_reader_failed",
-        "has_blocking = natural_reader_failed",
+        "dialogue_reader_failed",
+        "has_blocking = natural_reader_failed or dialogue_reader_failed",
         "reader-naturalness",
         '"reviewed" if final_blocking else "awaiting_approval"',
     ]
