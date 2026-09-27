@@ -97,14 +97,20 @@ def _persist_memory(
         )
 
 
-def _review_contract() -> str:
-    return """NARRATIVEOS_REVIEW_V1
-请严格使用以下格式输出；每个问题一块，多个问题用单独一行 --- 分隔：
-严重性: blocking|suggestion|info
-片段: 必须逐字复制正文中的连续原文；没有具体片段写 NONE
-问题: 一句话说明问题
-建议: 一句话给出可执行修改
-如果没有问题，只输出 NO_ISSUE。"""
+def _review_contract(round_no: int) -> str:
+    if round_no <= 1:
+        return """NARRATIVEOS_REVIEW_V2
+审核轮次：INITIAL。请严格按“小说精修流程 v4”的 Reviewer 统一审核输出格式执行。
+每个问题一块，多个问题用单独一行 --- 分隔；没有问题只输出 NO_ISSUE。
+必须包含：问题标识、严重性、处置级别、问题类型、问题定位、逐字片段、问题说明、判级理由、修改边界、必须保留事实、禁止新增内容、执行目标、建议动作、复审要求、复审结果=PENDING。
+处置级别只能是 REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS。
+REWRITE_BLOCK 必须解释为什么 LOCAL_REWRITE 不足；影响事实、因果或人物意图的问题不得降级为 POLISH。"""
+    return """NARRATIVEOS_REVIEW_V2
+审核轮次：RECHECK。你正在复审上一轮由同一 Reviewer 提出的问题。
+必须沿用原问题标识，逐条检查原问题是否消失，不得用新问题替代原 blocking。
+输出必须包含：原问题标识、原处置级别、问题类型、原问题定位、本次复审范围、复审检查、复审发现、复审结果 PASS/FAIL、后续处置、再次打回原因。
+复审检查至少覆盖：事实锚点、因果链、人物动机、修改边界、禁止新增内容、原问题是否消失、是否产生新的 blocking。
+若原问题全部解决且无新 blocking，可以输出 NO_ISSUE。"""
 
 
 async def _run_review_round(
@@ -113,6 +119,7 @@ async def _run_review_round(
     draft: str,
     context: str,
     round_no: int,
+    prior_outputs: list[str] | None = None,
 ) -> tuple[list[str], bool]:
     specs = [
         (
@@ -138,13 +145,19 @@ async def _run_review_round(
         (
             "style-reviewer",
             "style",
-            "检查叙述视角、节奏、句式、对白、氛围、重复表达和说明性语言。重点抓四类问题：连续碎短句/单句段落造成电报体；只用“不像A、也不像B”排除却不给可感知正向形象；陌生行业术语首次出现没有让普通读者理解；对白只是资料问答、没有人物关系和情绪目的。出现成片问题时必须明确指出并要求重写对应段落。只给可执行修改意见。",
+            "检查叙述视角、节奏、句式、对白、氛围、重复表达和说明性语言。重点抓连续碎短句、空洞排除式描写、陌生术语未落地、功能性对白和模型腔。成片问题按 Skill 判级，不要把结构问题当成 POLISH。",
         ),
     ]
 
     outputs: list[str] = []
     has_blocking = False
-    for role, category, instruction in specs:
+    for index, (role, category, instruction) in enumerate(specs):
+        prior = ""
+        if prior_outputs and index < len(prior_outputs):
+            prior = (
+                "上一轮同一 Reviewer 的审核结果如下。RECHECK 时必须沿用其中的问题标识逐条复审：\n"
+                + prior_outputs[index]
+            )
         result = await _run_step(
             task_id=task_id,
             role=role,
@@ -153,7 +166,12 @@ async def _run_review_round(
             content=draft,
             instruction="\n\n".join(
                 item
-                for item in [instruction, _review_contract(), context]
+                for item in [
+                    instruction,
+                    _review_contract(round_no),
+                    prior,
+                    context,
+                ]
                 if item
             ),
         )
@@ -408,7 +426,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             content=draft,
             instruction="\n\n".join(
                 [
-                    """根据五个独立 Reviewer 的意见重写。blocking 必须修复；suggestion 只有在不破坏架构与世界规则时采用。保留未被指出问题的有效内容。只输出重写后的完整正文。""",
+                    """根据五个独立 Reviewer 的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
                     "Reviewer 意见：\n" + "\n\n".join(review_outputs),
                     context,
                 ]
@@ -426,6 +444,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             draft=revision.content,
             context=context,
             round_no=2,
+            prior_outputs=review_outputs,
         )
 
         final_content = revision.content
@@ -438,7 +457,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 content=revision.content,
                 instruction="\n\n".join(
                     [
-                        """第二轮审核仍有 blocking。只修复 blocking 与其直接引发的问题；不得重构已经通过的部分。只输出完整正文。""",
+                        """第二轮复审仍有 blocking。仅处理复审结果为 FAIL 的原问题，并按原问题标识与处置级别执行；REWRITE_BLOCK 才允许重建对应范围，LOCAL_REWRITE 必须保持最小修改。不得重构已经 PASS 的部分，不得越过 Reviewer 给出的修改边界。只输出完整正文。""",
                         "第二轮 Reviewer 意见：\n" + "\n\n".join(second_outputs),
                         context,
                     ]
@@ -455,6 +474,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 draft=final_content,
                 context=context,
                 round_no=3,
+                prior_outputs=second_outputs,
             )
         else:
             final_blocking = False
