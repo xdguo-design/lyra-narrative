@@ -177,3 +177,86 @@ def test_skill_evolution_protocol_is_formalized():
     ]
     for marker in required:
         assert marker in protocol
+
+
+def test_embodied_dialogue_regression_corpus():
+    corpus = Path("docs/embodied-dialogue-regression-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "ED001",
+        "ED006",
+        "EP001",
+        "EP005",
+        "EMBODIED_DIALOGUE_GAP",
+        "GENERIC_ACTION_GAP",
+        "不允许为了通过 Gate 在每句对白后机械添加动作",
+    ]:
+        assert marker in corpus
+
+
+def test_failure_corpus_freezes_embodied_and_human_interaction_gaps():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    required = [
+        "F018｜人物只有嘴，没有身体",
+        "F019｜人物过度理性，像在解释自己",
+        "F020｜人物没有自我形象与面子",
+        "F021｜熟人没有关系记忆",
+        "F022｜话轮过度整齐",
+        "F023｜情绪没有余波",
+        "F024｜人物感知同质化",
+        "EMBODIED_DIALOGUE_GAP",
+        "OVER_RATIONAL_DIALOGUE_GAP",
+        "SELF_PRESENTATION_GAP",
+        "RELATIONSHIP_MEMORY_GAP",
+        "TURN_TAKING_SYMMETRY_GAP",
+        "EMOTIONAL_RESIDUE_GAP",
+        "PERCEPTION_SIGNATURE_GAP",
+    ]
+    for marker in required:
+        assert marker in corpus
+
+
+def test_human_interaction_regression_corpus_has_fail_and_pass_boundaries():
+    corpus = Path("docs/human-interaction-regression-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "HI001",
+        "HI006",
+        "HP001",
+        "HP006",
+        "OVER_RATIONAL_DIALOGUE_GAP",
+        "RELATIONSHIP_MEMORY_GAP",
+        "TURN_TAKING_SYMMETRY_GAP",
+        "EMOTIONAL_RESIDUE_GAP",
+        "PERCEPTION_SIGNATURE_GAP",
+        "False-positive boundaries",
+    ]:
+        assert marker in corpus
+
+
+def test_core_character_cards_have_voice_body_self_image_memory_and_perception():
+    characters = (BASE / "characters.md").read_text(encoding="utf-8")
+    for name in ["陈安", "赵六", "周虎", "刘旺", "陈小满", "柳氏", "孙成", "刘三爷"]:
+        section = characters.split(f"## {name}", 1)[1]
+        if "\n## " in section:
+            section = section.split("\n## ", 1)[0]
+        for marker in [
+            "语言指纹：",
+            "非语言指纹：",
+            "自我形象：",
+            "关系记忆：",
+            "感知指纹：",
+        ]:
+            assert marker in section
+
+
+def test_skill_evolution_protocol_tracks_embodied_and_deeper_interaction_cases():
+    protocol = Path("docs/skill-evolution-protocol.md").read_text(encoding="utf-8")
+    for marker in [
+        "Case SE-003｜人物只有嘴，没有身体",
+        "Case SE-004｜更深层的机器人式互动",
+        "自我形象",
+        "关系记忆",
+        "话轮不对称",
+        "情绪残留",
+        "感知差异",
+    ]:
+        assert marker in protocol
