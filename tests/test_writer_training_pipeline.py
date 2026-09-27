@@ -210,3 +210,23 @@ def test_training_reader_protocol_requires_unknown_labels():
         "只有 INTENTIONAL_UNKNOWN 可直接 PASS",
     ]:
         assert marker in source
+
+
+def test_writer_failure_corpus_is_frozen_for_regression():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    required = [
+        "F001｜未知项本身不明确",
+        "县衙那边也没完",
+        "F005｜碎短句机械节奏",
+        "F007｜剧情需要时人物突然合作",
+        "F008｜主角永远正确",
+        "F009｜便利线索准时出现",
+        "F010｜AI 式段尾/章尾总结",
+        "F011｜连续章节同一发动机",
+        "F012｜编辑把人物修成同一种声音",
+        "F013｜为了留白删掉必要语义支点",
+        "F014｜非调查场景被案件吞掉",
+        "F015｜金手指替代真实成长",
+    ]
+    for marker in required:
+        assert marker in corpus
