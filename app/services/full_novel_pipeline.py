@@ -121,6 +121,26 @@ async def _run_review_round(
     round_no: int,
     prior_outputs: list[str] | None = None,
 ) -> tuple[list[str], bool]:
+    reader_trace_result = await _run_step(
+        task_id=task_id,
+        role="blind-reader",
+        stage=f"reader-trace-r{round_no}",
+        mode="check",
+        content=draft,
+        instruction="""你是第一次阅读这一章的普通小说读者。你看不到人物卡、世界设定、场景设计、作者意图、Reviewer意见或后续剧情。
+不要修改正文，也不要替作者补全。
+严格输出：
+READER_TRACE_V1
+【我理解发生了什么】
+【我理解主要人物各自想要什么】
+【我理解关系发生了什么变化】
+【我记住的最多3个细节】
+【我不确定/需要回读的地方】
+【我认为正文故意留下的问题】
+【我现在期待下一步发生什么】
+任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
+    )
+
     specs = [
         (
             "continuity-reviewer",
@@ -156,6 +176,13 @@ async def _run_review_round(
             "aesthetic-reviewer",
             "aesthetic",
             "做审美复审，不按“华丽程度”评分。检查：细节是否有主次、描写是否经过当前人物视角、关键处是否舍得慢写而流程是否敢压缩、人物声音是否被编辑同质化、情绪是否说得过满、是否存在正确但无味的标准句群、比喻/金句是否抢戏、连续章节是否复用同一种动作形态/笑点/金手指展示/章尾钩子。审美问题必须给可定位证据；单句可 POLISH/DELETE，成片模板化或视角平均化可 REWRITE_BLOCK。不得把个人偏好冒充 blocking。",
+        ),
+        (
+            "reader-gap-reviewer",
+            "reader",
+            "这是独立盲读者的首次阅读报告：\n"
+            + reader_trace_result.content
+            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
         ),
     ]
 
@@ -495,7 +522,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             content=draft,
             instruction="\n\n".join(
                 [
-                    """根据七个独立 Reviewer 的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
+                    """根据八个独立 Reviewer 的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
                     "Reviewer 意见：\n" + "\n\n".join(review_outputs),
                     context,
                 ]
