@@ -364,6 +364,39 @@ CALIBRATING
 状态：
 CALIBRATING
 
+## Case SE-004｜更深层的机器人式互动
+来源：人工继续验收。
+
+问题：
+即使人物已经有不同台词、动作和表情，仍可能存在更深层机器人味：
+- 过度理性，人物准确解释自己；
+- 不维护面子和自我形象；
+- 熟人没有关系记忆；
+- 对话话轮过度整齐；
+- 情绪没有余波；
+- 不同人物感知同质。
+
+泛化：
+“人物互动缺少自我包装、共同历史、话轮不对称、情绪残留和感知差异”。
+
+升级：
+- Writer Human Interaction Complexity Gate；
+- Reader B B19—B26；
+- F019—F024；
+- Human Interaction Regression Corpus；
+- Character Designer 增加自我形象 / 关系记忆 / 感知指纹；
+- Scene Director 增加关系记忆触发、面子、话轮与余波、感知差异。
+
+误报边界：
+- 不要求人人含蓄；
+- 不要求每场翻旧账；
+- 不要求每句话都有情绪；
+- 紧急行动可以高度对称；
+- 关键危险可以被所有人同时注意。
+
+状态：
+CALIBRATING
+
 ---
 
 # 14. Definition of Done
