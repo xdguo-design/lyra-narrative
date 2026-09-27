@@ -251,9 +251,30 @@ def test_full_pipeline_has_scene_director_aesthetic_editor_and_reviewer():
         'stage="aesthetic-edit"',
         '"aesthetic-reviewer"',
         '"aesthetic"',
-        "根据七个独立 Reviewer",
+        "根据八个独立 Reviewer",
         "主细节要突出",
         "人物声音被编辑同质化",
     ]
     for marker in required:
         assert marker in source
+
+
+def test_full_pipeline_has_blind_reader_and_reader_gap_reviewer():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        'role="blind-reader"',
+        'stage=f"reader-trace-r{round_no}"',
+        '"reader-gap-reviewer"',
+        '"reader"',
+        "READER_TRACE_V1",
+        "semantic-gap",
+        "suspense-gap",
+        "不能用‘读者多读两遍就懂’作为通过理由",
+    ]
+    for marker in required:
+        assert marker in source
+
+    start = source.index('role="blind-reader"')
+    specs = source.index("specs = [", start)
+    blind_block = source[start:specs]
+    assert "context," not in blind_block
