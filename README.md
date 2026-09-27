@@ -33,6 +33,7 @@ demo fallback until a provider is configured. See [provider configuration](docs/
 - Writer → multi-Reviewer → Revision → human approval workflow
 - Versioned project Memory with confirmation, conflict detection, and rollback
 - Versioned Skills with enable/disable and rollback
+- Skill Evolution Protocol: human-discovered misses are generalized into versioned rules, regression corpora, and automated gates instead of permanent manual review steps
 - Content-repository preflight, world/style import, accepted chapter/review/version archive, and retry
 - Character cards and project-specific world notes
 - AI continue, polish, and consistency-check actions
@@ -88,3 +89,32 @@ Skill Update
 Slow World (`slow-world-novel`)
 
 A post-apocalyptic time ability novel used to validate the complete AI writing workflow.
+
+
+## Quality learning loop
+
+NarrativeOS treats human review findings as training signals rather than permanent workflow stages.
+
+Formal protocol: [Skill Evolution Protocol](docs/skill-evolution-protocol.md)
+
+```
+Human / external review finds a miss
+    ↓
+Capture original evidence
+    ↓
+Diagnose why existing gates passed it
+    ↓
+Generalize rule + define false-positive boundary
+    ↓
+Add FAIL and PASS regression samples
+    ↓
+Version the owning Skill
+    ↓
+Replay the original failure
+    ↓
+Only then repair the manuscript
+    ↓
+Recheck and promote the rule
+```
+
+Stable learned checks are folded back into Writer / Reader / Editor / Reviewer gates so the extra human checkpoint can be removed.
