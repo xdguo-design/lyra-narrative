@@ -205,8 +205,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v4_adds_writer_craft():
-    assert BUILTIN_WRITING_SKILL_VERSION == 4
+def test_writing_skill_v5_adds_writer_craft_and_human_first_read():
+    assert BUILTIN_WRITING_SKILL_VERSION == 5
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -219,6 +219,11 @@ def test_writing_skill_v4_adds_writer_craft():
         "章节与长篇变化",
         "连续两章不得机械复用同一种章末钩子",
         "如果把人物名字替换掉",
+        "自然首读硬门槛（Human First-Read）",
+        "意思能懂但第一眼发怪",
+        "对比/转折两端是否同一语义层级",
+        "开篇前三段必须做类型第一印象检查",
+        "TONE_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -288,6 +293,24 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         "AMBIGUOUS_GAP",
         "严格按 Reader Gate v3 判定",
         "不能用‘读者多读两遍就懂’作为通过理由",
+    ]
+    for marker in required:
+        assert marker in source
+
+
+def test_full_pipeline_blocks_delivery_on_final_human_read():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        'role="final-human-reader"',
+        'stage="final-human-read"',
+        'stage="final-human-fix"',
+        'stage="final-human-recheck"',
+        "FINAL_HUMAN_READ_V1",
+        "NATURALNESS_GAP",
+        "TONE_GAP",
+        "AUTHOR_JOKE_GAP",
+        "先感觉到的不是头疼，是屁股",
+        '"reviewed" if (final_blocking or final_human_failed) else "awaiting_approval"',
     ]
     for marker in required:
         assert marker in source
