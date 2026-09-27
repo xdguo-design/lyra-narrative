@@ -373,6 +373,65 @@ WRITER_TRAINING_DIAGNOSIS_V1
         )
         rhythm_rewrite = rhythm_attempt
 
+    reader_trace = await _training_step(
+        task_id=task_id,
+        role="blind-reader",
+        stage="training-reader-trace",
+        mode="check",
+        content=rhythm_rewrite.content,
+        instruction="""你是第一次读到这段文字的普通小说读者。你看不到人物卡、场景卡、作者意图、教练反馈和后续剧情，也不负责修改文本。
+只根据眼前正文，严格输出：
+READER_TRACE_V1
+【我理解发生了什么】
+【我理解人物各自想要什么】
+【我理解关系发生了什么变化】
+【我记住的最多3个细节】
+【我不确定/需要回读的地方】
+【我认为正文故意留下的问题】
+【我现在期待下一步发生什么】
+如果某句话只有靠猜作者意图才能懂，必须放进“不确定/需要回读”，不要替作者补全。不要提供改写建议。""",
+    )
+
+    reader_gap = await _training_step(
+        task_id=task_id,
+        role="reader-gap-coach",
+        stage="training-reader-gap",
+        mode="check",
+        content=rhythm_rewrite.content,
+        instruction="\n\n".join(
+            [
+                training_rules,
+                "作者侧 Scene Direction：\n" + scene_rewrite.content,
+                "作者侧人物训练：\n" + behavior_attempt.content,
+                "盲读者报告：\n" + reader_trace.content,
+                """对照作者预期与读者实际理解，只判断 Reader Gap，不做一般润色。
+重点分类 semantic-gap / causal-gap / motivation-gap / relationship-gap / salience-gap / suspense-gap / emotion-gap。
+有意悬念可以保留，但读者必须清楚自己“不知道什么”；若读者连句子在说什么、人物为什么这样做、关系为何变化都需要作者材料才能理解，则必须打回。
+若完全没有需要改正文的 Reader Gap，只输出 NO_READER_GAP。
+若有问题，最多输出3项，每项必须含：类型、逐字片段、读者实际理解、作者预期、为什么属于信息缺失而非有效留白、重写边界。""",
+            ]
+        ),
+    )
+
+    if reader_gap.content.strip() == "NO_READER_GAP":
+        reader_rewrite = rhythm_rewrite
+    else:
+        reader_rewrite = await _training_step(
+            task_id=task_id,
+            role="writer-trainee",
+            stage="training-reader-rewrite",
+            mode="polish",
+            content=rhythm_rewrite.content,
+            instruction="\n\n".join(
+                [
+                    reader_gap.content,
+                    """只修 Reader Gap。不得改变事实、人物动机、信息顺序和节奏训练已经成立的部分。
+目标不是多解释，而是补足一次阅读必需的语义支点、对象、因果或关系动作。有效悬念继续保留。
+只输出完整训练片段。""",
+                ]
+            ),
+        )
+
     integrated_scene = await _training_step(
         task_id=task_id,
         role="writer-trainee",
@@ -387,11 +446,73 @@ WRITER_TRAINING_DIAGNOSIS_V1
                 scene_rewrite.content,
                 behavior_feedback.content,
                 rhythm_feedback.content,
-                """执行阶段 E 综合训练。基于同一作品事实，重新写一个 900—1600 字完整场景。
+                reader_gap.content,
+                """执行阶段 F 综合训练。基于同一作品事实，重新写一个 900—1600 字完整场景。
 必须同时应用：场景取舍、POV过滤、人物行为阈值、潜台词、句群节奏。
 不得复制前面训练片段句子，不得新增关键线索，不得用总结句证明自己“学会了”。只输出正文。""",
             ]
         ),
+    )
+
+    integrated_reader_trace = await _training_step(
+        task_id=task_id,
+        role="blind-reader",
+        stage="training-integrated-reader-trace",
+        mode="check",
+        content=integrated_scene.content,
+        instruction="""你是第一次读到这段完整场景的普通小说读者。你不知道作者计划和训练目标。
+严格输出 READER_TRACE_V1：
+【我理解发生了什么】
+【我理解人物各自想要什么】
+【我理解关系发生了什么变化】
+【我记住的最多3个细节】
+【我不确定/需要回读的地方】
+【我认为正文故意留下的问题】
+【我现在期待下一步发生什么】
+不要给改写建议，不要替作者脑补。""",
+    )
+
+    integrated_reader_gap = await _training_step(
+        task_id=task_id,
+        role="reader-gap-coach",
+        stage="training-integrated-reader-gap",
+        mode="check",
+        content=integrated_scene.content,
+        instruction="\n\n".join(
+            [
+                training_rules,
+                "Scene Direction：\n" + scene_rewrite.content,
+                "Blind Reader：\n" + integrated_reader_trace.content,
+                """只判断作者预期与盲读结果之间是否存在必须修改的 Reader Gap。
+若没有，只输出 NO_READER_GAP；若有，最多3项，按 semantic / causal / motivation / relationship / salience / suspense / emotion 分类，并给逐字片段和修改边界。""",
+            ]
+        ),
+    )
+
+    if integrated_reader_gap.content.strip() == "NO_READER_GAP":
+        integrated_final = integrated_scene
+    else:
+        integrated_final = await _training_step(
+            task_id=task_id,
+            role="writer-trainee",
+            stage="training-integrated-reader-rewrite",
+            mode="polish",
+            content=integrated_scene.content,
+            instruction="\n\n".join(
+                [
+                    integrated_reader_gap.content,
+                    """只修 Reader Gap，不做额外润色，不增加剧情、线索或解释性总结。保留已经成立的人物行为、场景结构和节奏。只输出完整正文。""",
+                ]
+            ),
+        )
+
+    integrated_reader_recheck = await _training_step(
+        task_id=task_id,
+        role="blind-reader",
+        stage="training-integrated-reader-recheck",
+        mode="check",
+        content=integrated_final.content,
+        instruction="""再次作为不知道任何作者意图的首次读者阅读。输出 READER_TRACE_V1，并明确列出仍需要回读或无法确定语义的地方。不要给修改建议。""",
     )
 
     if transfer_brief.strip():
@@ -407,7 +528,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
                 [
                     context,
                     training_rules,
-                    """生成阶段 F 迁移测试题，不写答案。
+                    """生成阶段 G 迁移测试题，不写答案。
 要求：仍在同一作品世界，优先使用已存在人物；改变地点、即时目标或关系压力；不得复用当前训练文本的关键动作、证据、台词和章尾结构。
 题目必须能同时测试：场景取舍、人物行为、语言节奏。
 控制在 250 字以内。""",
@@ -432,6 +553,24 @@ WRITER_TRAINING_DIAGNOSIS_V1
         ),
     )
 
+    transfer_reader_trace = await _training_step(
+        task_id=task_id,
+        role="blind-reader",
+        stage="training-transfer-reader-trace",
+        mode="check",
+        content=transfer_scene.content,
+        instruction="""你是第一次读到迁移测试场景的普通小说读者，不知道训练目标、人物卡或作者计划。
+输出 READER_TRACE_V1：
+【我理解发生了什么】
+【我理解人物各自想要什么】
+【我理解关系发生了什么变化】
+【我记住的最多3个细节】
+【我不确定/需要回读的地方】
+【我认为正文故意留下的问题】
+【我现在期待下一步发生什么】
+不要提出修改方案。""",
+    )
+
     transfer_review = await _training_step(
         task_id=task_id,
         role="training-examiner",
@@ -443,6 +582,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
                 context,
                 training_rules,
                 diagnosis.content,
+                "迁移测试盲读者报告：\n" + transfer_reader_trace.content,
                 """盲审迁移测试。分别判断：
 - 场景导演：NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
 - 人物行为：NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
@@ -464,6 +604,12 @@ WRITER_TRAINING_DIAGNOSIS_V1
                 scene_feedback.content,
                 behavior_feedback.content,
                 rhythm_feedback.content,
+                reader_trace.content,
+                reader_gap.content,
+                integrated_reader_trace.content,
+                integrated_reader_gap.content,
+                integrated_reader_recheck.content,
+                transfer_reader_trace.content,
                 transfer_review.content,
             ]
         ),
@@ -517,10 +663,22 @@ WRITER_CRAFT_PROFILE_V1
             "feedback": rhythm_feedback.content,
             "rewrite": rhythm_rewrite.content,
         },
-        "integrated_scene": integrated_scene.content,
+        "reader_gate": {
+            "trace": reader_trace.content,
+            "gap": reader_gap.content,
+            "rewrite": reader_rewrite.content,
+        },
+        "integrated_scene": {
+            "draft": integrated_scene.content,
+            "reader_trace": integrated_reader_trace.content,
+            "reader_gap": integrated_reader_gap.content,
+            "final": integrated_final.content,
+            "reader_recheck": integrated_reader_recheck.content,
+        },
         "transfer": {
             "brief": transfer_case,
             "scene": transfer_scene.content,
+            "reader_trace": transfer_reader_trace.content,
             "review": transfer_review.content,
         },
         "writer_craft_profile": profile.content,
