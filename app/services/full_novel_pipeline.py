@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from app.db import connect
+from app.services.default_skills import BUILTIN_READER_REVIEW_SKILL_CONTENT
 from app.services.workflow_service import (
     WorkflowStateError,
     _parse_review_output,
@@ -145,6 +146,48 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
 任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
     )
 
+    natural_reader_result = await _run_step(
+        task_id=task_id,
+        role="blind-natural-reader",
+        stage=f"reader-natural-r{round_no}",
+        mode="check",
+        content=draft,
+        instruction="\n\n".join(
+            [
+                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
+
+必须逐段、逐关键句首读，覆盖 D01—D15。不要只盯开篇和章尾。
+
+严格输出：
+NATURAL_FIRST_READ_V2
+VERDICT: PASS 或 VERDICT: FAIL
+
+若 FAIL，每个问题必须输出：
+【问题ID】D001 起递增
+【逐字原句】
+【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP 中选择
+【第一次为什么会停】
+【是否只是人物毛刺】YES / NO
+【最小修改边界】
+【是否阻断交付】YES
+
+若 PASS：
+【问题】NONE
+【为什么可以直接读过去】简述
+【是否阻断交付】NO
+
+规则：
+- “能理解”不是通过理由。
+- 只要有一个明确自然度问题，VERDICT 必须 FAIL。
+- CHARACTER_ROUGHNESS 只有能明确归属于人物说话方式时才可保留。
+- 不能把作者叙述的别扭句保护成“人物毛刺”。
+- 不得修改正文。""",
+            ]
+        ),
+    )
+    natural_reader_failed = "VERDICT: PASS" not in natural_reader_result.content.upper()
+
     specs = [
         (
             "continuity-reviewer",
@@ -191,7 +234,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
     ]
 
     outputs: list[str] = []
-    has_blocking = False
+    has_blocking = natural_reader_failed
     for index, (role, category, instruction) in enumerate(specs):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
@@ -253,6 +296,25 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
                             finding["end_offset"],
                         ),
                     )
+    outputs.append(f"[reader-naturalness] {natural_reader_result.content}")
+    if natural_reader_failed:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "blind-natural-reader",
+                    "reader-naturalness",
+                    "blocking",
+                    natural_reader_result.content,
+                    "按 Reader D 给出的最小修改边界修复；不得顺手改写已通过内容。",
+                    "open",
+                ),
+            )
     return outputs, has_blocking
 
 
@@ -579,74 +641,6 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
         else:
             final_blocking = False
 
-        final_human_failed = False
-        if not final_blocking:
-            final_human = await _run_step(
-                task_id=task_id,
-                role="final-human-reader",
-                stage="final-human-read",
-                mode="check",
-                content=final_content,
-                instruction="""你是最终交付前最后一名普通中文小说读者。你只看正文，不看作者意图、人物卡、Scene Card、Reviewer 结论，也不要替作者脑补。
-
-你的任务不是检查剧情是否完整，而是检查“正常人读起来怪不怪”。重点逐句检查：
-1. 意思虽然能猜懂，但中文母语直觉是否别扭；
-2. “不是A，是B / 先A后B / A而不是B”等结构两端是否处于同一语义层级；
-3. 是否需要自动补一个隐藏词才能让句子成立；
-4. 幽默是否来自人物/处境，还是作者跳出来抖机灵；
-5. 开篇前三段给出的类型第一印象是否与正文真正气质一致；
-6. 关键转折句、章尾句是否自然，而不是刻意做效果；
-7. 是否把作者自己的别扭句误当成“人物口语毛刺”。
-
-强制参考失败样本：
-“陈安醒过来的时候，先感觉到的不是头疼，是屁股。”
-这句话即使能脑补成“屁股疼”，仍应判 FAIL：头疼是症状，屁股是部位，语义层级不平；并且作为开篇把气质推向段子式穿越。
-
-严格输出：
-FINAL_HUMAN_READ_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【怪句】逐字引用；没有则写 NONE
-【类型】NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / NONE
-【为什么第一眼不自然】
-【最小修改边界】
-
-只要开篇、关键转折或章尾仍有一个明确 NATURALNESS_GAP / TONE_GAP，就必须 VERDICT: FAIL。""",
-            )
-            final_human_failed = "VERDICT: PASS" not in final_human.content.upper()
-
-            if final_human_failed:
-                human_revision = await _run_step(
-                    task_id=task_id,
-                    role="final-delivery-editor",
-                    stage="final-human-fix",
-                    mode="polish",
-                    content=final_content,
-                    instruction="\n\n".join(
-                        [
-                            final_human.content,
-                            """只修 Final Human Read 明确指出的自然度/气质问题。保持事实、事件顺序、人物动机、信息边界和已经通过的段落不变。对 NATURALNESS_GAP 修语义层级、搭配或缺失支点；对 TONE_GAP 去掉错误的段子感/作者表演感；对 AUTHOR_JOKE_GAP 把幽默还给人物与处境。不得顺手重写其他内容。只输出完整正文。""",
-                        ]
-                    ),
-                )
-                final_content = human_revision.content
-
-                human_recheck = await _run_step(
-                    task_id=task_id,
-                    role="final-human-reader",
-                    stage="final-human-recheck",
-                    mode="check",
-                    content=final_content,
-                    instruction="""再次只作为普通中文小说读者做最终首读。不得看作者意图，不得因为上一轮已经修改就放宽标准。检查 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP，尤其开篇前三段、关键转折、章尾。
-严格输出：
-FINAL_HUMAN_READ_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【怪句】
-【类型】
-【为什么第一眼不自然】
-【最小修改边界】""",
-                )
-                final_human_failed = "VERDICT: PASS" not in human_recheck.content.upper()
-
         with connect() as conn:
             conn.execute(
                 """
@@ -656,7 +650,7 @@ VERDICT: PASS 或 VERDICT: FAIL
                 """,
                 (
                     final_content,
-                    "reviewed" if (final_blocking or final_human_failed) else "awaiting_approval",
+                    "reviewed" if final_blocking else "awaiting_approval",
                     task_id,
                 ),
             )
