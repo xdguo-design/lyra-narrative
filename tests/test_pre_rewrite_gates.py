@@ -119,3 +119,61 @@ def test_rewrite_workflow_has_no_permanent_final_human_stage():
     assert "Final Human Read" not in freeze
     assert "Final Human Recheck" not in freeze
     assert "不新增永久人工工序" in status
+
+
+def test_dialogue_authenticity_failure_and_pass_corpus():
+    corpus = Path("docs/dialogue-authenticity-regression-corpus.md").read_text(encoding="utf-8")
+    fail_markers = [
+        "DA001",
+        "DA002",
+        "DA003",
+        "DA004",
+        "DA005",
+        "DIALOGUE_FUNCTIONAL_GAP",
+        "DIALOGUE_VOICE_GAP",
+        "RELATIONSHIP_VOICE_GAP",
+        "DIALOGUE_STATELESS_GAP",
+    ]
+    pass_markers = [
+        "DP001",
+        "DP002",
+        "DP003",
+        "DP004",
+        "DP005",
+        "不允许通过强行增加口头禅",
+    ]
+    for marker in fail_markers + pass_markers:
+        assert marker in corpus
+
+
+def test_failure_corpus_freezes_functional_dialogue_pattern():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "F017｜对白只有功能，没有人物",
+        "去掉人物名字，我还能分清谁是谁吗",
+        "把两个人台词互换",
+        "DIALOGUE_VOICE_GAP",
+        "DIALOGUE_FUNCTIONAL_GAP",
+    ]:
+        assert marker in corpus
+
+
+def test_skill_evolution_protocol_is_formalized():
+    protocol = Path("docs/skill-evolution-protocol.md").read_text(encoding="utf-8")
+    required = [
+        "SKILL_EVOLUTION_CASE_V1",
+        "先归因，不先改正文",
+        "泛化门槛",
+        "正例 / 反例双向回归",
+        "Skill 版本升级",
+        "CANDIDATE",
+        "CALIBRATING",
+        "STABLE",
+        "TRANSFERABLE",
+        "Remove Human Crutch",
+        "Case SE-001",
+        "Case SE-002",
+        "Definition of Done",
+    ]
+    for marker in required:
+        assert marker in protocol
