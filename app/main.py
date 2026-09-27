@@ -756,6 +756,24 @@ async def run_full_pipeline(task_id: int):
         raise HTTPException(502, str(exc)) from exc
 
 
+@app.post("/api/tasks/{task_id}/train-writer")
+async def train_writer(task_id: int, payload: WriterTrainingRequest):
+    if not get_workflow_task(task_id):
+        raise HTTPException(404, "task not found")
+    try:
+        return await run_writer_training(
+            task_id,
+            source=payload.source,
+            transfer_brief=payload.transfer_brief,
+        )
+    except WorkflowStateError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+
 @app.post("/api/projects/{project_id}/run-book-pipeline")
 async def run_project_book_pipeline(project_id: int, payload: BookPipelineRequest):
     with connect() as conn:
