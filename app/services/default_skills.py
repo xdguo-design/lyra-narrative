@@ -1109,7 +1109,7 @@ BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v1】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v2】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
