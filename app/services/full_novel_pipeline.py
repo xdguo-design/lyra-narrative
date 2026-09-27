@@ -146,6 +146,47 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
 任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
     )
 
+    dialogue_reader_result = await _run_step(
+        task_id=task_id,
+        role="blind-dialogue-reader",
+        stage=f"reader-dialogue-r{round_no}",
+        mode="check",
+        content=draft,
+        instruction="\n\n".join(
+            [
+                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                """你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。
+
+必须覆盖 B01—B12，重点不是对白长短，而是“这是不是两个具体的人在说话”。
+
+严格输出：
+DIALOGUE_AUTHENTICITY_V1
+VERDICT: PASS 或 VERDICT: FAIL
+【场景目标A】
+【场景目标B】
+【去名字测试】PASS / FAIL
+【换人测试】PASS / FAIL
+【声音指纹】
+【关系痕迹】
+【信息所有权】
+【非合作/回避方式】
+【对话后状态变化】
+【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / NONE
+【逐字问题片段】
+【最小修改边界】
+
+规则：
+- “对白很短”不是失败理由；“对白很长”也不是通过理由。
+- 若连续四轮以上问答主要只是问什么答什么、人物目标相同、换人后仍基本成立，VERDICT 必须 FAIL。
+- 若关键人物首次长对话后仍无法形成稳定声音指纹，VERDICT 必须 FAIL。
+- 熟人、上下级、债权人与债务人等关系必须改变说话方式。
+- 不得为了显得真实机械添加打断、反问、沉默；所有非合作行为都必须服务人物目标。
+- 不得修改正文。""",
+            ]
+        ),
+    )
+    dialogue_reader_failed = "VERDICT: PASS" not in dialogue_reader_result.content.upper()
+
     natural_reader_result = await _run_step(
         task_id=task_id,
         role="blind-natural-reader",
@@ -234,7 +275,7 @@ VERDICT: PASS 或 VERDICT: FAIL
     ]
 
     outputs: list[str] = []
-    has_blocking = natural_reader_failed
+    has_blocking = natural_reader_failed or dialogue_reader_failed
     for index, (role, category, instruction) in enumerate(specs):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
@@ -296,6 +337,26 @@ VERDICT: PASS 或 VERDICT: FAIL
                             finding["end_offset"],
                         ),
                     )
+    outputs.append(f"[reader-dialogue] {dialogue_reader_result.content}")
+    if dialogue_reader_failed:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "blind-dialogue-reader",
+                    "reader-dialogue",
+                    "blocking",
+                    dialogue_reader_result.content,
+                    "按 Reader B 给出的最小修改边界重写功能性对白；不得仅增加字数，必须增强人物目标、声音和关系痕迹。",
+                    "open",
+                ),
+            )
+
     outputs.append(f"[reader-naturalness] {natural_reader_result.content}")
     if natural_reader_failed:
         with connect() as conn:
