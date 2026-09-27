@@ -207,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v7_adds_dialogue_authenticity_and_micro_naturalness():
-    assert BUILTIN_WRITING_SKILL_VERSION == 7
+def test_writing_skill_v9_adds_human_interaction_complexity():
+    assert BUILTIN_WRITING_SKILL_VERSION == 9
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -236,6 +236,14 @@ def test_writing_skill_v7_adds_dialogue_authenticity_and_micro_naturalness():
         "换人测试",
         "DIALOGUE_VOICE_GAP",
         "RELATIONSHIP_VOICE_GAP",
+        "带身体的对白（Embodied Dialogue）",
+        "真人交互复杂度（Human Interaction Complexity）",
+        "非语言指纹",
+        "自我形象",
+        "关系记忆",
+        "话轮过度对称",
+        "情绪要有余波",
+        "PERCEPTION_SIGNATURE_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -310,8 +318,8 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_reader_review_skill_v2_learns_naturalness_and_dialogue_authenticity():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 2
+def test_reader_review_skill_v4_learns_naturalness_dialogue_and_human_interaction():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 4
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -332,6 +340,18 @@ def test_reader_review_skill_v2_learns_naturalness_and_dialogue_authenticity():
         "DIALOGUE_AUTHENTICITY_V1",
         "DIALOGUE_FUNCTIONAL_GAP",
         "DIALOGUE_STATELESS_GAP",
+        "B13 身体在场",
+        "B18 空间权力",
+        "B19 过度理性",
+        "B26 场景残余",
+        "EMBODIED_DIALOGUE_GAP",
+        "GENERIC_ACTION_GAP",
+        "OVER_RATIONAL_DIALOGUE_GAP",
+        "SELF_PRESENTATION_GAP",
+        "RELATIONSHIP_MEMORY_GAP",
+        "TURN_TAKING_SYMMETRY_GAP",
+        "EMOTIONAL_RESIDUE_GAP",
+        "PERCEPTION_SIGNATURE_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -346,6 +366,10 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         'stage=f"reader-dialogue-r{round_no}"',
         "NATURAL_FIRST_READ_V2",
         "DIALOGUE_AUTHENTICITY_V1",
+        "EMBODIED_DIALOGUE_GAP",
+        "OVER_RATIONAL_DIALOGUE_GAP",
+        "RELATIONSHIP_MEMORY_GAP",
+        "EMOTIONAL_RESIDUE_GAP",
         "natural_reader_failed",
         "dialogue_reader_failed",
         "has_blocking = natural_reader_failed or dialogue_reader_failed",
