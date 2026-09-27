@@ -23,10 +23,10 @@
 - F011 连续章节同发动机：N/A，第一章；后续滚动检查。
 - F014 非调查场景被案件吞掉：N/A，本章本就是调查发动机。
 - F015 金手指替代真实成长：PASS
-- F016 能懂但第一眼就是怪：FAIL
-  - 原句：“陈安醒过来的时候，先感觉到的不是头疼，是屁股。”
-  - NATURALNESS_GAP：头疼=症状，屁股=身体部位，对比层级不平。
-  - TONE_GAP：开篇段子感先于底层生存感。
+- F016 能懂但第一眼就是怪：PASS AFTER REWRITE
+  - 原失败句已删除。
+  - Final Human Read R1—R5 多轮打回后，R6 PASS。
+  - 开篇前三段 NATURALNESS_GAP = 0，TONE_GAP = 0。
 
 ## Additional
 - RC001 指代竞争：PASS
@@ -36,4 +36,4 @@
 - LONG002 重复章尾：N/A
 
 ## Result
-FAIL — F016 / FINAL_HUMAN_READ_REQUIRED
+PASS
