@@ -68,7 +68,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 3
+BUILTIN_REFINEMENT_SKILL_VERSION = 4
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽，再冲突与推进，再删废话、控对白、润色氛围，最后审核并打回不合格段落。"
 )
@@ -357,6 +357,139 @@ REWRITE_BLOCK 输出格式：
 4. 两种模板都必须保护 Story State 和已冻结设定，不能以“改善文风”为理由改事实。
 5. 修改完成后，Reviewer 必须再次审核修改结果；原 blocking 未消失则继续打回。
 6. 多个相邻 LOCAL_REWRITE 若实际指向同一个结构问题，应合并并升级为 REWRITE_BLOCK，禁止把结构性问题拆成很多小修补。
+
+阶段 9：Reviewer 统一审核输出格式（NARRATIVEOS_REVIEW_V2）
+
+目标：
+- 所有 Reviewer 使用同一结构输出，禁止散文式、泛化式“建议优化”。
+- 输出必须能直接被 Revision Agent 执行，并能在复审时判断原问题是否真正消失。
+- continuity / causality / character / plot / exposition / dialogue / style / atmosphere Reviewer 均使用本协议。
+- 一个问题对应一个完整问题块；多个问题之间使用单独一行 --- 分隔。
+- 没有任何问题时只输出 NO_ISSUE。
+
+一、首次审核输出模板
+
+NARRATIVEOS_REVIEW_V2
+【审核轮次】INITIAL
+【严重性】blocking / suggestion / info
+【处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere
+【问题定位】
+- 章节/场景：
+- 段落范围：
+- 片段：逐字复制正文中的连续原文；无法精确定位时写 NONE
+【问题说明】一句话说明哪里不成立，禁止只写“节奏不好”“人物不够立体”等空泛判断
+【判级理由】说明为什么当前处置级别足够；若为 REWRITE_BLOCK，必须说明为什么 LOCAL_REWRITE 不足
+【修改边界】
+- 最小修改范围：
+- 允许联动范围：
+- 不得触碰范围：
+【必须保留的事实】
+- 世界规则：
+- 时间/地点：
+- 人物已知与未知信息：
+- 人物伤势/称谓/关系状态：
+- 道具归属/数量/损坏/消耗：
+- 已发生且不可重置事件：
+- 必须保留的场景结果：
+【禁止新增内容】
+- 不得新增的人物：
+- 不得新增的世界规则/能力：
+- 不得新增的线索来源：
+- 不得新增的巧合：
+- 不得新增的关系/称谓跳变：
+- 不得恢复的已消耗资源：
+【执行目标】Revision Agent 完成本次修改后，正文必须达到什么可验证状态
+【建议动作】一句到三句可执行修改方向；不得直接偷换为新的故事设定
+【复审要求】明确复审时要验证的事实、因果、人物意图或语言指标
+【复审结果】PENDING
+
+字段纪律：
+1. 【片段】必须逐字复制原文，供系统定位；没有可定位原文时写 NONE。
+2. 【判级理由】必须解释“为什么是这个级别”，不能重复问题说明。
+3. 【修改边界】必须告诉 Revision Agent 哪里可以动、哪里不能动。
+4. 【必须保留的事实】只列与当前问题有关的锚点，不复制整份 Story State。
+5. 【禁止新增内容】必须针对当前风险填写；没有特定项可写“无额外禁止项，仍遵守 Story State”。
+6. 【执行目标】必须可验证，例如“删除后前后动作直接衔接且信息无缺口”，禁止写“提升可读性”。
+7. 首次审核的【复审结果】固定为 PENDING。
+8. PASS 不与问题块混用；若整篇无问题，直接输出 NO_ISSUE。
+
+二、复审输出模板
+
+修改完成后，Reviewer 必须针对原问题逐条复审，不重新发明一批无关问题替代原 blocking。
+
+NARRATIVEOS_REVIEW_V2
+【审核轮次】RECHECK
+【原问题标识】沿用首次审核的问题序号或唯一标识
+【原处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere
+【原问题定位】
+- 章节/场景：
+- 原片段：
+【本次复审范围】只检查原问题修改范围及必要前后文
+【复审检查】
+- 事实锚点是否保持：PASS / FAIL
+- 因果链是否成立：PASS / FAIL / N/A
+- 人物动机与意图是否成立：PASS / FAIL / N/A
+- 修改边界是否越界：PASS / FAIL
+- 禁止新增内容是否遵守：PASS / FAIL
+- 原问题是否消失：PASS / FAIL
+- 是否产生新的 blocking：YES / NO
+【复审发现】用具体事实说明；无新问题写 NONE
+【复审结果】PASS / FAIL
+【后续处置】
+- PASS：关闭原问题，不再重复修改
+- FAIL：保持原处置级别或升级；说明下一轮必须解决的 blocking
+【再次打回原因】复审结果为 FAIL 时必填；PASS 时写 NONE
+
+三、问题标识与排序
+1. 每个问题使用稳定标识：R001、R002、R003……；复审沿用同一标识，不重新编号。
+2. 同一原因为核心的相邻问题应合并，避免把一个结构问题拆成多个局部问题。
+3. 输出顺序固定为：
+   - blocking + REWRITE_BLOCK
+   - blocking + LOCAL_REWRITE/DELETE
+   - suggestion + LOCAL_REWRITE/DELETE
+   - suggestion + POLISH
+   - info
+4. Reviewer 不做“整体评分”代替问题定位；分数不能覆盖 blocking 判断。
+
+四、统一示例骨架
+
+NARRATIVEOS_REVIEW_V2
+【问题标识】R001
+【审核轮次】INITIAL
+【严重性】blocking
+【处置级别】REWRITE_BLOCK
+【问题类型】character
+【问题定位】
+- 章节/场景：第 X 章 / 某场景
+- 段落范围：第 A 段至第 B 段
+- 片段：<逐字原文>
+【问题说明】...
+【判级理由】...
+【修改边界】
+- 最小修改范围：...
+- 允许联动范围：...
+- 不得触碰范围：...
+【必须保留的事实】
+- ...
+【禁止新增内容】
+- ...
+【执行目标】...
+【建议动作】...
+【复审要求】...
+【复审结果】PENDING
+
+---
+
+五、Reviewer 禁止行为
+1. 禁止只输出“建议加强冲突、优化节奏、增强氛围”等无法直接执行的结论。
+2. 禁止未给原文定位就要求大段重写。
+3. 禁止判 REWRITE_BLOCK 却不给事实锚点和修改边界。
+4. 禁止把个人风格偏好冒充 continuity 或 causality blocking。
+5. 禁止复审时因为文字变得更顺就忽略原设定/因果问题。
+6. 禁止复审时擅自扩大范围；新发现的独立问题应新建问题标识，不能篡改原问题。
+7. 禁止在 PASS 后继续反复重写同一处，除非出现新的独立 blocking。
 
 输出原则：
 - 先解决事实和结构，再解决语言。
