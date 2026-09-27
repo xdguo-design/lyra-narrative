@@ -11,6 +11,10 @@ def test_reader_three_perspective_gate_is_frozen():
         "Reader A — 首读理解",
         "Reader B — 人物 / 关系",
         "Reader C — 阅读动力",
+        "Reader D — 自然首读 / 气质",
+        "NATURALNESS_GAP",
+        "TONE_GAP",
+        "AUTHOR_JOKE_GAP",
         "INTENTIONAL_UNKNOWN",
         "READER_GAP",
         "AMBIGUOUS_GAP",
@@ -66,3 +70,16 @@ def test_rewrite_freeze_pack_requires_all_fiction_gates():
         assert marker in freeze
     assert "小说改进 / 训练门槛" in status
     assert "**ALL PASS**" in status
+
+
+def test_failure_corpus_freezes_unnatural_but_understandable_case():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    required = [
+        "F016｜能懂但第一眼就是怪",
+        "先感觉到的不是头疼，是屁股",
+        "NATURALNESS_GAP",
+        "TONE_GAP",
+        "对比两端是在比同一种东西吗",
+    ]
+    for marker in required:
+        assert marker in corpus
