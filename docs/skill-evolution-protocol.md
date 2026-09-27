@@ -339,6 +339,31 @@ STABLE
 状态：
 CALIBRATING
 
+## Case SE-003｜人物只有嘴，没有身体
+来源：人工首读。
+
+问题：
+对白即使有不同人物声音，人物一开口后身体、表情、手上任务、伤势和空间位置仍可能消失；机械补“皱眉/看了看/沉默”也不能解决。
+
+泛化：
+“对话场景缺少带性格的非语言行为与并行任务，人物退化成聊天框”。
+
+升级：
+- Writer Embodied Dialogue Gate
+- Reader B B13—B18
+- EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP
+- Embodied Dialogue Regression Corpus
+- Character Designer 增加语言指纹 + 非语言指纹
+- Scene Director 增加对话身体线
+
+误报边界：
+- 不要求每句对白有动作；
+- 紧急行动、命令、快速确认可高比例纯对白；
+- 动作少的克制人物可以 PASS，只要动作与空间仍有选择性。
+
+状态：
+CALIBRATING
+
 ---
 
 # 14. Definition of Done
