@@ -26,6 +26,7 @@ from app.services.content_repository import (
 from app.services.full_novel_pipeline import run_full_novel_pipeline
 from app.services.workflow_service import WorkflowStateError
 from app.services.workflow_service import get_task as get_workflow_task
+from app.services.writer_training_pipeline import run_writer_training
 from app.services.workflow_service import run_task as execute_workflow_task
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -94,6 +95,11 @@ class BookPipelineRequest(BaseModel):
     goal: str = Field(min_length=1, max_length=2000)
     instruction: str = ""
     chapter_count: int = Field(default=8, ge=1, le=30)
+
+
+class WriterTrainingRequest(BaseModel):
+    source: str = ""
+    transfer_brief: str = ""
 
 
 class MemoryCreate(BaseModel):
