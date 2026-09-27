@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 5
+BUILTIN_WRITING_SKILL_VERSION = 6
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -122,7 +122,19 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 7. 对故意粗粝、口语化、人物化的表达，允许不规范，但必须能说明“这是人物声音”；不能把作者自己的别扭句误当人物毛刺保护。
 8. 任一开篇句、关键转折句、章尾句触发 NATURALNESS_GAP 或 TONE_GAP，至少 LOCAL_REWRITE；若开篇连续三句都在制造错误气质，REWRITE_BLOCK。
 
-十六、自检
+十六、微观自然度与连续性
+1. 搭配检查：身体部位、动作、感受、器物与修饰词必须是自然中文搭配。避免“腰胯往下”“压得完整的脚印”这类能猜但发硬的组合。
+2. 数量关系检查：单只/一双、一人/一群、一个部位/一件成对物必须匹配；“左脚穿着一双鞋”一类错误属于硬失败。
+3. 指代检查：“这/那/一边/它/那只”等必须只有一个自然指向；最近实体会抢指代时必须改写。
+4. 微连续性检查：小动作、手中物、食物、伤势、站位、刚才是否已做过某动作要连续。禁止凭作者记忆补出“第二颗豆子”之类正文没有建立的状态。
+5. 修饰词去重：“一点轻微”“略微有些”“完全彻底”等同义叠加默认压缩。
+6. 句法完整性检查：不能用断句掩盖搭配错误或逻辑关系。“他没有继续追。\n而是……”若必须依赖上一句才能成立，应合并。
+7. 作者造句感检查：如果一句话明显为了“有劲”“有金句感”“落一下”而把普通事实抽象化，如“放到一起，放不拢”，先问人物是否真的会这样感知；否则改成具体事实。
+8. 叙述口语与人物口语分开：人物可以省略、绕、说半句；第三人称旁白不能借“口语感”掩盖不自然搭配。
+9. 技术词与普通叙述检查：普通生活场景优先常用中文，“偏摆”等技术词若无人物职业理由，应换成可见动作。
+10. 最终逐句问：这句若不是我自己写的，我第一次看到会不会停一下？只要答案是“会”，就不能以“意思没错”放过。
+
+十七、自检
 交稿前逐段检查：
 - 是否连续出现过多短句或单句段落？
 - 是否有只写“不像什么”却没有写清“像什么”的描写？
@@ -1069,6 +1081,103 @@ Editor Craft Profile 分维度记录：
 """
 
 
+BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
+BUILTIN_READER_REVIEW_SKILL_VERSION = 1
+BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
+    "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
+)
+
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v1】
+
+定位：
+Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
+
+一、四类 Reader 视角
+A. 首读理解：发生了什么、因果能否一次读通、未知项是否可命名。
+B. 人物/关系：人物各自想要什么、谁阻碍谁、谁让步、关系发生了什么变化。
+C. 阅读动力：好奇来自未知还是没看懂、是否有具体下一步期待、类型承诺是否被别的线吞掉。
+D. 自然首读：意思即使能猜懂，正常中文读者第一眼是否会觉得怪、刻意、像作者表演或类型气质跑偏。
+
+二、Reader D 固定检查维度
+D01 语义平行：不是A而是B、先A后B、A比B等结构两端必须可比较。
+D02 隐藏补词：若读者必须自动补词才能让句子成立，默认 NATURALNESS_GAP。
+D03 中文搭配：身体位置、动作、感觉、器物与修饰词是否是自然搭配。
+D04 数量关系：只/双、个/群、单侧身体部位与成对物数量是否匹配。
+D05 指代唯一：这/那/一边/它/那只是否有唯一自然指向。
+D06 微连续性：手中物、动作次数、站位、伤势、小道具是否由正文连续建立。
+D07 修饰冗余：同义程度词是否重复，例如“一点轻微”。
+D08 断句完整：是否用句号、短句制造力度，却留下依赖前句才能成立的“而是/因为/所以”。
+D09 作者造句感：是否为了金句、落点、段子而把普通事实抽象化或刻意切碎。
+D10 默认节奏器：看了看、停了一下、没说话等若没有新增行为意义，标记。
+D11 技术/报告词：普通叙述里是否出现无人物依据的技术词、报告腔。
+D12 类型第一印象：开篇前三段让读者以为在读什么类型，是否与作品定位一致。
+D13 作者笑点：幽默来自人物与处境，还是旁白向读者眨眼。
+D14 人物毛刺鉴别：不标准表达若属于人物声音可标 CHARACTER_ROUGHNESS；作者叙述别扭不能用这个标签保护。
+D15 全文停顿测试：只要第一次读会因措辞本身停一下，而不是因剧情思考停一下，就必须记录。
+
+三、正式标签
+INTENTIONAL_UNKNOWN
+READER_GAP
+AMBIGUOUS_GAP
+NATURALNESS_GAP
+TONE_GAP
+AUTHOR_JOKE_GAP
+MICRO_CONTINUITY_GAP
+COLLOCATION_GAP
+QUANTITY_GAP
+REFERENCE_GAP
+AUTHOR_EFFECT_GAP
+CHARACTER_ROUGHNESS
+
+四、Reader D 输出
+NATURAL_FIRST_READ_V2
+VERDICT: PASS / FAIL
+【问题ID】
+【逐字原句】
+【标签】
+【第一次为什么会停】
+【是否只是人物毛刺】YES / NO
+【最小修改边界】
+【是否阻断交付】YES / NO
+
+任何明确的 NATURALNESS_GAP / TONE_GAP / QUANTITY_GAP / REFERENCE_GAP / MICRO_CONTINUITY_GAP 都阻断交付，不因“能理解”降级。
+
+五、固定失败样本
+1. “先感觉到的不是头疼，是屁股。”
+   - 语义不平行 + 隐藏补词 + 开篇气质偏移。
+2. “男人左脚穿着一双旧布鞋。”
+   - QUANTITY_GAP。
+3. “走起来有一点轻微的偏摆。”
+   - 修饰冗余 + 技术词。
+4. “赵六嘴里的第二颗豆子……”
+   - 若正文未建立第二颗，MICRO_CONTINUITY_GAP。
+5. “他没有继续追。\n而是站在……”
+   - 断句导致句法依赖。
+6. “把两件事放到一起。\n放不拢。”
+   - AUTHOR_EFFECT_GAP，普通事实被刻意造句。
+7. “闻言停了一下。”
+   - 若没有新增行为意义，为默认节奏器。
+8. “按理说三个字够用了。”
+   - 作者批注感，不是人物当场自然知觉。
+
+六、Skill 自升级协议
+当人工验收、作者、编辑或外部读者发现 Reader 漏检：
+1. 先记录原句和漏检原因，不先改正文。
+2. 判断能否泛化为一种失败类型；只能针对单句的特殊偏好不得升级为硬规则。
+3. 给新规则写：定义、反例、正例、误报边界。
+4. 加入 Failure Corpus，分配稳定编号。
+5. 加入 Reader Skill 检查维度或既有维度的细则，并升级版本。
+6. 加自动/静态回归样本，证明旧失败现在会 FAIL，正常表达不会误杀。
+7. 用升级后的 Reader 重新跑原正文。
+8. Reader 能稳定抓住后，再让 Writer/Editor 修改正文。
+9. 修改后 Reader Recheck PASS 才关闭问题。
+
+原则：
+人工阅读是训练信号，不是永久流水线工位。
+同类问题一旦被成功固化，后续应由 Reader 自动承担。
+"""
+
+
 BUILTIN_SKILLS = (
     {
         "name": BUILTIN_WRITING_SKILL_NAME,
@@ -1097,6 +1206,13 @@ BUILTIN_SKILLS = (
         "purpose": BUILTIN_EDITOR_TRAINING_SKILL_PURPOSE,
         "content": BUILTIN_EDITOR_TRAINING_SKILL_CONTENT,
         "note": "NarrativeOS built-in deliberate-practice editor training skill",
+    },
+    {
+        "name": BUILTIN_READER_REVIEW_SKILL_NAME,
+        "version": BUILTIN_READER_REVIEW_SKILL_VERSION,
+        "purpose": BUILTIN_READER_REVIEW_SKILL_PURPOSE,
+        "content": BUILTIN_READER_REVIEW_SKILL_CONTENT,
+        "note": "NarrativeOS built-in blind reader quality gate",
     },
 )
 
