@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 2
+BUILTIN_WRITING_SKILL_VERSION = 3
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "控制中文小说的句式节奏、感官描写、术语落地、对白情绪与叙事可读性。"
 )
@@ -68,7 +68,24 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 5. 技术场景也必须先是小说场景：先有人在做事、遇到阻力、看到后果，再解释必要原理。
 6. 对白朗读时应像人物会当场说出口的话。书面汇报腔、百科说明腔、完整得不自然的长句必须重写。
 
-九、自检
+九、人物立体化
+1. 重要人物第一次正式出场时，不允许只给姓名、身份和功能。应至少通过外貌、神态、动作习惯、衣着、声音、姿态中的两项，让读者形成可记忆形象。
+2. 外貌描写附着在动作和情绪上，不写静态档案。
+3. 神态必须服务性格和关系，避免只写“他笑了”“她皱眉”。
+4. 配角也要有至少一个可辨认特征。
+
+十、幽默感
+1. 大众网文允许轻微幽默，但幽默必须来自人物性格、身份落差、处境、误会、嘴硬、互损或生活细节。
+2. 禁止作者跳出来抖机灵，禁止为了搞笑让人物降智。
+3. 不要求每章固定笑点，宁可没有，也不要硬塞网络梗。
+
+十一、去 AI 收束句
+1. 段尾、场景尾、章尾禁止习惯性补一句总结意义的话。
+2. 前文动作已经说明意思后，不再补“总得……”“至少……”“这一次……”“他知道……”“才刚刚开始”等总结句。
+3. 如果最后一句只是点题、替读者下判断、重复情绪或预告故事继续，优先删除。
+4. 收束优先落在新动作、新发现、新麻烦、关系变化或具体画面上。
+
+十二、自检
 交稿前逐段检查：
 - 是否连续出现过多短句或单句段落？
 - 是否有只写“不像什么”却没有写清“像什么”的描写？
@@ -87,7 +104,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 5
+BUILTIN_REFINEMENT_SKILL_VERSION = 6
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性，最后审核并打回不合格段落。"
 )
