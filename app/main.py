@@ -11,7 +11,10 @@ from pydantic import BaseModel, Field
 
 from app.db import connect, init_db
 from app.services.ai_service import assist
-from app.services.default_skills import BUILTIN_WRITER_TRAINING_SKILL_NAME
+from app.services.default_skills import (
+    BUILTIN_EDITOR_TRAINING_SKILL_NAME,
+    BUILTIN_WRITER_TRAINING_SKILL_NAME,
+)
 from app.services.book_pipeline import run_book_pipeline
 from app.services.continuity_service import (
     latest_story_state,
@@ -657,10 +660,14 @@ def create_writing_task(project_id: int, payload: WritingTaskCreate):
                 FROM skills
                 WHERE enabled=1
                   AND (project_id IS NULL OR project_id=?)
-                  AND name<>?
+                  AND name NOT IN (?,?)
                 ORDER BY project_id IS NOT NULL DESC,id
                 """,
-                (project_id, BUILTIN_WRITER_TRAINING_SKILL_NAME),
+                (
+                    project_id,
+                    BUILTIN_WRITER_TRAINING_SKILL_NAME,
+                    BUILTIN_EDITOR_TRAINING_SKILL_NAME,
+                ),
             ).fetchall()
         else:
             requested_ids = list(dict.fromkeys(payload.skill_ids))
