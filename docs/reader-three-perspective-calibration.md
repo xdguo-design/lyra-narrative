@@ -101,3 +101,20 @@ REWRITE_BLOCK：
 - 人物目标/关系变化只存在于作者材料；
 - 阅读动力主要来自困惑；
 - 场景核心类型被另一条线完全吞掉。
+
+
+## Reader Skill 自升级
+
+正式 Reader 规则以“小说读者校验流程”Skill 为准。
+
+当人工验收发现 Reader 漏检：
+1. 不先把人工阅读变成永久工位；
+2. 先抽象失败类型；
+3. 写入 Reader Skill；
+4. 写入 `docs/reader-naturalness-regression-corpus.md`；
+5. 添加回归约束；
+6. 用升级后的 Reader 重新审原文；
+7. Reader 能抓住后才修改正文。
+
+目标：
+人工只负责发现“Reader 还不会什么”；一旦学会，同类问题以后由 Reader 自动处理。
