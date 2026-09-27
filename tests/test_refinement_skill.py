@@ -1,6 +1,8 @@
 from pathlib import Path
 
 from app.services.default_skills import (
+    BUILTIN_READER_REVIEW_SKILL_CONTENT,
+    BUILTIN_READER_REVIEW_SKILL_VERSION,
     BUILTIN_REFINEMENT_SKILL_CONTENT,
     BUILTIN_REFINEMENT_SKILL_VERSION,
     BUILTIN_WRITING_SKILL_CONTENT,
@@ -205,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v5_adds_writer_craft_and_human_first_read():
-    assert BUILTIN_WRITING_SKILL_VERSION == 5
+def test_writing_skill_v6_adds_writer_craft_and_micro_naturalness():
+    assert BUILTIN_WRITING_SKILL_VERSION == 6
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -224,6 +226,11 @@ def test_writing_skill_v5_adds_writer_craft_and_human_first_read():
         "对比/转折两端是否处于同一语义层级",
         "开篇前三段必须做类型第一印象检查",
         "TONE_GAP",
+        "微观自然度与连续性",
+        "数量关系检查",
+        "微连续性检查",
+        "作者造句感检查",
+        "最终逐句问",
     ]
     for marker in required:
         assert marker in content
@@ -298,19 +305,47 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_full_pipeline_blocks_delivery_on_final_human_read():
+def test_reader_review_skill_v1_learns_from_human_misses():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 1
+    content = BUILTIN_READER_REVIEW_SKILL_CONTENT
+    required = [
+        "Reader D 固定检查维度",
+        "D01 语义平行",
+        "D04 数量关系",
+        "D06 微连续性",
+        "D07 修饰冗余",
+        "D09 作者造句感",
+        "D10 默认节奏器",
+        "D15 全文停顿测试",
+        "男人左脚穿着一双旧布鞋",
+        "赵六嘴里的第二颗豆子",
+        "Skill 自升级协议",
+        "先记录原句和漏检原因，不先改正文",
+        "人工阅读是训练信号，不是永久流水线工位",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_full_pipeline_folds_human_read_into_blind_reader_d():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
     required = [
+        'role="blind-natural-reader"',
+        'stage=f"reader-natural-r{round_no}"',
+        "NATURAL_FIRST_READ_V2",
+        "natural_reader_failed",
+        "has_blocking = natural_reader_failed",
+        "reader-naturalness",
+        '"reviewed" if final_blocking else "awaiting_approval"',
+    ]
+    for marker in required:
+        assert marker in source
+
+    forbidden = [
         'role="final-human-reader"',
         'stage="final-human-read"',
         'stage="final-human-fix"',
         'stage="final-human-recheck"',
-        "FINAL_HUMAN_READ_V1",
-        "NATURALNESS_GAP",
-        "TONE_GAP",
-        "AUTHOR_JOKE_GAP",
-        "先感觉到的不是头疼，是屁股",
-        '"reviewed" if (final_blocking or final_human_failed) else "awaiting_approval"',
     ]
-    for marker in required:
-        assert marker in source
+    for marker in forbidden:
+        assert marker not in source
