@@ -673,12 +673,12 @@ D. 审美复审
 
 
 BUILTIN_WRITER_TRAINING_SKILL_NAME = "小说作家训练流程"
-BUILTIN_WRITER_TRAINING_SKILL_VERSION = 1
+BUILTIN_WRITER_TRAINING_SKILL_VERSION = 2
 BUILTIN_WRITER_TRAINING_SKILL_PURPOSE = (
-    "通过场景导演、人物行为、语言节奏和迁移测试的刻意练习，持续提升 Writer 的实际写作能力。"
+    "通过场景导演、人物行为、语言节奏、读者盲读与迁移测试的刻意练习，持续提升 Writer 的实际写作能力。"
 )
 
-BUILTIN_WRITER_TRAINING_SKILL_CONTENT = """【NarrativeOS Skill：小说作家训练流程 v1】
+BUILTIN_WRITER_TRAINING_SKILL_CONTENT = """【NarrativeOS Skill：小说作家训练流程 v2】
 
 目标：训练 Writer，不直接追求产出可发布章节。每次训练必须经历“基线诊断 → 单项练习 → 教练反馈 → 定向重写 → 迁移测试 → 能力档案更新”。只读规则不算训练，只修改原文不算掌握。
 
@@ -689,8 +689,9 @@ BUILTIN_WRITER_TRAINING_SKILL_CONTENT = """【NarrativeOS Skill：小说作家�
 4. 重写必须针对原问题；不能通过换场景、删难点规避训练。
 5. 最后必须做“新场景迁移测试”，同一段改对不等于真正掌握。
 6. 训练结论分为：NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE。
-7. 不用单一总分评价作家；分别记录场景、人物、语言三个维度。
+7. 不用单一总分评价作家；分别记录场景、人物、语言三个维度。Reader 不作为第四个“能力分”，而是三个维度共同必须通过的外部验证。
 8. 训练产生的是项目级 Writer Craft Profile，不得改写作品事实或人物设定。
+9. 作者、Coach 和 Editor 知道得越多，越容易脑补正文缺失信息；因此任何关键训练稿都必须经过一次不带作者上下文的 Reader Gate。
 
 二、阶段 A：基线诊断
 从最近正文中定位最多 3 个高杠杆问题，每个问题必须给原文证据。
@@ -753,8 +754,45 @@ BUILTIN_WRITER_TRAINING_SKILL_CONTENT = """【NarrativeOS Skill：小说作家�
 8. 是否保留人物口语毛刺，不被统一润色。
 训练允许同一事实写两个版本进行比较，但必须说明为什么最终选择其中一个，禁止为了炫技保留两个版本。
 
-六、阶段 E：综合场景训练
-Writer 根据经过修正的 Scene Direction Card + Behavior Matrix 写完整场景。
+六、阶段 E：读者盲读验证（Reader Gate）
+
+目标：验证“正文对读者实际成立”，而不是验证作者意图是否完整。
+
+A. Blind Reader 纪律
+1. Blind Reader 只能看到待测正文，不得看到 Scene Direction Card、Behavior Matrix、Coach 反馈、作者意图、设定解释或预期答案。
+2. Reader 不是编辑，不提供改写方案，不替作者补设定。
+3. Reader 只报告首次阅读体验，严格输出：
+   READER_TRACE_V1
+   【我理解发生了什么】
+   【我理解人物各自想要什么】
+   【我理解关系发生了什么变化】
+   【我记住的最多3个细节】
+   【我不确定/需要回读的地方】
+   【我认为正文故意留下的问题】
+   【我现在期待下一步发生什么】
+4. 若一句话只有知道作者计划的人才能自动补全，Reader 必须标记为“不确定/需要回读”。
+5. Reader 不因“后来能猜出来”而放过第一次阅读障碍。
+
+B. Reader Gap Coach
+Reader 完成后，Coach 才可以同时查看作者训练卡与 Reader Trace，对照“作者预期”与“读者实际理解”。
+差距分类：
+- semantic-gap：主语、指代、对象、时间、地点或字面含义不清；
+- causal-gap：动作与结果之间缺必要因果；
+- motivation-gap：人物为什么这样做只能靠人物卡解释；
+- relationship-gap：作者想表现的关系变化读者没有读到；
+- salience-gap：作者认为重要的东西读者没有记住，次要信息反而抢占注意力；
+- suspense-gap：作者想制造悬念，但读者得到的是困惑；
+- emotion-gap：作者预期的情绪与读者实际感受不一致。
+
+C. Reader Gate 判定
+- 有意不告诉读者答案，可以保留；但读者必须知道“自己在不知道什么”。
+- “含糊”不等于“留白”。缺少必要对象或语义支点，属于失败省略。
+- “读者可以回读后猜懂”不算通过；重要信息必须支持一次阅读理解。
+- Reader Gap 涉及场景目标、人物动机、关系变化或必要因果时，必须打回 Writer。
+- Reader Gate 未通过时，不得进入 STABLE / TRANSFERABLE。
+
+七、阶段 F：综合场景训练
+Writer 根据经过修正的 Scene Direction Card + Behavior Matrix + Reader Gate 反馈写完整场景。
 必须同时满足：
 - 场景有清晰焦点；
 - 细节有主次；
@@ -765,7 +803,7 @@ Writer 根据经过修正的 Scene Direction Card + Behavior Matrix 写完整场
 - 不新增作品事实。
 教练只针对前三个最高影响问题反馈，防止把训练重新变成全量审稿。
 
-七、阶段 F：迁移测试
+八、阶段 G：迁移测试
 由 Examiner 提供一个“结构相似但表面不同”的新场景：
 - 保持同一作品世界和人物卡；
 - 改变地点、即时目标或关系压力；
@@ -778,7 +816,7 @@ Writer 不得看到上一轮教练的具体改句，只能使用蒸馏后的能�
 - 节奏能随新场景变化。
 仅原题重写通过而迁移失败，最高只能判 EMERGING。
 
-八、Writer Craft Profile
+九、Writer Craft Profile
 训练结束后输出并保存：
 【稳定能力 STABLE】
 - 已连续在原题重写与迁移测试中成立的能力。
@@ -801,13 +839,15 @@ Writer 不得看到上一轮教练的具体改句，只能使用蒸馏后的能�
 【正式写作激活规则】
 - 最多 6 条，必须短、明确、可执行，供后续 Writer 在正式章节写作前读取。
 
-九、教练纪律
+十、教练纪律
 1. Coach 不追求展示自己的文笔，不替 Writer 写“范文”。
 2. Feedback 必须引用训练文本中的证据。
 3. 一次反馈最多 3 个重点，按对长篇质量的影响排序。
 4. 已经 STABLE 的能力不重复讲课，除非迁移测试再次失败。
 5. 审美偏好不能冒充硬错误；必须说明对人物、节奏、视角或阅读体验的实际影响。
-6. 若训练文本的事实前提与作品冻结状态冲突，先停止训练并修正事实，不拿错误设定练文笔。
+6. Coach 不得以“我知道作者是什么意思”为理由替 Reader 补全正文。
+7. 若 Reader Trace 与作者意图不一致，先判断是有效悬念还是信息缺失；不能自动认为 Reader 理解能力不足。
+8. 若训练文本的事实前提与作品冻结状态冲突，先停止训练并修正事实，不拿错误设定练文笔。
 """
 
 
