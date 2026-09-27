@@ -1,4 +1,6 @@
 request: zero-platform-platform-rewrite
-model: gpt-5.6-sol
 mode: full-book
 chapters: 8
+skill: 小说精修流程-v4
+review_contract: NARRATIVEOS_REVIEW_V2
+trigger_from_commit: bc08a1bb4edc18bad50360373ca4c8645b62769e
