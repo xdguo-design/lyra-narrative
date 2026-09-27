@@ -79,6 +79,7 @@ Sources:
 - Reader A：首读理解
 - Reader B：人物/关系
 - Reader C：阅读动力
+- Reader D：自然首读 / 气质
 - Gate 2：PASS / STABLE
 
 核心原则：
@@ -89,7 +90,7 @@ Source:
 - docs/writer-failure-corpus.md
 
 冻结：
-F001—F015
+F001—F016
 
 额外训练失败：
 - RC001：指代竞争造成 AMBIGUOUS_GAP
@@ -141,12 +142,13 @@ PASS / STABLE
 Chapter Promise Card
 → Scene Director
 → Writer
-→ Blind Reader A/B/C
+→ Blind Reader A/B/C/D
 → Character / Continuity / Plot / World Review
 → Editor
 → Blind Reader Recheck
 → Failure Corpus Regression
-→ Final Review
+→ Final Human Read
+→ Final Human Recheck（如需）
 → Story State 更新
 
 blocking 未清零，不进入下一章。
@@ -163,6 +165,8 @@ blocking 未清零，不进入下一章。
 - 不能把家庭写成温情插曲。
 - 不能让身份只存在于称呼。
 - 不能用“高级感”删除必要语义支点。
+- 不能以“能猜懂”为理由放过 NATURALNESS_GAP。
+- 开篇前三段不得用作者段子感误导作品类型。
 
 ## 13. Ready Condition
 
