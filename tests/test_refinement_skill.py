@@ -278,3 +278,16 @@ def test_full_pipeline_has_blind_reader_and_reader_gap_reviewer():
     specs = source.index("specs = [", start)
     blind_block = source[start:specs]
     assert "context," not in blind_block
+
+
+def test_formal_reader_gate_enforces_unknown_boundary_labels():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        "INTENTIONAL_UNKNOWN",
+        "READER_GAP",
+        "AMBIGUOUS_GAP",
+        "严格按 Reader Gate v3 判定",
+        "不能用‘读者多读两遍就懂’作为通过理由",
+    ]
+    for marker in required:
+        assert marker in source
