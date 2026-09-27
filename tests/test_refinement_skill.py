@@ -4,8 +4,8 @@ from app.services.default_skills import (
 )
 
 
-def test_refinement_skill_v4_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 4
+def test_refinement_skill_v5_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 5
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -97,11 +97,11 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "应合并并升级为 REWRITE_BLOCK" in content
 
 
-def test_refinement_skill_v4_has_unified_reviewer_output_contract():
+def test_refinement_skill_v5_has_unified_reviewer_output_contract():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
-        "阶段 9：Reviewer 统一审核输出格式（NARRATIVEOS_REVIEW_V2）",
+        "阶段 9：Reviewer 统一审核输出格式（NARRATIVEOS_REVIEW_V3）",
         "【审核轮次】INITIAL",
         "【处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS",
         "【问题定位】",
@@ -140,3 +140,31 @@ def test_reviewer_recheck_closes_or_returns_same_issue():
     assert "PASS：关闭原问题，不再重复修改" in content
     assert "FAIL：保持原处置级别或升级" in content
     assert "禁止在 PASS 后继续反复重写同一处" in content
+
+
+def test_refinement_skill_v5_has_reality_and_readability_gate():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+
+    required = [
+        "阶段 10：自然叙事硬门槛（Reality & Readability Gate）",
+        "现实锚点检查",
+        "先看见具体物",
+        "海堤上的门",
+        "朗读检查",
+        "人话对白检查",
+        "信息负载检查",
+        "普通读者第一次阅读即可知道主要人物在哪里、在做什么、面对什么具体东西",
+        "不需要替作者脑补关键物理结构",
+        "不需要回读才能理解主要句子",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_refinement_skill_v5_escalates_scene_level_naturalness_failures():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+
+    assert "场景中的关键地点、设施、器物或空间关系没有现实锚点" in content
+    assert "整体呈现技术报告、项目汇报、AI 摘要式语流" in content
+    assert "连续多句如此 → REWRITE_BLOCK" in content
+    assert "只缺一个孤立锚点 → LOCAL_REWRITE" in content
