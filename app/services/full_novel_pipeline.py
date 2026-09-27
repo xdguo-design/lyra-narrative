@@ -442,7 +442,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                     f"写作任务：{goal}",
                     extra,
                     context,
-                    """严格依据已确认的故事架构、世界规则、人物矛盾、章节大纲和本次冻结写作 Skill 生成当前目标章节的完整正文。不得擅自新增世界规则；设定信息优先通过行动、环境、冲突和后果呈现，不让人物充当说明书。不要默认使用碎短句；普通叙事让动作、感受与关系进入完整语流。陌生术语第一次出现必须让普通读者当场理解。任何地点、设施、器物第一次出现时，先让读者看懂它在哪里、是什么、做什么用，再使用专业名；禁止用“海堤上的门”这类缺少现实空间锚点的诗性概括要求读者自行脑补。对白必须带人物意图和关系温度，不能只承担问答式信息传递。写每场对白前必须先读取在场人物卡，明确每个人“想得到什么、怕暴露什么、愿意承认到什么程度、会如何拖延/反问/撒谎/试探”。人物回答必须由性格与利益共同决定，不能因为作者需要信息就突然老实。写前必须读取“场景导演卡”，把它当作取舍约束而不是待勾选清单：主细节要突出，次要流程敢于压缩，关键决定与关系变化敢于慢写；描写经过当前人物视角过滤，不平均用力。对白允许不合作和留白，人物不必把真实目的说出来。先完成准确、有性格的正文，再考虑漂亮；不得为了金句、比喻或所谓文学感抢走人物和事件。正文完成后按正常语速自读，凡需回读才能理解的句子先改顺。重要人物首次正式出场必须有可记忆的外貌、神态或动作特征；允许轻微幽默，但必须来自人物和处境。段尾、场景尾、章尾执行去 AI 收束检查：若只是总结、点题、重复情绪或用“总得、至少、这一次、他知道、才刚刚开始”等句式制造力度，删除或改成具体动作、发现、麻烦、关系变化或画面。只输出正文。""",
+                    """严格依据已确认的故事架构、世界规则、人物矛盾、章节大纲和本次冻结写作 Skill 生成当前目标章节的完整正文。不得擅自新增世界规则；设定信息优先通过行动、环境、冲突和后果呈现，不让人物充当说明书。不要默认使用碎短句；普通叙事让动作、感受与关系进入完整语流。陌生术语第一次出现必须让普通读者当场理解。任何地点、设施、器物第一次出现时，先让读者看懂它在哪里、是什么、做什么用，再使用专业名；禁止用“海堤上的门”这类缺少现实空间锚点的诗性概括要求读者自行脑补。对白必须带人物意图和关系温度，不能只承担问答式信息传递。写每场对白前必须先读取在场人物卡，明确每个人“想得到什么、怕暴露什么、愿意承认到什么程度、会如何拖延/反问/撒谎/试探”。人物回答必须由性格与利益共同决定，不能因为作者需要信息就突然老实。写前必须读取“场景导演卡”，把它当作取舍约束而不是待勾选清单：主细节要突出，次要流程敢于压缩，关键决定与关系变化敢于慢写；描写经过当前人物视角过滤，不平均用力。对白允许不合作和留白，人物不必把真实目的说出来。先完成准确、有性格的正文，再考虑漂亮；不得为了金句、比喻或所谓文学感抢走人物和事件。正文完成后按正常语速自读，凡需回读才能理解的句子先改顺。额外执行 Natural First-Read：逐句找“意思能懂但第一眼发怪”的表达；检查对比/转折两端是否同一语义层级、是否依赖读者自动补词、幽默是否来自人物而非作者抖机灵。开篇前三段必须做类型第一印象检查，若气质与作品定位不符先重写。重要人物首次正式出场必须有可记忆的外貌、神态或动作特征；允许轻微幽默，但必须来自人物和处境。段尾、场景尾、章尾执行去 AI 收束检查：若只是总结、点题、重复情绪或用“总得、至少、这一次、他知道、才刚刚开始”等句式制造力度，删除或改成具体动作、发现、麻烦、关系变化或画面。只输出正文。""",
                 ]
                 if item
             ),
@@ -579,6 +579,74 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
         else:
             final_blocking = False
 
+        final_human_failed = False
+        if not final_blocking:
+            final_human = await _run_step(
+                task_id=task_id,
+                role="final-human-reader",
+                stage="final-human-read",
+                mode="check",
+                content=final_content,
+                instruction="""你是最终交付前最后一名普通中文小说读者。你只看正文，不看作者意图、人物卡、Scene Card、Reviewer 结论，也不要替作者脑补。
+
+你的任务不是检查剧情是否完整，而是检查“正常人读起来怪不怪”。重点逐句检查：
+1. 意思虽然能猜懂，但中文母语直觉是否别扭；
+2. “不是A，是B / 先A后B / A而不是B”等结构两端是否处于同一语义层级；
+3. 是否需要自动补一个隐藏词才能让句子成立；
+4. 幽默是否来自人物/处境，还是作者跳出来抖机灵；
+5. 开篇前三段给出的类型第一印象是否与正文真正气质一致；
+6. 关键转折句、章尾句是否自然，而不是刻意做效果；
+7. 是否把作者自己的别扭句误当成“人物口语毛刺”。
+
+强制参考失败样本：
+“陈安醒过来的时候，先感觉到的不是头疼，是屁股。”
+这句话即使能脑补成“屁股疼”，仍应判 FAIL：头疼是症状，屁股是部位，语义层级不平；并且作为开篇把气质推向段子式穿越。
+
+严格输出：
+FINAL_HUMAN_READ_V1
+VERDICT: PASS 或 VERDICT: FAIL
+【怪句】逐字引用；没有则写 NONE
+【类型】NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / NONE
+【为什么第一眼不自然】
+【最小修改边界】
+
+只要开篇、关键转折或章尾仍有一个明确 NATURALNESS_GAP / TONE_GAP，就必须 VERDICT: FAIL。""",
+            )
+            final_human_failed = "VERDICT: PASS" not in final_human.content.upper()
+
+            if final_human_failed:
+                human_revision = await _run_step(
+                    task_id=task_id,
+                    role="final-delivery-editor",
+                    stage="final-human-fix",
+                    mode="polish",
+                    content=final_content,
+                    instruction="\n\n".join(
+                        [
+                            final_human.content,
+                            """只修 Final Human Read 明确指出的自然度/气质问题。保持事实、事件顺序、人物动机、信息边界和已经通过的段落不变。对 NATURALNESS_GAP 修语义层级、搭配或缺失支点；对 TONE_GAP 去掉错误的段子感/作者表演感；对 AUTHOR_JOKE_GAP 把幽默还给人物与处境。不得顺手重写其他内容。只输出完整正文。""",
+                        ]
+                    ),
+                )
+                final_content = human_revision.content
+
+                human_recheck = await _run_step(
+                    task_id=task_id,
+                    role="final-human-reader",
+                    stage="final-human-recheck",
+                    mode="check",
+                    content=final_content,
+                    instruction="""再次只作为普通中文小说读者做最终首读。不得看作者意图，不得因为上一轮已经修改就放宽标准。检查 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP，尤其开篇前三段、关键转折、章尾。
+严格输出：
+FINAL_HUMAN_READ_V1
+VERDICT: PASS 或 VERDICT: FAIL
+【怪句】
+【类型】
+【为什么第一眼不自然】
+【最小修改边界】""",
+                )
+                final_human_failed = "VERDICT: PASS" not in human_recheck.content.upper()
+
         with connect() as conn:
             conn.execute(
                 """
@@ -588,7 +656,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 """,
                 (
                     final_content,
-                    "reviewed" if final_blocking else "awaiting_approval",
+                    "reviewed" if (final_blocking or final_human_failed) else "awaiting_approval",
                     task_id,
                 ),
             )
