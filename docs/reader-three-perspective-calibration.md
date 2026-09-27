@@ -1,7 +1,7 @@
-# Reader Three-Perspective Calibration Protocol v1
+# Reader Multi-Perspective Calibration Protocol v2
 
 ## 目的
-Reader Gate 不再由一个 Reader 同时承担所有判断。三个 Reader 彼此独立，只看正文，不看人物卡、Scene Card、作者意图、Coach 反馈和其他 Reader 的结论。
+Reader Gate 不再由一个 Reader 同时承担所有判断。四个 Reader 彼此独立，只看正文，不看人物卡、Scene Card、作者意图、Coach 反馈和其他 Reader 的结论。
 
 ## Reader A — 首读理解
 只回答：
@@ -97,7 +97,7 @@ LOCAL_REWRITE：
 - 单句/相邻句造成局部语义、关系或注意力误导。
 
 REWRITE_BLOCK：
-- 三个 Reader 对“这场在干什么”得出不同核心解释；
+- 四个 Reader 对“这场在干什么”得出不同核心解释；
 - 人物目标/关系变化只存在于作者材料；
 - 阅读动力主要来自困惑；
 - 场景核心类型被另一条线完全吞掉。
