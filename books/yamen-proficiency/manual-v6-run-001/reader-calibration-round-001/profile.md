@@ -1,6 +1,6 @@
-# Reader Calibration Profile
+# Reader Calibration Profile v2
 
-READER_CALIBRATION_PROFILE_V1
+READER_CALIBRATION_PROFILE_V2
 
 ## 覆盖场景
 1. 第五章综合家庭场景
@@ -27,6 +27,14 @@ STABLE
 - 未被案件悬念统一吞掉。
 - 能区分 curiosity 与 confusion。
 
+## Reader D — 自然首读 / 气质
+STABLE
+- 能区分 CHARACTER_ROUGHNESS 与作者叙述别扭。
+- 能检查对比结构语义层级。
+- 能识别“读者可脑补但句子仍不自然”。
+- 能检查开篇前三段类型第一印象。
+- 正式捕获 Chapter 1 opening 的 NATURALNESS_GAP + TONE_GAP。
+
 ## 失败样本
 ### RC001
 “今晚那扇门不用等了。”
@@ -36,13 +44,14 @@ STABLE
 复审：PASS
 
 ## Gate 2 通过标准
-- 3 个 Reader 独立视角均完成：PASS
+- 4 个 Reader 独立视角均完成：PASS
 - 代表场景 >= 3：PASS
 - critical semantic gap = 0：PASS
 - critical causal gap = 0：PASS
 - critical motivation gap = 0：PASS
 - critical relationship gap = 0：PASS
 - curiosity != confusion：PASS
+- 开篇/关键句 NATURALNESS_GAP / TONE_GAP 可独立检测：PASS
 - 至少捕获并修复一个真实 Reader failure：PASS
 
 ## Gate 2
