@@ -125,3 +125,23 @@ def test_writer_training_skill_remains_discoverable_for_explicit_use():
             item["name"] == BUILTIN_WRITER_TRAINING_SKILL_NAME
             for item in skills
         )
+
+
+def test_training_level_parser_controls_repeated_coaching():
+    from app.services.writer_training_pipeline import (
+        _diagnosed_level,
+        _needs_coaching,
+    )
+
+    diagnosis = """WRITER_TRAINING_DIAGNOSIS_V1
+【场景导演】STABLE
+【人物行为】EMERGING
+【语言节奏】TRANSFERABLE
+"""
+    assert _diagnosed_level(diagnosis, "场景导演") == "STABLE"
+    assert _diagnosed_level(diagnosis, "人物行为") == "EMERGING"
+    assert _diagnosed_level(diagnosis, "语言节奏") == "TRANSFERABLE"
+    assert _needs_coaching("STABLE") is False
+    assert _needs_coaching("TRANSFERABLE") is False
+    assert _needs_coaching("EMERGING") is True
+    assert _needs_coaching("NEEDS_WORK") is True
