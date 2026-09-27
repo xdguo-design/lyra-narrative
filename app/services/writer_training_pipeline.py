@@ -387,6 +387,10 @@ READER_TRACE_V1
 【我理解关系发生了什么变化】
 【我记住的最多3个细节】
 【我不确定/需要回读的地方】
+每一项必须标记为 INTENTIONAL_UNKNOWN / READER_GAP / AMBIGUOUS_GAP。
+INTENTIONAL_UNKNOWN：我知道问题是什么，只是不知道答案。
+READER_GAP：我连句子或动作在指什么都不能确定。
+AMBIGUOUS_GAP：存在两个以上同样合理的解释。
 【我认为正文故意留下的问题】
 【我现在期待下一步发生什么】
 如果某句话只有靠猜作者意图才能懂，必须放进“不确定/需要回读”，不要替作者补全。不要提供改写建议。""",
@@ -406,7 +410,7 @@ READER_TRACE_V1
                 "盲读者报告：\n" + reader_trace.content,
                 """对照作者预期与读者实际理解，只判断 Reader Gap，不做一般润色。
 重点分类 semantic-gap / causal-gap / motivation-gap / relationship-gap / salience-gap / suspense-gap / emotion-gap。
-有意悬念可以保留，但读者必须清楚自己“不知道什么”；若读者连句子在说什么、人物为什么这样做、关系为何变化都需要作者材料才能理解，则必须打回。
+有意悬念可以保留，但读者必须清楚自己“不知道什么”；若读者连句子在说什么、人物为什么这样做、关系为何变化都需要作者材料才能理解，则必须打回。严格执行 Reader Gate v3：只有 INTENTIONAL_UNKNOWN 可直接 PASS；READER_GAP 必须修改；AMBIGUOUS_GAP 只有当多个解释均为作者有意设计且不影响当前理解时才可 PASS，否则修改。
 若完全没有需要改正文的 Reader Gap，只输出 NO_READER_GAP。
 若有问题，最多输出3项，每项必须含：类型、逐字片段、读者实际理解、作者预期、为什么属于信息缺失而非有效留白、重写边界。""",
             ]
@@ -467,6 +471,10 @@ READER_TRACE_V1
 【我理解关系发生了什么变化】
 【我记住的最多3个细节】
 【我不确定/需要回读的地方】
+每一项必须标记为 INTENTIONAL_UNKNOWN / READER_GAP / AMBIGUOUS_GAP。
+INTENTIONAL_UNKNOWN：我知道问题是什么，只是不知道答案。
+READER_GAP：我连句子或动作在指什么都不能确定。
+AMBIGUOUS_GAP：存在两个以上同样合理的解释。
 【我认为正文故意留下的问题】
 【我现在期待下一步发生什么】
 不要给改写建议，不要替作者脑补。""",
@@ -566,6 +574,10 @@ READER_TRACE_V1
 【我理解关系发生了什么变化】
 【我记住的最多3个细节】
 【我不确定/需要回读的地方】
+每一项必须标记为 INTENTIONAL_UNKNOWN / READER_GAP / AMBIGUOUS_GAP。
+INTENTIONAL_UNKNOWN：我知道问题是什么，只是不知道答案。
+READER_GAP：我连句子或动作在指什么都不能确定。
+AMBIGUOUS_GAP：存在两个以上同样合理的解释。
 【我认为正文故意留下的问题】
 【我现在期待下一步发生什么】
 不要提出修改方案。""",
