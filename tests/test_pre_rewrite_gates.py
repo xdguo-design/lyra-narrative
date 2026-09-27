@@ -83,3 +83,39 @@ def test_failure_corpus_freezes_unnatural_but_understandable_case():
     ]
     for marker in required:
         assert marker in corpus
+
+
+def test_reader_naturalness_regression_corpus_has_fail_and_pass_boundaries():
+    corpus = Path("docs/reader-naturalness-regression-corpus.md").read_text(encoding="utf-8")
+    fail_markers = [
+        "RN001",
+        "RN003",
+        "RN005",
+        "RN007",
+        "RN012",
+        "NATURALNESS_GAP",
+        "QUANTITY_GAP",
+        "MICRO_CONTINUITY_GAP",
+        "AUTHOR_EFFECT_GAP",
+    ]
+    pass_markers = [
+        "RP001",
+        "RP002",
+        "RP003",
+        "RP004",
+        "CHARACTER_ROUGHNESS",
+        "不得误杀",
+    ]
+    for marker in fail_markers + pass_markers:
+        assert marker in corpus
+
+
+def test_rewrite_workflow_has_no_permanent_final_human_stage():
+    freeze = (BASE / "rewrite-freeze-pack-v1.md").read_text(encoding="utf-8")
+    status = (BASE / "pre-rewrite-status.md").read_text(encoding="utf-8")
+
+    assert "Reader D Natural First-Read" in freeze
+    assert "人工阅读不是永久流水线工位" in freeze
+    assert "Final Human Read" not in freeze
+    assert "Final Human Recheck" not in freeze
+    assert "不新增永久人工工序" in status
