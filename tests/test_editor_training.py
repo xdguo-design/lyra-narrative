@@ -15,6 +15,7 @@ from app.services.default_skills import (
     BUILTIN_EDITOR_TRAINING_SKILL_CONTENT,
     BUILTIN_EDITOR_TRAINING_SKILL_NAME,
     BUILTIN_EDITOR_TRAINING_SKILL_VERSION,
+    BUILTIN_READER_REVIEW_SKILL_NAME,
     BUILTIN_WRITER_TRAINING_SKILL_NAME,
 )
 
@@ -60,6 +61,7 @@ def test_training_skills_are_excluded_from_default_writing_tasks():
         names = {skill["name"] for skill in task.json()["skills"]}
         assert BUILTIN_WRITER_TRAINING_SKILL_NAME not in names
         assert BUILTIN_EDITOR_TRAINING_SKILL_NAME not in names
+        assert BUILTIN_READER_REVIEW_SKILL_NAME not in names
 
 
 def test_editor_training_skill_remains_discoverable_for_explicit_use():
@@ -127,3 +129,16 @@ def test_character_stress_gate_records_two_rounds_and_all_core_characters():
     assert "失败样本" in b
     assert "通过标准" in a
     assert "通过标准" in b
+
+
+def test_reader_review_skill_remains_discoverable_for_explicit_use():
+    with TestClient(app) as client:
+        project_id = client.post(
+            "/api/projects",
+            json={"title": "Reader Skill 可见性"},
+        ).json()["id"]
+        skills = client.get(f"/api/projects/{project_id}/skills").json()
+        assert any(
+            item["name"] == BUILTIN_READER_REVIEW_SKILL_NAME
+            for item in skills
+        )
