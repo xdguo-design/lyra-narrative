@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.services.default_skills import (
     BUILTIN_REFINEMENT_SKILL_CONTENT,
     BUILTIN_REFINEMENT_SKILL_VERSION,
@@ -182,3 +184,20 @@ def test_refinement_skill_v6_character_humor_and_ending_rules():
         "新动作、新发现、新麻烦、关系变化或具体画面",
     ]:
         assert marker in content
+
+
+def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        "受压时第一反应",
+        "常用撒谎/回避方式",
+        "面对上级/同级/弱者时的不同态度",
+        "什么证据出现前绝不会承认",
+        "什么情况下才会改口",
+        "人物回答必须由性格与利益共同决定",
+        "不能因为作者需要信息就突然老实",
+        "谨慎/怕事的人是否过早坦白",
+        "为了让剧情顺利推进而让人物突然变老实",
+    ]
+    for marker in required:
+        assert marker in source
