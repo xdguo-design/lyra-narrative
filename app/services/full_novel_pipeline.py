@@ -588,7 +588,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             content=draft,
             instruction="\n\n".join(
                 [
-                    """根据八个独立 Reviewer 的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
+                    """根据八个独立 Reviewer 与盲读 Reader D 的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
                     "Reviewer 意见：\n" + "\n\n".join(review_outputs),
                     context,
                 ]
