@@ -4,8 +4,8 @@ from app.services.default_skills import (
 )
 
 
-def test_refinement_skill_v5_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 5
+def test_refinement_skill_v6_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 6
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -97,7 +97,7 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "应合并并升级为 REWRITE_BLOCK" in content
 
 
-def test_refinement_skill_v5_has_unified_reviewer_output_contract():
+def test_refinement_skill_v6_has_unified_reviewer_output_contract():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -142,7 +142,7 @@ def test_reviewer_recheck_closes_or_returns_same_issue():
     assert "禁止在 PASS 后继续反复重写同一处" in content
 
 
-def test_refinement_skill_v5_has_reality_and_readability_gate():
+def test_refinement_skill_v6_has_reality_and_readability_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -161,10 +161,24 @@ def test_refinement_skill_v5_has_reality_and_readability_gate():
         assert marker in content
 
 
-def test_refinement_skill_v5_escalates_scene_level_naturalness_failures():
+def test_refinement_skill_v6_escalates_scene_level_naturalness_failures():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     assert "场景中的关键地点、设施、器物或空间关系没有现实锚点" in content
     assert "整体呈现技术报告、项目汇报、AI 摘要式语流" in content
     assert "连续多句如此 → REWRITE_BLOCK" in content
     assert "只缺一个孤立锚点 → LOCAL_REWRITE" in content
+
+
+def test_refinement_skill_v6_character_humor_and_ending_rules():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+    for marker in [
+        "人物立体化",
+        "幽默感",
+        "去 AI 收束句",
+        "总得",
+        "才刚刚开始",
+        "优先删除",
+        "新动作、新发现、新麻烦、关系变化或具体画面",
+    ]:
+        assert marker in content
