@@ -25,13 +25,17 @@ def setup_function():
 
 
 def test_writer_training_skill_has_deliberate_practice_contract():
-    assert BUILTIN_WRITER_TRAINING_SKILL_VERSION == 1
+    assert BUILTIN_WRITER_TRAINING_SKILL_VERSION == 2
     content = BUILTIN_WRITER_TRAINING_SKILL_CONTENT
     required = [
         "基线诊断",
         "场景导演训练",
         "人物行为训练",
         "语言节奏训练",
+        "读者盲读验证",
+        "READER_TRACE_V1",
+        "Reader Gap",
+        "含糊”不等于“留白",
         "综合场景训练",
         "迁移测试",
         "Writer Craft Profile",
@@ -60,9 +64,16 @@ def test_writer_training_pipeline_has_attempt_feedback_rewrite_and_transfer():
         'stage="training-rhythm-attempt"',
         'stage="training-rhythm-feedback"',
         'stage="training-rhythm-rewrite"',
+        'stage="training-reader-trace"',
+        'stage="training-reader-gap"',
+        'stage="training-reader-rewrite"',
         'stage="training-integrated-scene"',
+        'stage="training-integrated-reader-trace"',
+        'stage="training-integrated-reader-gap"',
+        'stage="training-integrated-reader-recheck"',
         'stage="training-transfer-brief"',
         'stage="training-transfer-attempt"',
+        'stage="training-transfer-reader-trace"',
         'stage="training-transfer-review"',
         'stage="training-profile"',
         '"writer-training:craft-profile"',
@@ -145,3 +156,26 @@ def test_training_level_parser_controls_repeated_coaching():
     assert _needs_coaching("TRANSFERABLE") is False
     assert _needs_coaching("EMERGING") is True
     assert _needs_coaching("NEEDS_WORK") is True
+
+
+def test_blind_reader_does_not_receive_author_context():
+    source = Path("app/services/writer_training_pipeline.py").read_text(
+        encoding="utf-8"
+    )
+    start = source.index('role="blind-reader"')
+    gap = source.index('role="reader-gap-coach"', start)
+    blind_block = source[start:gap]
+    assert "context," not in blind_block
+    assert "scene_rewrite.content" not in blind_block
+    assert "behavior_attempt.content" not in blind_block
+    assert "READER_TRACE_V1" in blind_block
+
+
+def test_reader_gate_can_force_writer_rewrite():
+    source = Path("app/services/writer_training_pipeline.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'reader_gap.content.strip() == "NO_READER_GAP"' in source
+    assert 'stage="training-reader-rewrite"' in source
+    assert "只修 Reader Gap" in source
+    assert "有效悬念继续保留" in source
