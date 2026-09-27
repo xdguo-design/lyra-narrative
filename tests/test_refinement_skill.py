@@ -4,8 +4,8 @@ from app.services.default_skills import (
 )
 
 
-def test_refinement_skill_v3_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 3
+def test_refinement_skill_v4_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 4
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -95,3 +95,48 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "Reviewer 必须再次审核修改结果" in content
     assert "多个相邻 LOCAL_REWRITE" in content
     assert "应合并并升级为 REWRITE_BLOCK" in content
+
+
+def test_refinement_skill_v4_has_unified_reviewer_output_contract():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+
+    required = [
+        "阶段 9：Reviewer 统一审核输出格式（NARRATIVEOS_REVIEW_V2）",
+        "【审核轮次】INITIAL",
+        "【处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS",
+        "【问题定位】",
+        "【修改边界】",
+        "【必须保留的事实】",
+        "【禁止新增内容】",
+        "【复审要求】",
+        "【复审结果】PENDING",
+        "【审核轮次】RECHECK",
+        "【复审检查】",
+        "【复审结果】PASS / FAIL",
+        "【再次打回原因】",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_reviewer_contract_requires_exact_location_boundaries_and_anchors():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+
+    assert "逐字复制正文中的连续原文" in content
+    assert "为什么 LOCAL_REWRITE 不足" in content
+    assert "最小修改范围" in content
+    assert "允许联动范围" in content
+    assert "不得触碰范围" in content
+    assert "只列与当前问题有关的锚点" in content
+    assert "禁止散文式、泛化式“建议优化”" in content
+
+
+def test_reviewer_recheck_closes_or_returns_same_issue():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+
+    assert "复审沿用同一标识" in content
+    assert "原问题是否消失：PASS / FAIL" in content
+    assert "是否产生新的 blocking：YES / NO" in content
+    assert "PASS：关闭原问题，不再重复修改" in content
+    assert "FAIL：保持原处置级别或升级" in content
+    assert "禁止在 PASS 后继续反复重写同一处" in content
