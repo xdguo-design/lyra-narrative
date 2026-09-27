@@ -1,6 +1,6 @@
 # Pre-Rewrite Readiness Status
 
-更新点：Reader 三视角、三章 mini-arc、Genre Promise Matrix 已完成并复审。
+更新点：Reader 多视角、三章 mini-arc、Genre Promise Matrix 已完成并复审。
 
 ## Gate 1 — Writer transfer mastery
 **PASS**
@@ -15,10 +15,11 @@ Writer Craft Profile v2：
 ## Gate 2 — Reader calibration
 **PASS / STABLE**
 
-已完成三个独立 Reader：
+已完成四个独立 Reader：
 1. 首读理解 Reader
 2. 人物 / 关系 Reader
 3. 阅读动力 Reader
+4. 自然首读 / 气质 Reader
 
 覆盖：
 - 第五章综合家庭场景
@@ -37,6 +38,8 @@ Writer Craft Profile v2：
 - critical motivation gap = 0
 - critical relationship gap = 0
 - curiosity != confusion
+- Natural First-Read calibration：PASS
+- 能识别“能懂但第一眼发怪”：PASS
 
 ## Gate 3 — Editor deliberate practice
 **PASS / STABLE**
@@ -53,7 +56,7 @@ EF001—EF004 已冻结。
 ## Gate 4 — Failure corpus
 **PASS**
 
-- Writer Failure Corpus：F001—F015
+- Writer Failure Corpus：F001—F016
 - Reader Failure：RC001
 - Editor Failure：EF001—EF004
 - Long-form Watch / Failure：LONG001 / LONG002
@@ -135,7 +138,7 @@ GP001—GP008 已冻结。
 - 不继续修补旧第一至四章；
 - 从 Chapter 1 全新生成；
 - 保留冻结故事事实，不复制旧措辞；
-- 每章都经过 Reader A/B/C + Editor + Failure Corpus；
+- 每章都经过 Reader A/B/C/D + Editor + Failure Corpus + Final Human Read；
 - blocking 未清零不得进入下一章。
 
 ## 平台上线门槛
