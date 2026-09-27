@@ -16,7 +16,12 @@ from app.services.default_skills import (
 
 
 def db_path() -> Path:
-    configured = os.getenv("NOVEL_DB_PATH", "data/novel_workbench.db")
+    default_path = (
+        "/tmp/novel_workbench.db"
+        if os.getenv("VERCEL")
+        else "data/novel_workbench.db"
+    )
+    configured = os.getenv("NOVEL_DB_PATH", default_path)
     path = Path(configured)
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
