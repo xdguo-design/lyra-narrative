@@ -25,7 +25,7 @@ def setup_function():
 
 
 def test_writer_training_skill_has_deliberate_practice_contract():
-    assert BUILTIN_WRITER_TRAINING_SKILL_VERSION == 2
+    assert BUILTIN_WRITER_TRAINING_SKILL_VERSION == 3
     content = BUILTIN_WRITER_TRAINING_SKILL_CONTENT
     required = [
         "基线诊断",
@@ -179,3 +179,34 @@ def test_reader_gate_can_force_writer_rewrite():
     assert 'stage="training-reader-rewrite"' in source
     assert "只修 Reader Gap" in source
     assert "有效悬念继续保留" in source
+
+
+def test_reader_gate_unknown_boundary_rule_and_failure_examples():
+    content = BUILTIN_WRITER_TRAINING_SKILL_CONTENT
+    required = [
+        "读者可以不知道答案，但必须知道自己不知道的是什么",
+        "INTENTIONAL_UNKNOWN",
+        "READER_GAP",
+        "AMBIGUOUS_GAP",
+        "县衙那边也没完",
+        "事情还没完",
+        "他终于明白了",
+        "她把钱收起来",
+        "多读两遍能懂",
+        "Author/Coach/Editor 均不得替 Reader 解释",
+    ]
+    for marker in required:
+        assert marker in content
+
+
+def test_training_reader_protocol_requires_unknown_labels():
+    source = Path("app/services/writer_training_pipeline.py").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "INTENTIONAL_UNKNOWN",
+        "READER_GAP",
+        "AMBIGUOUS_GAP",
+        "只有 INTENTIONAL_UNKNOWN 可直接 PASS",
+    ]:
+        assert marker in source
