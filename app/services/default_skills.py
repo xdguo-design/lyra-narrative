@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 3
+BUILTIN_WRITING_SKILL_VERSION = 4
 BUILTIN_WRITING_SKILL_PURPOSE = (
-    "控制中文小说的句式节奏、感官描写、术语落地、对白情绪与叙事可读性。"
+    "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
 
 BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小说自然叙事】
@@ -85,7 +85,34 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 3. 如果最后一句只是点题、替读者下判断、重复情绪或预告故事继续，优先删除。
 4. 收束优先落在新动作、新发现、新麻烦、关系变化或具体画面上。
 
-十二、自检
+十二、作家能力：选材、视角与叙事取舍
+1. 每个场景先确定“这一场真正值得读者看什么”，最多抓住两到三个高价值细节，不平均描写所有东西。
+2. 描写必须经过人物视角过滤。同一个屋子，不同人物应注意不同东西；职业、欲望、恐惧、疲劳和当前任务都会改变他先看见什么。
+3. 不把“完整”误当成“好”。读者不需要知道的布置、动作流程、背景信息，即使真实也可以不写。
+4. 该快的地方要敢于压缩：赶路、重复劳动、已建立规则、无冲突的手续可一句带过。
+5. 该慢的地方要敢于展开：人物做决定、关系发生变化、危险第一次显形、关键误会形成、情绪失控前的一瞬，应给动作、停顿和可感知细节。
+6. 细节必须有层级：主细节推动注意力；次细节托住场景；背景细节只在需要时存在。禁止把每样东西都写得同样重。
+7. 好句子首先要准确，其次才是漂亮。若一句很“有文学感”却抢走人物和事件的注意力，删掉或降级。
+8. 不追求每段都出金句，不追求每章都“有一句能摘抄的话”。小说首先要让人继续读。
+
+十三、作家能力：潜台词、人物声音与句群
+1. 人物说话时，表面意思和真实目的可以不同。能通过回避、换词、停顿、动作、答非所问表达的，不直接把动机说透。
+2. 不同人物必须有不同的句子长度、词汇习惯、攻击方式、回避方式和幽默方式；不能只是“内容不同，口吻一样”。
+3. 一段对白至少允许一个人不合作。对话不是把信息从 A 搬到 B，而是双方争夺解释权、时间、面子、利益或关系位置。
+4. 叙述句也要有“句群”意识。不要只逐句优化，要看三到五句连起来有没有起伏：进入、承接、加重、停顿、落点。
+5. 连续使用相同句法、相同长度、相同转折词，会产生机械节奏；主动变化，但不能为了变化破坏自然中文。
+6. 情绪尽量保留一层未说透。人物已经通过动作和选择表现出来时，不再替他总结“他很愤怒/他终于明白/他第一次意识到”。
+7. 幽默不能独立悬在剧情外。好笑之后，人物关系、处境或性格至少有一项更清楚。
+
+十四、章节与长篇变化
+1. 每章要有自己的主要动作形态：追查、争执、奔波、吃饭、交易、等待、失误、回家、逃跑、训练等，连续章节不能都靠“站着问话”推进。
+2. 连续两章不得机械复用同一种章末钩子。姓名揭示、物证出现、门外有人、系统弹窗、危险逼近都不能变成固定模板。
+3. 金手指、口头禅、人物标志动作属于调味，不得按章打卡。
+4. 长篇需要生活面。主线压力之外，要让吃饭、钱、家人、身体、工作、人情、闲话等现实持续存在，但不能变成无推进的水戏。
+5. 每章至少应有一个“只属于这章”的记忆点：一个人物动作、一处场景、一种关系变化或一个具体困境，而不是靠标题区分。
+6. 写完后问：如果把人物名字替换掉，这一章是否仍像任何一本书都能用？如果是，说明人物声音和场景独特性不足。
+
+十五、自检
 交稿前逐段检查：
 - 是否连续出现过多短句或单句段落？
 - 是否有只写“不像什么”却没有写清“像什么”的描写？
@@ -96,6 +123,13 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 是否存在作者脑内成立、正文却缺少现实空间锚点的表达？
 - 正常朗读是否顺畅，是否有需要回头第二遍才能理解的句子？
 - 技术信息是否压过人物动作和场景本身？
+- 本场真正值得读者记住的两三个细节是什么，是否被平均描写淹没？
+- 这段观察是否只有当前视角人物才会这样观察？
+- 是否把本该一句带过的流程写长，把本该停下来的决定写快？
+- 连续三到五句是否存在明显句群起伏，而不是逐句都差不多？
+- 对话中是否所有人都在合作提供信息？
+- 本章的动作形态、笑点来源、金手指展示、章尾钩子是否与前章重复？
+- 如果把人物名字替换掉，是否仍像通用模板？
 若任一项成立，先改再交。
 """
 
@@ -104,9 +138,9 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 6
+BUILTIN_REFINEMENT_SKILL_VERSION = 7
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
-    "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性，最后审核并打回不合格段落。"
+    "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性与审美取舍，最后审核并打回不合格段落。"
 )
 
 BUILTIN_REFINEMENT_SKILL_CONTENT = """【NarrativeOS 默认 Skill：小说精修流程】
@@ -261,7 +295,7 @@ F. Reviewer 必须给出明确处置
 
 每条审核至少包含：
 - 处置级别
-- 问题类型：continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability
+- 问题类型：continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic
 - 原文范围
 - 为什么当前级别足够或为什么必须升级
 - 重写时必须保留的事实
@@ -281,7 +315,7 @@ F. Reviewer 必须给出明确处置
 
 执行输入：
 【处置级别】LOCAL_REWRITE
-【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic
 【原文范围】逐字给出需要修改的原句；必要时附前后各一句
 【问题说明】只说明当前局部为什么不成立，不扩展成泛泛评价
 【必须保留】
@@ -332,7 +366,7 @@ LOCAL_REWRITE 输出格式：
 
 执行输入：
 【处置级别】REWRITE_BLOCK
-【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic
 【打回范围】明确到段落、场景或连续段落的起止
 【核心问题】一句话指出结构性问题，例如“人物没有理由主动交代秘密”“场景只在解释规则，没有任何局势变化”
 【为什么不能局部修】说明至少一个连锁影响：事实 / 因果 / 动机 / 后文接口 / 整段语流
@@ -414,7 +448,7 @@ REWRITE_BLOCK 输出格式：
 目标：
 - 所有 Reviewer 使用同一结构输出，禁止散文式、泛化式“建议优化”。
 - 输出必须能直接被 Revision Agent 执行，并能在复审时判断原问题是否真正消失。
-- continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability Reviewer 均使用本协议。
+- continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic Reviewer 均使用本协议。
 - 一个问题对应一个完整问题块；多个问题之间使用单独一行 --- 分隔。
 - 没有任何问题时只输出 NO_ISSUE。
 
@@ -424,7 +458,7 @@ NARRATIVEOS_REVIEW_V3
 【审核轮次】INITIAL
 【严重性】blocking / suggestion / info
 【处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS
-【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic
 【问题定位】
 - 章节/场景：
 - 段落范围：
@@ -473,7 +507,7 @@ NARRATIVEOS_REVIEW_V3
 【审核轮次】RECHECK
 【原问题标识】沿用首次审核的问题序号或唯一标识
 【原处置级别】REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH
-【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability
+【问题类型】continuity / causality / character / plot / exposition / dialogue / style / atmosphere / reality / readability / aesthetic / aesthetic
 【原问题定位】
 - 章节/场景：
 - 原片段：
@@ -586,6 +620,47 @@ F. 判级
 - 不需要回读才能理解主要句子；
 - 技术名词不抢在画面和行动前面；
 - 对白像人物说的话，而不是作者借人物做说明。
+
+阶段 11：编辑审美门槛（Aesthetic Editing Gate）
+
+目标不是“写得更华丽”，而是让正文更准确、更有选择、更有层次、更有人物味，并保留可读性。
+
+A. 审美判断优先级
+1. 准确 > 华丽：词语、动作、感受必须先准确，再考虑修辞。
+2. 具体 > 抽象：能用一个真实动作、一处细节、一句有关系温度的对白解决，不用抽象评价。
+3. 克制 > 说透：人物和场景已经表达出的情绪，不再补解释。
+4. 人物特有 > 通用漂亮：一句话若换给任何角色都成立，优先重写。
+5. 层次 > 平均用力：关键处慢写，过渡处快写；主细节重，背景细节轻。
+6. 余味 > 点题：场景结束后让动作、沉默、结果或关系变化留下余味，不由旁白替读者总结。
+7. 新鲜 > 奇怪：允许不俗套，但不能为了陌生感使用生硬比喻、怪异语序或冷僻词。
+8. 粗粝真实 > 统一精致：人物的口语、窘迫、生活痕迹可以不“漂亮”，编辑不得把所有人修成同一种文气。
+
+B. 编辑的正向选择
+编辑不仅找错误，还必须判断：
+- 哪一个细节最值钱，是否应该保留并让周围让路；
+- 哪一句虽然正确，但太通用、太安全、太像“标准好句”；
+- 哪一处情绪应该少写半句；
+- 哪一处冲突应该慢半拍，让人物先有动作再开口；
+- 哪一段信息应该压缩，让下一段真正重要的东西获得篇幅；
+- 哪一处人物声音被“润色”抹平，需要恢复原本的粗糙、停顿、口语或攻击性。
+
+C. 禁止“过度编辑”
+1. 不把自然口语全部改成书面语。
+2. 不把短而有力的句子为了“高级”改成长句。
+3. 不把有性格的小毛刺统一抛光。
+4. 不为了所谓文学性增加比喻、意象、排比和抽象感受。
+5. 不把大众网文改成散文，不牺牲剧情速度换取句子漂亮。
+6. 不修改已经成立的事实、人物动机、事件顺序和世界规则。
+
+D. 审美复审
+最终稿至少应满足：
+- 有一处以上只有当前人物/当前场景才成立的具体表达；
+- 关键段落存在清晰轻重，不平均用力；
+- 没有连续“正确但无味”的通用句群；
+- 人物声音没有被编辑同质化；
+- 情绪有留白，不靠旁白反复命名；
+- 章尾不点题，不靠模板钩子；
+- 读者能顺畅阅读，同时能记住至少一个人物动作、场景细节或关系变化。
 
 输出原则：
 - 先解决事实和结构，再解决语言。
