@@ -928,3 +928,42 @@ def test_ai_system_prompt_guards_against_choppy_prose_and_jargon():
     assert "可感知的正向形象" in prompt
     assert "陌生术语首次出现" in prompt
     assert "对白必须体现人物关系" in prompt
+
+
+def test_builtin_refinement_workflow_skill_is_seeded_and_complements_prose_skill():
+    from app.services.default_skills import (
+        BUILTIN_REFINEMENT_SKILL_NAME,
+        BUILTIN_WRITING_SKILL_NAME,
+    )
+
+    with TestClient(app) as client:
+        project_id = client.post(
+            "/api/projects",
+            json={"title": "小说精修流程技能测试"},
+        ).json()["id"]
+        skills = client.get(f"/api/projects/{project_id}/skills").json()
+        by_name = {item["name"]: item for item in skills}
+
+        assert BUILTIN_WRITING_SKILL_NAME in by_name
+        assert BUILTIN_REFINEMENT_SKILL_NAME in by_name
+
+        refinement = by_name[BUILTIN_REFINEMENT_SKILL_NAME]
+        prose = by_name[BUILTIN_WRITING_SKILL_NAME]
+        assert refinement["project_id"] is None
+        assert refinement["enabled"] == 1
+        assert refinement["id"] != prose["id"]
+
+        content = refinement["content"]
+        stage_markers = [
+            "阶段 1：设定、事实与情节自洽",
+            "阶段 2：人物矛盾与剧情推进",
+            "阶段 3：删除解释性与过渡废话",
+            "阶段 4：控制对白密度",
+            "阶段 5：语言、画面与氛围润色",
+            "阶段 6：最终审核与打回",
+        ]
+        positions = [content.index(marker) for marker in stage_markers]
+        assert positions == sorted(positions)
+        assert "任何 blocking 自洽问题" in content
+        assert "整段重写，不逐句打补丁" in content
+        assert "先解决事实和结构，再解决语言" in content
