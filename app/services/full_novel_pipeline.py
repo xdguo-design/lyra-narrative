@@ -136,6 +136,10 @@ READER_TRACE_V1
 【我理解关系发生了什么变化】
 【我记住的最多3个细节】
 【我不确定/需要回读的地方】
+每一项必须标记为 INTENTIONAL_UNKNOWN / READER_GAP / AMBIGUOUS_GAP。
+INTENTIONAL_UNKNOWN：知道问题是什么，只是不知道答案。
+READER_GAP：不知道句子或动作在指什么。
+AMBIGUOUS_GAP：存在两个以上同样合理解释。
 【我认为正文故意留下的问题】
 【我现在期待下一步发生什么】
 任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
@@ -182,7 +186,7 @@ READER_TRACE_V1
             "reader",
             "这是独立盲读者的首次阅读报告：\n"
             + reader_trace_result.content
-            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
+            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。严格按 Reader Gate v3 判定：INTENTIONAL_UNKNOWN 可 PASS；READER_GAP 必须修；AMBIGUOUS_GAP 只有多个解释均为作者有意且不损害当前场景理解时才可 PASS。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
         ),
     ]
 
