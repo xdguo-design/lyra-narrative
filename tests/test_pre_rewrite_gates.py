@@ -260,3 +260,41 @@ def test_skill_evolution_protocol_tracks_embodied_and_deeper_interaction_cases()
         "感知差异",
     ]:
         assert marker in protocol
+
+
+def test_revision_integrity_failure_and_pass_corpus():
+    corpus = Path("docs/revision-integrity-regression-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "RI001",
+        "RI005",
+        "RIP001",
+        "RIP004",
+        "SCENE_FUNCTION_DRIFT",
+        "LOCAL_REWRITE_SEAM_GAP",
+        "Blind Reader 不承担",
+    ]:
+        assert marker in corpus
+
+
+def test_failure_corpus_freezes_scene_function_and_seam_gaps():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "F025｜局部重写把场景功能写丢",
+        "F026｜局部重写接口裂缝",
+        "SCENE_FUNCTION_DRIFT",
+        "LOCAL_REWRITE_SEAM_GAP",
+        "Narrative Function Contract",
+        "Seam Check",
+    ]:
+        assert marker in corpus
+
+
+def test_skill_evolution_protocol_tracks_revision_integrity_case():
+    protocol = Path("docs/skill-evolution-protocol.md").read_text(encoding="utf-8")
+    for marker in [
+        "Case SE-005｜局部重写功能漂移与接口裂缝",
+        "Revision Integrity Reviewer",
+        "F025 / F026",
+        "Revision Integrity Regression Corpus",
+    ]:
+        assert marker in protocol
