@@ -17,7 +17,7 @@ jobs:
       NOVEL_DB_PATH: /tmp/yamen-first-ten-pipeline.db
       NOVEL_SEED_DEMO: "0"
 
-      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'DEEPSEEKV4PRO' }}
+      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'SENSENOVA68' }}
       NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
       NARRATIVE_PROFILE_DEEPSEEKV4PRO: ${{ vars.DEEPSEEKV4PRO }}
       NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
@@ -33,7 +33,7 @@ jobs:
       NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
-      NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
+      NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '4000' }}
       NOVEL_AI_TIMEOUT_SECONDS: ${{ vars.NOVEL_AI_TIMEOUT_SECONDS || '240' }}
       NOVEL_AI_HTTP_RETRIES: ${{ vars.NOVEL_AI_HTTP_RETRIES || '5' }}
       NOVEL_AI_RETRY_BASE_SECONDS: ${{ vars.NOVEL_AI_RETRY_BASE_SECONDS || '15' }}
@@ -57,7 +57,7 @@ jobs:
           import os
           import shlex
 
-          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "DEEPSEEKV4PRO").strip().upper()
+          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "SENSENOVA68").strip().upper()
           supported = [
               "ATRIA",
               "DEEPSEEKV4PRO",
