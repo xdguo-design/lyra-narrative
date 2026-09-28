@@ -405,7 +405,7 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         "EMOTIONAL_RESIDUE_GAP",
         "natural_reader_failed",
         "dialogue_reader_failed",
-        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed",
+        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed",
         "reader-naturalness",
         '"reviewed" if final_blocking else "awaiting_approval"',
     ]
@@ -502,3 +502,22 @@ def test_writing_skill_v13_requires_three_chapter_climax_and_character_state_cha
         "CHARACTER_STATE_STASIS_GAP",
     ]:
         assert marker in content
+
+
+def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    for marker in [
+        "def _recent_chapter_window",
+        'role="cadence-character-reader"',
+        'stage=f"reader-cadence-r{round_no}"',
+        "THREE_CHAPTER_CADENCE_V1",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
+        "SCENE_TEXTURE_GAP",
+        "ACTION_FRAGMENTATION_GAP",
+        "D01—D18",
+        "cadence_reader_failed",
+        'outputs.append(f"[reader-cadence] {cadence_reader_result.content}")',
+        "natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed",
+    ]:
+        assert marker in source
