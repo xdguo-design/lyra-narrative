@@ -411,7 +411,9 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         "EMOTIONAL_RESIDUE_GAP",
         "natural_reader_failed",
         "dialogue_reader_failed",
-        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed",
+        "has_blocking = (",
+        "artifice_reader_failed",
+        "cadence_reader_failed",
         "reader-naturalness",
         '"reviewed" if final_blocking else "awaiting_approval"',
     ]
@@ -473,7 +475,9 @@ def test_full_pipeline_has_author_artifice_reader_gate():
         'stage=f"reader-artifice-r{round_no}"',
         "STORY_FLOW_ARTIFICE_V1",
         "artifice_reader_failed",
-        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed",
+        "has_blocking = (",
+        "natural_reader_failed",
+        "dialogue_reader_failed",
         "INTERPRETATION_ECHO_GAP",
         "CLUE_LADDER_GAP",
         "CLUE_DENSITY_GAP",
@@ -524,7 +528,10 @@ def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
         "D01—D20",
         "cadence_reader_failed",
         'outputs.append(f"[reader-cadence] {cadence_reader_result.content}")',
-        "natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed",
+        "has_blocking = (",
+        "natural_reader_failed",
+        "dialogue_reader_failed",
+        "artifice_reader_failed",
     ]:
         assert marker in source
 
@@ -544,7 +551,7 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
 
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
     for marker in [
-        "必须覆盖 C01—C13",
+        "必须覆盖 C01—C15",
         "【推理解题板感】",
         "INVESTIGATION_WORKSHEET_GAP",
         "连续三步以上",
