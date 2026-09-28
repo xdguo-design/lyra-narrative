@@ -122,11 +122,19 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
         extra["reasoning_effort"] = configured_reasoning_effort
 
     max_tokens = int(os.getenv("NOVEL_AI_MAX_TOKENS", "6000"))
+    configured_temperature = os.getenv("NOVEL_AI_TEMPERATURE", "").strip()
+    if configured_temperature:
+        temperature = float(configured_temperature)
+    elif model.lower().startswith("kimi-k3"):
+        temperature = 1.0
+    else:
+        temperature = 0.72 if mode == "continue" else 0.35
+
     response = await provider.chat(
         ChatRequest(
             system=_system_prompt(mode),
             messages=[ChatMessage(role="user", content=user_prompt)],
-            temperature=0.72 if mode == "continue" else 0.35,
+            temperature=temperature,
             max_tokens=max_tokens,
             extra=extra,
         )
