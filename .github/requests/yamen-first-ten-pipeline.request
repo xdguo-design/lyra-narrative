@@ -21,3 +21,7 @@ provider_profile: DEEPSEEKV4PRO
 attempt: 8
 provider_profile: DEEPSEEKV4PRO
 timeout_seconds: 240
+attempt: 9
+provider_profile: DEEPSEEKV4PRO
+retries: 5
+checkpoint: enabled
