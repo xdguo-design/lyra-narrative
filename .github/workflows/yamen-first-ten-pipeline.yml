@@ -20,6 +20,8 @@ jobs:
       NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'SENSENOVA' }}
       NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
       NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
@@ -81,6 +83,8 @@ jobs:
           provider_name = parsed.get("NOVEL_AI_PROVIDER_NAME") or profile_name
           parsed["NOVEL_AI_PROVIDER_NAME"] = provider_name
 
+          secret_value = os.getenv(f"NARRATIVE_PROFILE_SECRET_{profile_name}", "").strip()
+
           github_env = os.environ["GITHUB_ENV"]
           with open(github_env, "a", encoding="utf-8") as fh:
               for key, value in parsed.items():
@@ -100,8 +104,17 @@ jobs:
                   + parsed.get("NOVEL_AI_API_KEY_ENV", "OPENAI_API_KEY")
                   + "\n"
               )
-              if parsed.get("NOVEL_AI_API_KEY"):
+              if secret_value:
+                  fh.write("NARRATIVE_PROVIDER_API_KEY=" + secret_value + "\n")
+              elif parsed.get("NOVEL_AI_API_KEY"):
                   fh.write("NARRATIVE_PROVIDER_API_KEY=" + parsed["NOVEL_AI_API_KEY"] + "\n")
+
+          if secret_value:
+              print("Provider secret source: matching GitHub Actions secret")
+          elif parsed.get("NOVEL_AI_API_KEY"):
+              print("Provider secret source: profile value")
+          else:
+              print("Provider secret source: unresolved")
 
           print(f"Loaded provider profile: {profile_name}")
           print(f"Protocol: {parsed['NOVEL_AI_KIND']}")
