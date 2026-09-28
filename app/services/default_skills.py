@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 13
+BUILTIN_WRITING_SKILL_VERSION = 14
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -263,7 +263,9 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 7. 对话的动作应和说话内容互相作用。例如老油条回答路线时，可能先看院里有没有人、再用下巴/手指路线；不是“说一句 + 随机皱眉”。
 8. 气味、声音的词必须准确。“旧汗味”表达的是陈旧汗渍/衣物气味；若现场强调人体与闷热产生的直接难闻，应使用更具体自然的“臭汗味、馊汗味”等，按场景选择，禁止用中性词削弱已建立的脏乱环境。
 9. 人物口语要自然。书面条件句“真碰上不该碰的，我不替你顶”若不符合身份，可改为更生活化的责任切割；口语化不能靠网络梗。
-10. 完稿后逐段问：
+10. 身份替换、穿越、失忆恢复、原身记忆接入等重大认知变化，不能像读取资料卡一样“上一句现代记忆、下一句古代资料”。若人物明明没有亲历，却自然得像自己一直知道，且没有任何认知冲突、迟滞或错位，判 MEMORY_INTEGRATION_TOO_SMOOTH。优先用“我没见过却知道”“身体熟悉但本人陌生”“称呼先冒出来、人还没认出来”等具体冲突表现，不允许加大段解释性独白。
+11. 人物短回应必须通过朗读测试。像“问。”“说。”“继续。”这类压缩句，即使语法成立，只要更像作者为节奏砸字、而不像当前人物自然开口，判 ORALITY_GAP；优先改成该人物当时真正会说的“嗯 / 行 / 说吧 / 怎么了”等，具体取决于身份、地域和关系。
+12. 完稿后逐段问：
    - 这段只有“发生了什么”，还是也能让人听见/闻见/摸到一点什么？
    - 连续动作是不是被我为了节奏切碎了？
    - 这句对白只有信息，还是能看见“谁在说”？
@@ -337,6 +339,8 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 最近三章是否始终同一强度，没有明确波峰？
 - 最近三章结束后，至少两名核心人物的关系/权限/责任是否真的改变？
 - 配角是否只是重复人设，没有做出自己的选择？
+- 重大记忆/身份切换是否像资料加载一样过于顺滑？
+- 极短对白是否只是作者压缩，而不是人物自然会说的话？
 若任一项成立，先改再交。
 """
 
@@ -1358,12 +1362,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 7
+BUILTIN_READER_REVIEW_SKILL_VERSION = 8
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v7】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v8】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1393,6 +1397,8 @@ D15 全文停顿测试：只要第一次读会因措辞本身停一下，而不�
 D16 叙事肌理：关键场景是否只有事实骨架，声音/气味/触感/动作阻力被写成功能标签，导致“能懂但太干”，标签 SCENE_TEXTURE_GAP。
 D17 连续动作：同一连续动作是否被机械拆成多个单行短句，导致阅读像分镜脚本而不是小说句群，标签 ACTION_FRAGMENTATION_GAP。
 D18 对话局部身体化：非紧急对白的关键话轮附近，是否完全没有说话者的姿态、视线、手中事或空间反应；若连续出现，优先复用 EMBODIED_DIALOGUE_GAP，不新造重复标签。
+D19 记忆接入摩擦：穿越/原身记忆/失忆恢复是否像资料加载一样顺滑，没有“本人没经历却知道”的认知冲突；标签 MEMORY_INTEGRATION_TOO_SMOOTH。
+D20 口语自然度：极短回应是否语法成立但真人不这么说，像作者故意砸字；标签 ORALITY_GAP。
 
 三、正式标签
 INTENTIONAL_UNKNOWN
