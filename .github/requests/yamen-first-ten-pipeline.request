@@ -16,3 +16,5 @@ attempt: 5
 fix: restore-db-and-seed-skills
 attempt: 6
 fix: restore-book-pipeline-and-cadence-window
+attempt: 7
+provider_profile: DEEPSEEKV4PRO
