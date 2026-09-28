@@ -235,6 +235,25 @@ async def _run_review_round(
     round_no: int,
     prior_outputs: list[str] | None = None,
 ) -> tuple[list[str], bool]:
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT wt.project_id,c.position
+            FROM writing_tasks wt
+            LEFT JOIN chapters c ON c.id=wt.chapter_id
+            WHERE wt.id=?
+            """,
+            (task_id,),
+        ).fetchone()
+    recent_chapter_window = (
+        _recent_chapter_window(
+            int(row["project_id"]),
+            int(row["position"]) if row and row["position"] is not None else None,
+        )
+        if row
+        else ""
+    )
+
     reader_trace_result = await _run_step(
         task_id=task_id,
         role="blind-reader",
@@ -693,10 +712,6 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
     extra = str(task["instruction"] or "").strip()
     seed = chapter["content"] if chapter else ""
     initial_context = _task_context(task_id, project_id)
-    recent_chapter_window = _recent_chapter_window(
-        project_id,
-        int(chapter["position"]) if chapter and chapter["position"] is not None else None,
-    )
 
     try:
         architect = await _run_step(
