@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 15
+BUILTIN_WRITING_SKILL_VERSION = 16
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -334,6 +334,10 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 线索是否过顺、过密、过准时，或由系统/记忆/巧合间接兜底？
 - 嫌疑人物的动作是否过于配合关键证据展示？
 - 调查是否像主角在主持解题板：每个细节都被立即解释、验证并兑现？
+- 关键人物此刻掌握的信息，正文是否给出了可追溯来源，而不是靠读者替作者脑补？
+- 作者重点写出的反常声音、重量、位置、动作或物理结果，是否至少被一个相关人物接收为疑问/记忆/待核查项？
+- 主角本章是否至少做出一个属于他的观察、选择、代价或策略，而不是只看着配角推进剧情？
+- 后文是否把一个从未在正文出现过的场景/旧事，当成读者已经见过的回调？
 - 关键声音/气味/触感是否只被功能命名，没有可感知质地？
 - 连续动作是否被切成三四个互不相连的短句？
 - 关键对白附近是否完全看不到说话人的身体、视线和当前任务？
@@ -351,7 +355,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 12
+BUILTIN_REFINEMENT_SKILL_VERSION = 13
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性与审美取舍，最后审核并打回不合格段落。"
 )
@@ -483,6 +487,10 @@ Reviewer / Editor 在放行前必须额外检查：
 - 记忆/系统/巧合是否承担剧情认证或补拼图；
 - 嫌疑人物是否被摆成证据展示台。
 - 调查/审讯是否触发 INVESTIGATION_WORKSHEET_GAP：主角连续把“发现→解释→验证→兑现”主持成解题板。
+- 角色关键知识是否触发 KNOWLEDGE_PROVENANCE_GAP：知道了正文没有来源的信息。
+- 显著异常是否触发 SALIENT_SIGNAL_ORPHAN_GAP：作者强调了，但人物完全没接住。
+- 主角是否触发 PROTAGONIST_AGENCY_GAP：整章重要推进都由配角完成，主角只负责在场。
+- 跨章回调是否触发 UNSEEDED_CALLBACK_GAP：正文从未播种，却按“前文见过”来写。
 
 修订原则：
 1. 优先删除重复解释，不补另一句解释。
@@ -491,6 +499,10 @@ Reviewer / Editor 在放行前必须额外检查：
 4. 优先让人物正常生活/工作，而不是配合主角展示证据。
 5. 系统、记忆、巧合必须降低确定性，而不是换一种方式给答案。
 6. 调查链若像解题板，不是机械塞假线索，而是拆掉“主角当场解释并兑现每一条”的节拍；允许他人复核、程序性检查、暂存和无结论动作。
+7. 修知识来源缺口时，只补“角色如何知道”的最小可见路径，不额外扩写说明会。
+8. 修孤儿信号时，不要求立刻解释答案；人物只需真实地看见、记住、质疑或决定复核。
+9. 修主角能动性时，不允许把权限硬塞给主角；优先给他独占观察、选择、承担代价或信息处理。
+10. 修未播种回调时，优先删除假回调或改成当前文本已建立的事实，不倒灌大段前情。
 
 阶段 6.9：三章节拍与人物状态推进门槛
 
@@ -1366,18 +1378,20 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 9
+BUILTIN_READER_REVIEW_SKILL_VERSION = 10
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v9】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v10】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
 
 一、四类 Reader 视角
 A. 首读理解：发生了什么、因果能否一次读通、未知项是否可命名。
+   A01 知识来源：关键人物为什么此刻知道这件事？若正文没有亲见、转述、记录、调查或既有前情来源，而只能由读者替作者补一条路径，标记 KNOWLEDGE_PROVENANCE_GAP。
+   A02 回调播种：正文说“昨儿那个 / 还记得 / 又是那件事”等回收式表达时，前文是否真的出现过对应场景或事实；没有则标记 UNSEEDED_CALLBACK_GAP。
 B. 人物/关系：人物各自想要什么、谁阻碍谁、谁让步、关系发生了什么变化。
 C. 阅读动力：好奇来自未知还是没看懂、是否有具体下一步期待、类型承诺是否被别的线吞掉。
 D. 自然首读：意思即使能猜懂，正常中文读者第一眼是否会觉得怪、刻意、像作者表演或类型气质跑偏。
@@ -1551,6 +1565,8 @@ C10 系统认证泄漏：技能/奖励触发是否间接告诉读者“刚才判
 C11 巧合集群：连续多个正好是否叠加暴露作者安排。
 C12 证据展示摆台：人物动作/位置是否过于方便关键证据被依次看到。
 C13 推理解题板：调查是否连续重复“发现一个细节→主角解释其意义→立刻找到对应验证→当场兑现”，让读者像在看作者主持证据板，而不是人物在不完整现场里做事。
+C14 显著信号孤儿：正文是否明显强调某个异常重量、声音、位置、物理结果或人物反常，却没有任何相关人物看见、记住、质疑、利用或明确留待复核；标签 SALIENT_SIGNAL_ORPHAN_GAP。
+C15 主角能动性：一章的关键发现、决定、推进和后果是否几乎全部由配角完成，主角只负责在场、听见、被带走；若主角没有独占观察、选择、代价或策略，标签 PROTAGONIST_AGENCY_GAP。
 
 正式标签：
 - INTERPRETATION_ECHO_GAP
@@ -1566,10 +1582,17 @@ C13 推理解题板：调查是否连续重复“发现一个细节→主角解�
 - COINCIDENCE_CLUSTER_GAP
 - EVIDENCE_DISPLAY_STAGING
 - INVESTIGATION_WORKSHEET_GAP
+- KNOWLEDGE_PROVENANCE_GAP
+- SALIENT_SIGNAL_ORPHAN_GAP
+- PROTAGONIST_AGENCY_GAP
+- UNSEEDED_CALLBACK_GAP
 
 阻断原则：
 - 单个轻微问题：LOCAL_REWRITE / WATCH。
 - 同一场景同时出现两类以上作者痕迹，或调查发动机整体呈“教程关”：REWRITE_BLOCK。
+- KNOWLEDGE_PROVENANCE_GAP / UNSEEDED_CALLBACK_GAP 只要影响关键行动或章末钩子，必须 FAIL。
+- SALIENT_SIGNAL_ORPHAN_GAP 单个可 LOCAL_REWRITE；多个关键异常无人接收则 FAIL。
+- PROTAGONIST_AGENCY_GAP 以整章判断；不能为了修复而让主角越权或突然全知。
 - 不能为了避免线索阶梯而机械塞假线索；阻力必须来自真实现场和证据边界。
 
 十、Skill 自升级协议

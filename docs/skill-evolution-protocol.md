@@ -505,6 +505,35 @@ CLUE_LADDER_GAP 能抓“线索过顺”，EVIDENCE_DISPLAY_STAGING 能抓“人
 状态：
 CALIBRATING
 
+
+## Case SE-008｜读者能脑补，但正文没有给出知识来源/异常接收/主角贡献
+来源：第二章《谁让你推的车》商业读者首读与外部模型交叉评审。
+
+真实问题：
+1. 周虎的调查起点需要读者替作者脑补；
+2. “粮袋太轻 / 藏在横梁”被作者强调，却无人接收；
+3. 陈安后半章几乎只在场，关键推进由周虎、刘旺、赵六完成；
+4. 章尾“西库门口吵车钱”回调当前第一章不存在的场景。
+
+旧机制为什么漏：
+- C13 只检查“解释太多/兑现太快”，无法抓“知识来源没写”；
+- salience-gap 过于抽象，没有要求显著异常必须被角色接收；
+- 三章节拍 Gate 颗粒过大，不能稳定抓单章主角能动性；
+- REFERENCE_GAP 没有明确跨章“未播种回调”场景。
+
+升级：
+- Writer v16；
+- Refinement v13；
+- Reader v10；
+- Reader A 新增 A01 知识来源、A02 回调播种；
+- Reader C 新增 C14 显著信号孤儿、C15 主角能动性；
+- 新标签 KNOWLEDGE_PROVENANCE_GAP / SALIENT_SIGNAL_ORPHAN_GAP / PROTAGONIST_AGENCY_GAP / UNSEEDED_CALLBACK_GAP；
+- F047—F050；
+- 正式 Pipeline 的 reader-gap / continuity / plot / blind-artifice reader 同步接入。
+
+状态：
+CALIBRATING
+
 # 14. Definition of Done
 
 一次 Skill Evolution 只有同时满足以下条件才算完成：

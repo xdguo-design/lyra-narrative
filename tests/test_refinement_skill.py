@@ -11,7 +11,7 @@ from app.services.default_skills import (
 
 
 def test_refinement_skill_v12_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 12
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -208,7 +208,7 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
 
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 15
+    assert BUILTIN_WRITING_SKILL_VERSION == 16
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -344,7 +344,7 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
 
 
 def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 9
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -530,9 +530,9 @@ def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
 
 
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
-    assert BUILTIN_WRITING_SKILL_VERSION == 15
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 12
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 9
+    assert BUILTIN_WRITING_SKILL_VERSION == 16
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
 
     for marker in [
         "INVESTIGATION_WORKSHEET_GAP",
@@ -550,3 +550,33 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
         "连续三步以上",
     ]:
         assert marker in source
+
+
+def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
+    assert BUILTIN_WRITING_SKILL_VERSION == 16
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
+
+    combined = "\n".join(
+        [
+            BUILTIN_WRITING_SKILL_CONTENT,
+            BUILTIN_REFINEMENT_SKILL_CONTENT,
+            BUILTIN_READER_REVIEW_SKILL_CONTENT,
+        ]
+    )
+    for marker in [
+        "KNOWLEDGE_PROVENANCE_GAP",
+        "SALIENT_SIGNAL_ORPHAN_GAP",
+        "PROTAGONIST_AGENCY_GAP",
+        "UNSEEDED_CALLBACK_GAP",
+        "C14 显著信号孤儿",
+        "C15 主角能动性",
+        "A01 知识来源",
+        "A02 回调播种",
+    ]:
+        assert marker in combined
+
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    assert "必须覆盖 C01—C15" in source
+    assert "KNOWLEDGE_PROVENANCE_GAP" in source
+    assert "UNSEEDED_CALLBACK_GAP" in source

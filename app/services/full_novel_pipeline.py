@@ -394,7 +394,7 @@ VERDICT: PASS 或 VERDICT: FAIL
                 BUILTIN_READER_REVIEW_SKILL_CONTENT,
                 """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
 
-必须覆盖 C01—C13。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台，以及调查是否被主角主持成解题板。
+必须覆盖 C01—C15。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台、调查是否被主角主持成解题板、显著异常是否成为孤儿信号，以及主角是否整章退化成摄像机。
 
 严格输出：
 STORY_FLOW_ARTIFICE_V1
@@ -411,6 +411,8 @@ VERDICT: PASS 或 VERDICT: FAIL
 【巧合集群】
 【证据展示摆台】
 【推理解题板感】
+【显著异常是否被角色接收】
+【主角本章是否有独占观察/选择/代价】
 【失败标签】
 【逐字证据】
 【最小修改边界】
@@ -429,6 +431,8 @@ SYSTEM_CONFIRMATION_LEAK
 COINCIDENCE_CLUSTER_GAP
 EVIDENCE_DISPLAY_STAGING
 INVESTIGATION_WORKSHEET_GAP
+SALIENT_SIGNAL_ORPHAN_GAP
+PROTAGONIST_AGENCY_GAP
 NONE
 
 规则：
@@ -441,6 +445,8 @@ NONE
 - 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。
 - 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。
 - 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。
+- 显著异常不要求立即解释答案；只要人物真实接收并形成疑问/记忆/待核查项即可通过 C14。
+- 主角不需要包办破案；一个有后果的观察、选择、代价或策略即可避免 C15，禁止为过 Gate 强行越权。
 - 不得修改正文。""",
             ]
         ),
@@ -490,12 +496,12 @@ VERDICT: PASS / WATCH / FAIL
         (
             "continuity-reviewer",
             "continuity",
-            "检查人物状态、称谓、时间线、地点、道具、伏笔和已确认世界规则是否连续。发现硬冲突必须标 blocking。",
+            "检查人物状态、称谓、时间线、地点、道具、伏笔和已确认世界规则是否连续。特别检查跨章回调：正文说‘昨儿那个/又是/还记得’时，前文是否真的播种；未播种却当成既有前情，标 UNSEEDED_CALLBACK_GAP 并按影响判 blocking。发现硬冲突必须标 blocking。",
         ),
         (
             "plot-reviewer",
             "plot",
-            "检查因果、人物动机、冲突升级、信息揭示、场景目标、代价和章末钩子。剧情靠解释推进或冲突不足时明确指出。",
+            "检查因果、人物动机、冲突升级、信息揭示、场景目标、代价和章末钩子。额外检查主角本章是否有独占观察、选择、代价或策略；若关键推进几乎全由配角完成而主角只在场，标 PROTAGONIST_AGENCY_GAP。剧情靠解释推进或冲突不足时明确指出。",
         ),
         (
             "character-reviewer",
@@ -527,7 +533,7 @@ VERDICT: PASS / WATCH / FAIL
             "reader",
             "这是独立盲读者的首次阅读报告：\n"
             + reader_trace_result.content
-            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。严格按 Reader Gate v3 判定：INTENTIONAL_UNKNOWN 可 PASS；READER_GAP 必须修；AMBIGUOUS_GAP 只有多个解释均为作者有意且不损害当前场景理解时才可 PASS。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
+            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。强制审计关键人物知识来源：每个关键行动前，正文是否给出亲见、转述、记录、调查或既有前情；只能靠读者脑补来源时标 KNOWLEDGE_PROVENANCE_GAP。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。严格按 Reader Gate v3 判定：INTENTIONAL_UNKNOWN 可 PASS；READER_GAP 必须修；AMBIGUOUS_GAP 只有多个解释均为作者有意且不损害当前场景理解时才可 PASS。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
         ),
     ]
 

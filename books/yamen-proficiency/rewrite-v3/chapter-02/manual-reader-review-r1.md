@@ -1,4 +1,8 @@
-# Chapter 02 Manual Reader / Reviewer Record — R1
+# Chapter 02 Manual Reader / Reviewer Record — R1 (superseded)
+
+> Provenance correction: this record was a manual self-check written in ChatGPT,
+> not the raw output of NarrativeOS Reader agents. Its PASS labels must not be
+> cited as formal agent-run evidence. Kept only as historical failure evidence.
 
 ## Scope
 - Chapter: 《谁让你推的车》
