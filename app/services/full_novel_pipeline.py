@@ -101,7 +101,7 @@ def _persist_memory(
 def _review_contract(round_no: int) -> str:
     if round_no <= 1:
         return """NARRATIVEOS_REVIEW_V3
-审核轮次：INITIAL。请严格按“小说精修流程 v8”的 Reviewer 统一审核输出格式执行。
+审核轮次：INITIAL。请严格按“小说精修流程 v9”的 Reviewer 统一审核输出格式执行。
 每个问题一块，多个问题用单独一行 --- 分隔；没有问题只输出 NO_ISSUE。
 必须包含：问题标识、严重性、处置级别、问题类型、问题定位、逐字片段、问题说明、判级理由、修改边界、必须保留事实、禁止新增内容、执行目标、建议动作、复审要求、复审结果=PENDING。
 处置级别只能是 REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS。
@@ -335,6 +335,67 @@ VERDICT: PASS 或 VERDICT: FAIL
     )
     natural_reader_failed = "VERDICT: PASS" not in natural_reader_result.content.upper()
 
+    artifice_reader_result = await _run_step(
+        task_id=task_id,
+        role="blind-artifice-reader",
+        stage=f"reader-artifice-r{round_no}",
+        mode="check",
+        content=draft,
+        instruction="\n\n".join(
+            [
+                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
+
+必须覆盖 C01—C12。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台。
+
+严格输出：
+STORY_FLOW_ARTIFICE_V1
+VERDICT: PASS 或 VERDICT: FAIL
+【解释回声】
+【设定清单】
+【对话循环】
+【人物声音是否过演】
+【指纹/身体状态是否打卡】
+【线索阶梯】
+【线索密度】
+【记忆是否过于便利】
+【系统是否间接认证判断】
+【巧合集群】
+【证据展示摆台】
+【失败标签】
+【逐字证据】
+【最小修改边界】
+
+允许标签：
+INTERPRETATION_ECHO_GAP
+PREMISE_CHECKLIST_GAP
+DIALOGUE_LOOP_GAP
+VOICE_OVERPERFORMANCE_GAP
+FINGERPRINT_OVERUSE_GAP
+BODY_STATE_TICKER_GAP
+CLUE_LADDER_GAP
+CLUE_DENSITY_GAP
+CONVENIENT_MEMORY_RECALL_GAP
+SYSTEM_CONFIRMATION_LEAK
+COINCIDENCE_CLUSTER_GAP
+EVIDENCE_DISPLAY_STAGING
+NONE
+
+规则：
+- 单个轻微痕迹可标 WATCH，不必强行 FAIL。
+- 同一场景出现两类以上明确作者痕迹，或调查链整体像教程关，VERDICT 必须 FAIL。
+- 不能把“有意悬念”误判为线索不足。
+- 不能为了降低线索密度要求作者机械塞假线索。
+- 人物标志动作出现一次不算打卡；短距离反复证明“这个人是谁”才算。
+- 身体状态持续影响选择是好事；只有旁白不断重复播报才算 BODY_STATE_TICKER_GAP。
+- 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。
+- 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。
+- 不得修改正文。""",
+            ]
+        ),
+    )
+    artifice_reader_failed = "VERDICT: PASS" not in artifice_reader_result.content.upper()
+
     specs = [
         (
             "continuity-reviewer",
@@ -381,7 +442,7 @@ VERDICT: PASS 或 VERDICT: FAIL
     ]
 
     outputs: list[str] = []
-    has_blocking = natural_reader_failed or dialogue_reader_failed
+    has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed
     for index, (role, category, instruction) in enumerate(specs):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
@@ -459,6 +520,26 @@ VERDICT: PASS 或 VERDICT: FAIL
                     "blocking",
                     dialogue_reader_result.content,
                     "按 Reader B 给出的最小修改边界重写功能性对白；不得仅增加字数，必须增强人物目标、声音和关系痕迹。",
+                    "open",
+                ),
+            )
+
+    outputs.append(f"[reader-artifice] {artifice_reader_result.content}")
+    if artifice_reader_failed:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "blind-artifice-reader",
+                    "reader-artifice",
+                    "blocking",
+                    artifice_reader_result.content,
+                    "按 Reader C 给出的最小修改边界降低作者痕迹；优先删解释回声、压缩重复对话、降低线索密度与巧合展示，不得机械添加假线索。",
                     "open",
                 ),
             )
@@ -766,7 +847,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             content=draft,
             instruction="\n\n".join(
                 [
-                    """根据八个独立 Reviewer、盲读 Reader B（对话真实性）与 Reader D（自然首读）的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。
+                    """根据八个独立 Reviewer、盲读 Reader B（对话真实性）、Reader C（阅读推进/作者痕迹）与 Reader D（自然首读）的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。
 
 任何 LOCAL_REWRITE 执行前必须先在内部建立 Narrative Function Contract：本段必须让读者知道什么、必须确认什么身份/关系/规则、必须发生什么决定/状态变化、后文依赖什么接口。修改完成后必须执行 Seam Check：检查重复问答、重复说明、决定/关系/动作/情绪/空间重置。不得为了改善人物或语言而写丢原场景功能。只输出重写后的完整正文。""",
                     "Reviewer 意见：\n" + "\n\n".join(review_outputs),
