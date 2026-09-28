@@ -13,6 +13,7 @@ Reader C：PASS
 Reader D：PASS
 Dialogue Authenticity Rebuild：PASS
 Revision Integrity Repair：PASS
+Clue Progression Reorder：PASS
 Multi-Review：LOCAL_POLISH
 Editor Pass：PASS
 Reader Recheck：PASS
@@ -44,6 +45,15 @@ Story State：FROZEN
 - 穿越正文确认：PASS
 - 运粮路线首次询问位置：PASS
 - 前后场景接口：PASS
+
+## Clue Progression Recheck
+- CLUE_LADDER：REDUCED / PASS
+- COINCIDENCE_CLUSTER：REDUCED / PASS
+- SYSTEM_CONFIRMATION_LEAK：CLOSED FOR CHAPTER 1
+- 刘旺提前作为日常人物出现：PASS
+- 擦痕追踪中断：PASS
+- 蓝线仅保留为待核查项：PASS
+- 陈安主动去后厨核对小车：PASS
 
 ## Blocking
 0
