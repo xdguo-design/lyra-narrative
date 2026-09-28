@@ -199,7 +199,17 @@ def _named_provider_profile(profile_name: str) -> dict | None:
         api_key_env = profile_secret_env
     else:
         configured_env = parsed.get("NOVEL_AI_API_KEY_ENV", "").strip()
-        if configured_env and os.getenv(configured_env, "").strip():
+        shared_profile_secret_env = (
+            f"NARRATIVE_PROFILE_SECRET_{configured_env.upper()}"
+            if configured_env
+            else ""
+        )
+        if (
+            shared_profile_secret_env
+            and os.getenv(shared_profile_secret_env, "").strip()
+        ):
+            api_key_env = shared_profile_secret_env
+        elif configured_env and os.getenv(configured_env, "").strip():
             api_key_env = configured_env
 
     return {

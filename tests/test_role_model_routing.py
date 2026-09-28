@@ -55,3 +55,21 @@ def test_specialist_readers_are_spread_across_profiles(monkeypatch):
     assert _role_profile_candidates("continuity-reviewer")[0] == "MODELSCOPE"
     assert _role_profile_candidates("character-reviewer")[0] == "GLM52"
     assert _role_profile_candidates("blind-natural-reader")[0] == "SENSENOVA68"
+
+
+def test_named_profile_can_reuse_shared_profile_secret(monkeypatch):
+    from app.services.ai_service import _named_provider_profile
+
+    monkeypatch.setenv(
+        "NARRATIVE_PROFILE_GLM52",
+        "NOVEL_AI_KIND=openai-compatible "
+        "NOVEL_AI_MODEL=glm-5.2 "
+        "NOVEL_AI_BASE_URL=https://example.invalid/v1 "
+        "NOVEL_AI_API_KEY_ENV=SENSENOVA",
+    )
+    monkeypatch.delenv("NARRATIVE_PROFILE_SECRET_GLM52", raising=False)
+    monkeypatch.setenv("NARRATIVE_PROFILE_SECRET_SENSENOVA", "shared-secret")
+
+    profile = _named_provider_profile("GLM52")
+    assert profile is not None
+    assert profile["api_key_env"] == "NARRATIVE_PROFILE_SECRET_SENSENOVA"
