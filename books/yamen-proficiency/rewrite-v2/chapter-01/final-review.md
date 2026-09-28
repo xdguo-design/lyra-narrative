@@ -41,6 +41,8 @@ WATCH：
 ## Reader D — 自然首读
 VERDICT: PASS
 
+Memory Transition：PASS（现代记忆与原身知识通过认知冲突完成切换，无解释性独白）
+
 - 开篇自然度：PASS。
 - 语义平行 / 数量 / 指代 / 身体关系：PASS。
 - 赵六动作与对白无明显作者段子感。
