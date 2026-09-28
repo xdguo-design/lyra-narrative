@@ -10,8 +10,8 @@ from app.services.default_skills import (
 )
 
 
-def test_refinement_skill_v9_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 9
+def test_refinement_skill_v11_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 11
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -103,7 +103,7 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "应合并并升级为 REWRITE_BLOCK" in content
 
 
-def test_refinement_skill_v9_has_unified_reviewer_output_contract():
+def test_refinement_skill_v11_has_unified_reviewer_output_contract():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -148,7 +148,7 @@ def test_reviewer_recheck_closes_or_returns_same_issue():
     assert "禁止在 PASS 后继续反复重写同一处" in content
 
 
-def test_refinement_skill_v9_has_reality_and_readability_gate():
+def test_refinement_skill_v11_has_reality_and_readability_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -167,7 +167,7 @@ def test_refinement_skill_v9_has_reality_and_readability_gate():
         assert marker in content
 
 
-def test_refinement_skill_v9_escalates_scene_level_naturalness_failures():
+def test_refinement_skill_v11_escalates_scene_level_naturalness_failures():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     assert "场景中的关键地点、设施、器物或空间关系没有现实锚点" in content
@@ -176,7 +176,7 @@ def test_refinement_skill_v9_escalates_scene_level_naturalness_failures():
     assert "只缺一个孤立锚点 → LOCAL_REWRITE" in content
 
 
-def test_refinement_skill_v9_character_humor_and_ending_rules():
+def test_refinement_skill_v11_character_humor_and_ending_rules():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     for marker in [
         "人物立体化",
@@ -207,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v11_adds_author_hand_and_story_flow_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 11
+def test_writing_skill_v13_adds_escalation_and_character_progression_gates():
+    assert BUILTIN_WRITING_SKILL_VERSION == 13
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -261,12 +261,18 @@ def test_writing_skill_v11_adds_author_hand_and_story_flow_gates():
         "SYSTEM_CONFIRMATION_LEAK",
         "COINCIDENCE_CLUSTER_GAP",
         "EVIDENCE_DISPLAY_STAGING",
+        "叙事肌理与连续动作（Narrative Texture Gate）",
+        "SCENE_TEXTURE_GAP",
+        "ACTION_FRAGMENTATION_GAP",
+        "三章节拍与人物状态推进（Three-Chapter Escalation Gate）",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
     ]
     for marker in required:
         assert marker in content
 
 
-def test_refinement_skill_v9_adds_aesthetic_editing_gate():
+def test_refinement_skill_v11_adds_aesthetic_editing_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
         "阶段 11：编辑审美门槛",
@@ -335,8 +341,8 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_reader_review_skill_v6_adds_author_artifice_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 6
+def test_reader_review_skill_v7_adds_narrative_texture_reader_contract():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 7
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -375,6 +381,10 @@ def test_reader_review_skill_v6_adds_author_artifice_reader_contract():
         "CLUE_DENSITY_GAP",
         "SYSTEM_CONFIRMATION_LEAK",
         "EVIDENCE_DISPLAY_STAGING",
+        "D16 叙事肌理",
+        "D17 连续动作",
+        "SCENE_TEXTURE_GAP",
+        "ACTION_FRAGMENTATION_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -395,7 +405,7 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         "EMOTIONAL_RESIDUE_GAP",
         "natural_reader_failed",
         "dialogue_reader_failed",
-        "has_blocking = natural_reader_failed or dialogue_reader_failed",
+        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed",
         "reader-naturalness",
         '"reviewed" if final_blocking else "awaiting_approval"',
     ]
@@ -412,7 +422,7 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         assert marker not in source
 
 
-def test_refinement_skill_v9_requires_narrative_function_and_seam_contracts():
+def test_refinement_skill_v11_requires_narrative_function_and_seam_contracts():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
         "阶段 6.5：局部重写完整性门槛",
@@ -468,3 +478,27 @@ def test_full_pipeline_has_author_artifice_reader_gate():
     ]
     for marker in required:
         assert marker in source
+
+
+def test_refinement_skill_v11_has_three_chapter_escalation_gate():
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+    for marker in [
+        "阶段 6.9：三章节拍与人物状态推进门槛",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
+        "连续 3 章",
+        "连续 6 章",
+    ]:
+        assert marker in content
+
+
+def test_writing_skill_v13_requires_three_chapter_climax_and_character_state_change():
+    content = BUILTIN_WRITING_SKILL_CONTENT
+    for marker in [
+        "三章节拍与人物状态推进（Three-Chapter Escalation Gate）",
+        "每 3 章至少出现 1 个小高潮",
+        "至少两名核心人物",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
+    ]:
+        assert marker in content
