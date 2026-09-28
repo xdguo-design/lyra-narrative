@@ -327,7 +327,7 @@ VERDICT: PASS 或 VERDICT: FAIL
                 BUILTIN_READER_REVIEW_SKILL_CONTENT,
                 """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
 
-必须逐段、逐关键句首读，覆盖 D01—D18。不要只盯开篇和章尾。
+必须逐段、逐关键句首读，覆盖 D01—D20。不要只盯开篇和章尾。
 
 严格输出：
 NATURAL_FIRST_READ_V2
@@ -336,7 +336,7 @@ VERDICT: PASS 或 VERDICT: FAIL
 若 FAIL，每个问题必须输出：
 【问题ID】D001 起递增
 【逐字原句】
-【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP 中选择
+【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP / MEMORY_INTEGRATION_TOO_SMOOTH / ORALITY_GAP 中选择
 【第一次为什么会停】
 【是否只是人物毛刺】YES / NO
 【最小修改边界】
@@ -356,6 +356,8 @@ VERDICT: PASS 或 VERDICT: FAIL
 - 若同一连续观察/移动动作被机械切成多个短句，读起来像分镜脚本，判 ACTION_FRAGMENTATION_GAP。
 - 若关键对白连续只剩台词信息、附近完全看不到说话人的身体/视线/手上任务，判 EMBODIED_DIALOGUE_GAP。
 - “少解释”不能成为“少描写、少质感”的通过理由。
+- 穿越/原身记忆/失忆恢复若像读取资料卡一样无摩擦，判 MEMORY_INTEGRATION_TOO_SMOOTH；不得靠解释性独白修。
+- 极短对白若语法正确但真人不这么说，像作者为了节奏砸字，判 ORALITY_GAP。
 - 不得修改正文。""",
             ]
         ),
