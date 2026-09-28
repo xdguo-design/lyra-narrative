@@ -475,6 +475,36 @@ CALIBRATING
 
 ---
 
+
+## Case SE-007｜调查解题板感
+来源：用户要求先以读者身份复审《谁让你推的车》后发现。
+
+真实问题：
+逻辑与单条证据都能成立，但场景连续出现“鞋跟/车轮/谷壳/米袋/逃跑/上级进场”等验证点；主角几乎每看到一项就立刻解释、逼问、验证并兑现，读者会明显感觉作者在主持推理题。
+
+旧机制为什么还不够：
+CLUE_LADDER_GAP 能抓“线索过顺”，EVIDENCE_DISPLAY_STAGING 能抓“人物摆证据”，但没有明确拦截“主角把每一步意义当场讲明并主持整条验证链”的阅读体验。
+
+泛化：
+“调查/审讯/查账连续三步以上重复 发现→解释→验证→兑现，使人物现场退化成答案演示板。”
+
+升级：
+- Writer v15：Author-Hand Gate 新增解题板自检；
+- Reader Skill v9：Reader C 新增 C13；
+- Refinement v12：正式接入 INVESTIGATION_WORKSHEET_GAP；
+- full_novel_pipeline blind-artifice-reader 覆盖 C01—C13；
+- F046；
+- Author Artifice Regression Corpus 新增 AF013 / AP011。
+
+误报边界：
+- 两条连续相关线索不自动失败；
+- 一次漂亮推断或一次当场核验可以 PASS；
+- 不要求故意制造假线索、错误判断或拖沓；
+- 关键是是否形成连续三步以上的“作者主持答案”阅读感。
+
+状态：
+CALIBRATING
+
 # 14. Definition of Done
 
 一次 Skill Evolution 只有同时满足以下条件才算完成：

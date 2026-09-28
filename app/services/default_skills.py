@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 14
+BUILTIN_WRITING_SKILL_VERSION = 15
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -252,6 +252,7 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
    - 系统/记忆/巧合是否在替剧情兜底？
    - 人物动作是在生活，还是在展示证据？
    若出现两项以上，至少 LOCAL_REWRITE；调查主发动机大面积成立时 REWRITE_BLOCK。
+16. 调查、审讯、查账场景不得写成“主角主持解题板”：一个细节出现后，主角立刻命名含义、追问对应人物、得到验证、再总结结论，随后下一条证据继续同样循环。若连续三步以上都按“发现 → 解释 → 验证 → 兑现”推进，即使每一步逻辑成立，也判 INVESTIGATION_WORKSHEET_GAP。优先保留弱证据、未验证项、他人独立判断和程序性动作，让线索不必都由主角当场讲明。
 
 二十四、叙事肌理与连续动作（Narrative Texture Gate）
 1. “少解释”不等于“少描写”。关键声音、气味、触感、光线、动作阻力，至少要有一个可感知特征，不能只写“有人咬东西”“有味道”“他看了看”这类功能命名。
@@ -332,6 +333,7 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 人物指纹、伤势、口头禅是否被短距离反复打卡？
 - 线索是否过顺、过密、过准时，或由系统/记忆/巧合间接兜底？
 - 嫌疑人物的动作是否过于配合关键证据展示？
+- 调查是否像主角在主持解题板：每个细节都被立即解释、验证并兑现？
 - 关键声音/气味/触感是否只被功能命名，没有可感知质地？
 - 连续动作是否被切成三四个互不相连的短句？
 - 关键对白附近是否完全看不到说话人的身体、视线和当前任务？
@@ -349,7 +351,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 11
+BUILTIN_REFINEMENT_SKILL_VERSION = 12
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性与审美取舍，最后审核并打回不合格段落。"
 )
@@ -480,6 +482,7 @@ Reviewer / Editor 在放行前必须额外检查：
 - 调查链是否触发 CLUE_LADDER_GAP / CLUE_DENSITY_GAP；
 - 记忆/系统/巧合是否承担剧情认证或补拼图；
 - 嫌疑人物是否被摆成证据展示台。
+- 调查/审讯是否触发 INVESTIGATION_WORKSHEET_GAP：主角连续把“发现→解释→验证→兑现”主持成解题板。
 
 修订原则：
 1. 优先删除重复解释，不补另一句解释。
@@ -487,6 +490,7 @@ Reviewer / Editor 在放行前必须额外检查：
 3. 优先把关键证据改成待核查项，不把每个发现立刻兑现。
 4. 优先让人物正常生活/工作，而不是配合主角展示证据。
 5. 系统、记忆、巧合必须降低确定性，而不是换一种方式给答案。
+6. 调查链若像解题板，不是机械塞假线索，而是拆掉“主角当场解释并兑现每一条”的节拍；允许他人复核、程序性检查、暂存和无结论动作。
 
 阶段 6.9：三章节拍与人物状态推进门槛
 
@@ -1362,12 +1366,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 8
+BUILTIN_READER_REVIEW_SKILL_VERSION = 9
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v8】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v9】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1546,6 +1550,7 @@ C09 便利记忆：当前缺什么，记忆是否刚好补什么。
 C10 系统认证泄漏：技能/奖励触发是否间接告诉读者“刚才判断正确”。
 C11 巧合集群：连续多个正好是否叠加暴露作者安排。
 C12 证据展示摆台：人物动作/位置是否过于方便关键证据被依次看到。
+C13 推理解题板：调查是否连续重复“发现一个细节→主角解释其意义→立刻找到对应验证→当场兑现”，让读者像在看作者主持证据板，而不是人物在不完整现场里做事。
 
 正式标签：
 - INTERPRETATION_ECHO_GAP
@@ -1560,6 +1565,7 @@ C12 证据展示摆台：人物动作/位置是否过于方便关键证据被依
 - SYSTEM_CONFIRMATION_LEAK
 - COINCIDENCE_CLUSTER_GAP
 - EVIDENCE_DISPLAY_STAGING
+- INVESTIGATION_WORKSHEET_GAP
 
 阻断原则：
 - 单个轻微问题：LOCAL_REWRITE / WATCH。

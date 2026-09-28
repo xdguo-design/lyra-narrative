@@ -394,7 +394,7 @@ VERDICT: PASS 或 VERDICT: FAIL
                 BUILTIN_READER_REVIEW_SKILL_CONTENT,
                 """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
 
-必须覆盖 C01—C12。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台。
+必须覆盖 C01—C13。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台，以及调查是否被主角主持成解题板。
 
 严格输出：
 STORY_FLOW_ARTIFICE_V1
@@ -410,6 +410,7 @@ VERDICT: PASS 或 VERDICT: FAIL
 【系统是否间接认证判断】
 【巧合集群】
 【证据展示摆台】
+【推理解题板感】
 【失败标签】
 【逐字证据】
 【最小修改边界】
@@ -427,6 +428,7 @@ CONVENIENT_MEMORY_RECALL_GAP
 SYSTEM_CONFIRMATION_LEAK
 COINCIDENCE_CLUSTER_GAP
 EVIDENCE_DISPLAY_STAGING
+INVESTIGATION_WORKSHEET_GAP
 NONE
 
 规则：
@@ -438,6 +440,7 @@ NONE
 - 身体状态持续影响选择是好事；只有旁白不断重复播报才算 BODY_STATE_TICKER_GAP。
 - 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。
 - 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。
+- 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。
 - 不得修改正文。""",
             ]
         ),

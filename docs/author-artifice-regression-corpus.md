@@ -110,6 +110,17 @@ COINCIDENCE_CLUSTER_GAP
 标签：
 EVIDENCE_DISPLAY_STAGING
 
+---
+
+### AF013｜调查像主角主持解题板
+车轮异常 → 主角立刻解释 → 鞋跟吻合 → 当场逼问 → 嫌疑人逃跑 → 车里正好翻出关键物 → 上级正好进场继续认证；连续多步都由主角当场命名、验证并兑现。
+
+标签：
+INVESTIGATION_WORKSHEET_GAP
+
+必须抓住：
+不是某一条线索错误，而是整条调查节拍像作者按顺序揭答案。
+
 ## PASS 样本
 
 ### AP001｜必要边界解释
@@ -190,6 +201,14 @@ EVIDENCE_DISPLAY_STAGING
 为什么 PASS：
 单一自然暴露不构成“证据展示摆台”。
 
+---
+
+### AP011｜线索只形成怀疑，验证由程序和他人完成
+主角只指出“这辆车可能走过木棚”，没有当场解释全部意义；班头随后分别问人、搜场、过秤，过程中有无结果步骤，最后才确认少粮。
+
+为什么 PASS：
+主角提供观察，不主持整条答案链；证据边界、权限和他人独立判断都仍存在。
+
 ## False-positive boundaries
 
 Reader C 不得因为以下现象单独判 FAIL：
@@ -207,8 +226,8 @@ Reader C 不得因为以下现象单独判 FAIL：
 
 ## Regression requirement
 
-Reader Skill v6+：
-- AF001—AF012 必须识别为 FAIL 或至少明确 WATCH；
-- AP001—AP010 不得误杀；
+Reader Skill v9+：
+- AF001—AF013 必须识别为 FAIL 或至少明确 WATCH；
+- AP001—AP011 不得误杀；
 - 同一场景出现两类以上明确 FAIL 时必须 blocking；
 - 不允许为了降低作者痕迹机械增加废话、假线索或无意义动作。
