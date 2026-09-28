@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 10
+BUILTIN_WRITING_SKILL_VERSION = 11
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -227,7 +227,33 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 7. 如果保住场景功能必须触动超出原 LOCAL_REWRITE 边界的多个因果节点，停止小修，升级 REWRITE_BLOCK。
 8. Writer 在改写已有段落时同样执行本门槛；“重写得更好看”不能成为丢失原场景功能的理由。
 
-二十二、自检
+二十三、作者痕迹与推进人工感（Author-Hand & Story-Flow Gate）
+1. 动作、对白、场景已经让读者得出结论后，旁白不得紧接着把同一个意思再解释一遍。若“演完再解释”，判 INTERPRETATION_ECHO_GAP。
+2. 开篇背景不能像逐项勾设定卡。身份、家庭、债务、规则、能力若在很短范围内被整齐列完，且没有被行动/冲突分散，判 PREMISE_CHECKLIST_GAP。
+3. 一场对话即使人物声音成立，也不能围绕同一个决定反复演多轮。若“去/不去、跟/不跟、信/不信”等关系变化已经完成，却继续重复，判 DIALOGUE_LOOP_GAP。
+4. 人物声音建立后，不要求每句话都“很像这个人”。若台词持续追求巧、贫、冷、狠、金句感，读者开始看见作者在展示性格，判 VOICE_OVERPERFORMANCE_GAP。
+5. 人物语言/非语言指纹是选择依据，不是打卡项。标志物、口头禅、固定动作、伤势提醒若在短场景中反复出现以证明人物存在，判 FINGERPRINT_OVERUSE_GAP。
+6. 身体状态必须持续影响选择，但不能变成状态播报。伤、饿、冷、累若每隔几段重新被旁白提醒，而不是通过动作限制自然体现，判 BODY_STATE_TICKER_GAP。
+7. 调查/发现不能形成稳定“线索 A → 线索 B → 线索 C → 答案”的奖励阶梯。若每一步都必然产生下一步，缺少噪声、断点、无效信息或待核查项，判 CLUE_LADDER_GAP。
+8. 同一小空间/短时间内高价值异常过密，即使每条都合理，也会暴露作者发线索，判 CLUE_DENSITY_GAP。
+9. 回忆不能按剧情所缺的最后一块拼图精准解锁。回忆可以被感官触发，但应允许不完整、延迟、错误、无结论；若“当前缺什么就刚好想起什么”，判 CONVENIENT_MEMORY_RECALL_GAP。
+10. 系统/熟练度不能通过奖励时机间接认证推理正确。若技能增长紧贴关键判断，使读者理解成“系统确认答案”，判 SYSTEM_CONFIRMATION_LEAK。
+11. 单个巧合可接受；短时间连续多个“正好”叠加则构成作者手。人、物、时间、位置、证据连续配合时，判 COINCIDENCE_CLUSTER_GAP。
+12. 嫌疑人物即使不是巧合出现，也不能通过动作/站位依次把关键证据“展示”给主角。若正好擦关键物、正好转身露鞋、正好把证据摆到视线，判 EVIDENCE_DISPLAY_STAGING。
+13. 发现链必须允许至少一种真实阻力：追丢、噪声、无法解释、多个可能、需要复核、信息暂存。不是每章都强制误导，但不能稳定通关。
+14. 解释是否必要的判断：
+   - 没这句会让读者误判事实边界：可留；
+   - 动作/对白已经表达，只是怕读者没看懂人物品质：删；
+   - 规则以后可由剧情证明：不要提前辩护。
+15. 完稿后问：
+   - 我是不是在替读者总结刚刚已经看懂的东西？
+   - 这段是不是像作者在展示人物卡？
+   - 线索是否太密、太顺、太准时？
+   - 系统/记忆/巧合是否在替剧情兜底？
+   - 人物动作是在生活，还是在展示证据？
+   若出现两项以上，至少 LOCAL_REWRITE；调查主发动机大面积成立时 REWRITE_BLOCK。
+
+二十四、自检
 交稿前逐段检查：
 - 是否连续出现过多短句或单句段落？
 - 是否有只写“不像什么”却没有写清“像什么”的描写？
@@ -263,6 +289,11 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 不同人物是否真的注意不同的东西？
 - 如果这是局部重写，原段必须完成的叙事功能是否逐项保住？
 - 修改块与前后文拼接后，是否出现重复问答、重复介绍、状态重置或关系倒退？
+- 我是否在动作/对白已经表达后又替读者解释一遍？
+- 对话是否已完成人物关系变化却还在重复表演？
+- 人物指纹、伤势、口头禅是否被短距离反复打卡？
+- 线索是否过顺、过密、过准时，或由系统/记忆/巧合间接兜底？
+- 嫌疑人物的动作是否过于配合关键证据展示？
 若任一项成立，先改再交。
 """
 
@@ -271,7 +302,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 8
+BUILTIN_REFINEMENT_SKILL_VERSION = 9
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性与审美取舍，最后审核并打回不合格段落。"
 )
@@ -391,6 +422,24 @@ D. 修改纪律
 - Seam 问题优先合并/删除重复，不新增第三次解释；
 - 若后文原本成立、只是因新修改变重复，优先改新修改块或接口，不无故扩大到整章；
 - 若两个段落承担相同功能，只保留更自然、位置更合理的一处。
+
+阶段 6.8：作者痕迹与推进人工感门槛
+
+Reviewer / Editor 在放行前必须额外检查：
+- 是否存在 INTERPRETATION_ECHO_GAP；
+- 是否存在 PREMISE_CHECKLIST_GAP；
+- 对话是否触发 DIALOGUE_LOOP_GAP / VOICE_OVERPERFORMANCE_GAP；
+- 人物指纹或身体状态是否触发 FINGERPRINT_OVERUSE_GAP / BODY_STATE_TICKER_GAP；
+- 调查链是否触发 CLUE_LADDER_GAP / CLUE_DENSITY_GAP；
+- 记忆/系统/巧合是否承担剧情认证或补拼图；
+- 嫌疑人物是否被摆成证据展示台。
+
+修订原则：
+1. 优先删除重复解释，不补另一句解释。
+2. 优先降低有效信息密度，不机械增加假线索。
+3. 优先把关键证据改成待核查项，不把每个发现立刻兑现。
+4. 优先让人物正常生活/工作，而不是配合主角展示证据。
+5. 系统、记忆、巧合必须降低确定性，而不是换一种方式给答案。
 
 阶段 7：修改级别判定——整段重写、局部重写、直接删除、轻度润色
 
@@ -1251,12 +1300,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 5
+BUILTIN_READER_REVIEW_SKILL_VERSION = 6
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v5】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v6】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1413,7 +1462,42 @@ S17 局部重写接口裂缝：修改块内部成立，与前后文拼接后出�
 Reader 只能报告最终阅读结果；Revision Integrity 必须由能同时看到 Before / After 的 Reviewer 或 Revision Gate 执行。
 不得要求 Blind Reader 猜作者原段功能。
 
-九、Skill 自升级协议
+九、Reader C：阅读推进 / 作者痕迹
+Reader C 除“想不想继续读”外，强制检查正文是否暴露作者施工痕迹。
+
+C01 解释回声：动作/对白已表达后，旁白是否再总结同义结论。
+C02 设定清单：开篇是否短距离连续勾完身份、家庭、债务、规则、能力。
+C03 对话循环：同一决定/关系变化是否重复多轮。
+C04 声音过演：人物是否每句话都追求“很像自己”、巧句或口头禅。
+C05 指纹打卡：标志动作/物件/身体状态是否在短场景内反复证明人物。
+C06 身体状态播报：身体影响是否从“自然限制”退化成持续提醒。
+C07 线索阶梯：调查是否每一步稳定产出下一步。
+C08 线索密度：小空间/短时间高价值异常是否过密。
+C09 便利记忆：当前缺什么，记忆是否刚好补什么。
+C10 系统认证泄漏：技能/奖励触发是否间接告诉读者“刚才判断正确”。
+C11 巧合集群：连续多个正好是否叠加暴露作者安排。
+C12 证据展示摆台：人物动作/位置是否过于方便关键证据被依次看到。
+
+正式标签：
+- INTERPRETATION_ECHO_GAP
+- PREMISE_CHECKLIST_GAP
+- DIALOGUE_LOOP_GAP
+- VOICE_OVERPERFORMANCE_GAP
+- FINGERPRINT_OVERUSE_GAP
+- BODY_STATE_TICKER_GAP
+- CLUE_LADDER_GAP
+- CLUE_DENSITY_GAP
+- CONVENIENT_MEMORY_RECALL_GAP
+- SYSTEM_CONFIRMATION_LEAK
+- COINCIDENCE_CLUSTER_GAP
+- EVIDENCE_DISPLAY_STAGING
+
+阻断原则：
+- 单个轻微问题：LOCAL_REWRITE / WATCH。
+- 同一场景同时出现两类以上作者痕迹，或调查发动机整体呈“教程关”：REWRITE_BLOCK。
+- 不能为了避免线索阶梯而机械塞假线索；阻力必须来自真实现场和证据边界。
+
+十、Skill 自升级协议
 当人工验收、作者、编辑或外部读者发现 Reader 漏检：
 1. 先记录原句和漏检原因，不先改正文。
 2. 判断能否泛化为一种失败类型；只能针对单句的特殊偏好不得升级为硬规则。
