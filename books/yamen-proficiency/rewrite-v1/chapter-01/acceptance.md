@@ -12,6 +12,7 @@ Reader B：PASS
 Reader C：PASS
 Reader D：PASS
 Dialogue Authenticity Rebuild：PASS
+Revision Integrity Repair：PASS
 Multi-Review：LOCAL_POLISH
 Editor Pass：PASS
 Reader Recheck：PASS
@@ -36,6 +37,13 @@ Story State：FROZEN
 - 身体在场: PASS
 - 情绪余波: PASS
 - Blocking: 0
+
+## Revision Integrity Recheck
+- SCENE_FUNCTION_DRIFT：CLOSED
+- LOCAL_REWRITE_SEAM_GAP：CLOSED
+- 穿越正文确认：PASS
+- 运粮路线首次询问位置：PASS
+- 前后场景接口：PASS
 
 ## Blocking
 0
