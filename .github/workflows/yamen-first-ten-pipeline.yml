@@ -160,7 +160,7 @@ jobs:
           echo "Secret name: $NARRATIVE_PROVIDER_SECRET_NAME"
 
       - name: Run formal NarrativeOS first-ten pipeline
-        run: python scripts/run_yamen_first_ten_pipeline.py
+        run: PYTHONPATH=. python scripts/run_yamen_first_ten_pipeline.py
 
       - name: Upload pipeline outputs
         if: always()
