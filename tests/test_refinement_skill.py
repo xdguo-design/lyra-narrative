@@ -557,12 +557,10 @@ def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
 
-    combined = "\n".join(
-        [
-            BUILTIN_WRITING_SKILL_CONTENT,
-            BUILTIN_REFINEMENT_SKILL_CONTENT,
-            BUILTIN_READER_REVIEW_SKILL_CONTENT,
-        ]
+    combined = (
+        f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
+        f"{BUILTIN_REFINEMENT_SKILL_CONTENT}\n"
+        f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}"
     )
     for marker in [
         "KNOWLEDGE_PROVENANCE_GAP",

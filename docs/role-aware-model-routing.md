@@ -16,3 +16,21 @@
 3. Writer 与 Reasoning Reader 默认使用不同模型，降低同模型自我脑补造成的相关性漏检。
 4. Provider 发生限流或暂时失败时，按同一角色的 fallback 顺序切换。
 5. 所有实际运行仍写入 agent_runs 的 provider/model 字段，可追溯某次审核到底用了哪个模型。
+
+
+## Specialist distribution
+
+Default specialist primaries are intentionally different:
+
+- blind-reader: GLM52
+- blind-natural-reader: SENSENOVA68
+- aesthetic-reviewer: AGNES
+- blind-artifice-reader: DEEPSEEKV4PRO
+- cadence-character-reader: MODELSCOPE
+- continuity-reviewer: MODELSCOPE
+- plot-reviewer: DEEPSEEKV4PRO
+- character-reviewer: GLM52
+- reader-gap-reviewer: DEEPSEEKV4PRO
+
+A role can be overridden with:
+NARRATIVE_ROLE_<ROLE_NAME_WITH_UNDERSCORES>_PROFILE

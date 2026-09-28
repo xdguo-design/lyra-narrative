@@ -94,6 +94,24 @@ _FINAL_REVIEW_ROLES = {
     "final-reviewer",
 }
 
+_ROLE_PRIMARY_DEFAULTS = {
+    "blind-reader": "GLM52",
+    "blind-dialogue-reader": "GLM52",
+    "blind-natural-reader": "SENSENOVA68",
+    "style-reviewer": "SENSENOVA68",
+    "naturalness-reviewer": "GLM52",
+    "aesthetic-reviewer": "AGNES",
+    "blind-artifice-reader": "DEEPSEEKV4PRO",
+    "cadence-character-reader": "MODELSCOPE",
+    "revision-integrity-reviewer": "DEEPSEEKV4PRO",
+    "continuity-reviewer": "MODELSCOPE",
+    "plot-reviewer": "DEEPSEEKV4PRO",
+    "character-reviewer": "GLM52",
+    "world-science-reviewer": "MODELSCOPE",
+    "reader-gap-reviewer": "DEEPSEEKV4PRO",
+    "training-examiner": "MODELSCOPE",
+}
+
 
 def _role_bucket(role: str) -> str:
     normalized = role.strip().lower()
@@ -109,6 +127,7 @@ def _role_bucket(role: str) -> str:
 
 
 def _role_profile_candidates(role: str) -> list[str]:
+    normalized_role = role.strip().lower()
     bucket = _role_bucket(role)
     settings = {
         "writer": (
@@ -136,9 +155,11 @@ def _role_profile_candidates(role: str) -> list[str]:
             "DEEPSEEKV4PRO,AGNES",
         ),
     }
-    primary_env, primary_default, fallback_env, fallback_default = settings[bucket]
+    primary_env, bucket_default, fallback_env, fallback_default = settings[bucket]
+    role_env = "NARRATIVE_ROLE_" + normalized_role.upper().replace("-", "_") + "_PROFILE"
+    primary_default = _ROLE_PRIMARY_DEFAULTS.get(normalized_role, bucket_default)
     raw_names = [
-        os.getenv(primary_env, primary_default).strip(),
+        os.getenv(role_env, os.getenv(primary_env, primary_default)).strip(),
         *[
             item.strip()
             for item in os.getenv(fallback_env, fallback_default).split(",")

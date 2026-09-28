@@ -40,3 +40,18 @@ def test_role_profile_candidates_deduplicate(monkeypatch):
         "GLM52,ATRIA,GLM52",
     )
     assert _role_profile_candidates("plot-reviewer") == ["GLM52", "ATRIA"]
+
+
+def test_specialist_readers_are_spread_across_profiles(monkeypatch):
+    for key in [
+        "NARRATIVE_ROLE_BLIND_ARTIFICE_READER_PROFILE",
+        "NARRATIVE_ROLE_CONTINUITY_REVIEWER_PROFILE",
+        "NARRATIVE_ROLE_CHARACTER_REVIEWER_PROFILE",
+        "NARRATIVE_ROLE_BLIND_NATURAL_READER_PROFILE",
+    ]:
+        monkeypatch.delenv(key, raising=False)
+
+    assert _role_profile_candidates("blind-artifice-reader")[0] == "DEEPSEEKV4PRO"
+    assert _role_profile_candidates("continuity-reviewer")[0] == "MODELSCOPE"
+    assert _role_profile_candidates("character-reviewer")[0] == "GLM52"
+    assert _role_profile_candidates("blind-natural-reader")[0] == "SENSENOVA68"
