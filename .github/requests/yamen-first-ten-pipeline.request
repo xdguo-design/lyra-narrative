@@ -34,3 +34,6 @@ slim_context: true
 reasoning_effort_forward: false
 attempt: 12
 provider_profile: KIMIK3
+attempt: 13
+provider_profile: KIMIK3
+temperature: auto-kimi-1
