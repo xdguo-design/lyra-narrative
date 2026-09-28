@@ -12,6 +12,8 @@ VERDICT: PASS
 ## Reader B — 人物 / 对话真实性
 VERDICT: PASS
 
+Zhao Liu Hesitation：PASS（先扫院内风险再跟出门，以动作表现老油条，不增加对白循环）
+
 - 陈安与赵六去名字测试：PASS。
 - 换人测试：PASS。
 - 赵六不再靠连续贫嘴证明性格。
