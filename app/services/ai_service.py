@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 from dataclasses import dataclass
 
 from app.db import connect
@@ -67,76 +68,246 @@ def _default_provider_profile() -> dict | None:
         return dict(row) if row else None
 
 
-async def assist(*, mode: str, content: str, instruction: str = "") -> AssistResult:
-    profile = _default_provider_profile()
-    if profile:
-        kind = str(profile["protocol"]).strip().lower()
-        provider_name = str(profile["name"]).strip()
-        model = str(profile["default_model"]).strip()
-        base_url = str(profile["base_url"]).strip() or None
-        api_key_env = str(profile["api_key_env"]).strip() or None
-        if not model:
-            raise RuntimeError(
-                f"provider profile '{provider_name}' requires a default model before use"
-            )
+_NATURAL_READER_ROLES = {
+    "blind-reader",
+    "blind-dialogue-reader",
+    "blind-natural-reader",
+    "style-reviewer",
+    "naturalness-reviewer",
+    "aesthetic-reviewer",
+}
+
+_REASONING_READER_ROLES = {
+    "blind-artifice-reader",
+    "cadence-character-reader",
+    "revision-integrity-reviewer",
+    "continuity-reviewer",
+    "plot-reviewer",
+    "character-reviewer",
+    "world-science-reviewer",
+    "reader-gap-reviewer",
+    "training-examiner",
+}
+
+_FINAL_REVIEW_ROLES = {
+    "approval-reviewer",
+    "final-reviewer",
+}
+
+
+def _role_bucket(role: str) -> str:
+    normalized = role.strip().lower()
+    if normalized in _NATURAL_READER_ROLES:
+        return "natural-reader"
+    if normalized in _REASONING_READER_ROLES:
+        return "reasoning-reader"
+    if normalized in _FINAL_REVIEW_ROLES:
+        return "final-review"
+    if normalized.endswith("-reviewer"):
+        return "reasoning-reader"
+    return "writer"
+
+
+def _role_profile_candidates(role: str) -> list[str]:
+    bucket = _role_bucket(role)
+    settings = {
+        "writer": (
+            "NARRATIVE_WRITER_PROFILE",
+            "ATRIA",
+            "NARRATIVE_WRITER_FALLBACK_PROFILES",
+            "AGNES,KIMIK3",
+        ),
+        "natural-reader": (
+            "NARRATIVE_NATURAL_READER_PROFILE",
+            "GLM52",
+            "NARRATIVE_NATURAL_READER_FALLBACK_PROFILES",
+            "SENSENOVA68,AGNES",
+        ),
+        "reasoning-reader": (
+            "NARRATIVE_REASONING_READER_PROFILE",
+            "DEEPSEEKV4PRO",
+            "NARRATIVE_REASONING_READER_FALLBACK_PROFILES",
+            "MODELSCOPE,GLM52",
+        ),
+        "final-review": (
+            "NARRATIVE_FINAL_REVIEW_PROFILE",
+            "SENSENOVA",
+            "NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES",
+            "DEEPSEEKV4PRO,AGNES",
+        ),
+    }
+    primary_env, primary_default, fallback_env, fallback_default = settings[bucket]
+    raw_names = [
+        os.getenv(primary_env, primary_default).strip(),
+        *[
+            item.strip()
+            for item in os.getenv(fallback_env, fallback_default).split(",")
+            if item.strip()
+        ],
+    ]
+
+    result: list[str] = []
+    for name in raw_names:
+        normalized = name.upper()
+        if normalized and normalized not in result:
+            result.append(normalized)
+    return result
+
+
+def _named_provider_profile(profile_name: str) -> dict | None:
+    normalized = profile_name.strip().upper()
+    raw = os.getenv(f"NARRATIVE_PROFILE_{normalized}", "").strip()
+    if not raw:
+        return None
+
+    parsed: dict[str, str] = {}
+    for token in shlex.split(raw.replace("\n", " ")):
+        if "=" not in token:
+            continue
+        key, value = token.split("=", 1)
+        parsed[key.strip()] = value.strip()
+
+    kind = parsed.get("NOVEL_AI_KIND", "").strip().lower()
+    model = parsed.get("NOVEL_AI_MODEL", "").strip()
+    if not kind or not model:
+        return None
+
+    profile_secret_env = f"NARRATIVE_PROFILE_SECRET_{normalized}"
+    api_key_env = ""
+    if os.getenv(profile_secret_env, "").strip():
+        api_key_env = profile_secret_env
     else:
-        kind = os.getenv("NOVEL_AI_KIND", "demo").strip().lower()
-        provider_name = os.getenv("NOVEL_AI_PROVIDER_NAME", "workbench").strip() or "workbench"
-        model = os.getenv("NOVEL_AI_MODEL", "").strip()
-        base_url = os.getenv("NOVEL_AI_BASE_URL") or None
-        api_key_env = os.getenv("NOVEL_AI_API_KEY_ENV") or None
+        configured_env = parsed.get("NOVEL_AI_API_KEY_ENV", "").strip()
+        if configured_env and os.getenv(configured_env, "").strip():
+            api_key_env = configured_env
 
-    if kind in {"", "demo", "mock"}:
-        return _demo(mode, content, instruction)
+    return {
+        "name": parsed.get("NOVEL_AI_PROVIDER_NAME", normalized).strip() or normalized,
+        "protocol": kind,
+        "base_url": parsed.get("NOVEL_AI_BASE_URL", "").strip(),
+        "api_key_env": api_key_env,
+        "default_model": model,
+    }
 
-    from app.ai import ChatMessage, ChatRequest, ProviderConfig, build_provider
 
-    if not model:
-        raise RuntimeError("NOVEL_AI_MODEL is required when a real provider is configured")
+def _runtime_profiles(role: str) -> list[dict]:
+    profiles: list[dict] = []
+    for name in _role_profile_candidates(role):
+        profile = _named_provider_profile(name)
+        if profile is not None:
+            profiles.append(profile)
 
-    provider = build_provider(
-        ProviderConfig(
-            name=provider_name,
-            kind=kind,
-            base_url=base_url,
-            api_key_env=api_key_env,
-            default_model=model,
-            timeout_seconds=float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")),
-        )
+    if profiles:
+        return profiles
+
+    default = _default_provider_profile()
+    if default:
+        return [default]
+
+    return [
+        {
+            "name": os.getenv("NOVEL_AI_PROVIDER_NAME", "workbench").strip()
+            or "workbench",
+            "protocol": os.getenv("NOVEL_AI_KIND", "demo").strip().lower(),
+            "base_url": os.getenv("NOVEL_AI_BASE_URL", "").strip(),
+            "api_key_env": os.getenv("NOVEL_AI_API_KEY_ENV", "").strip(),
+            "default_model": os.getenv("NOVEL_AI_MODEL", "").strip(),
+        }
+    ]
+
+
+async def assist(
+    *,
+    mode: str,
+    content: str,
+    instruction: str = "",
+    role: str = "",
+) -> AssistResult:
+    from app.ai import (
+        ChatMessage,
+        ChatRequest,
+        ProviderConfig,
+        ProviderError,
+        build_provider,
     )
+
     user_prompt = f"当前正文：\n{content[-12000:]}"
     if instruction.strip():
         user_prompt += f"\n\n额外要求：\n{instruction.strip()}"
-    extra: dict[str, str] = {}
-    configured_reasoning_effort = os.getenv(
-        "NOVEL_AI_REASONING_EFFORT", ""
-    ).strip()
-    if model.lower().startswith(("gpt-5", "gpt-6")):
-        extra["reasoning_effort"] = configured_reasoning_effort or "medium"
-    elif (
-        configured_reasoning_effort
-        and kind == "openai-compatible"
-        and os.getenv("NOVEL_AI_FORWARD_REASONING_EFFORT", "0").strip().lower()
-        in {"1", "true", "yes", "on"}
-    ):
-        extra["reasoning_effort"] = configured_reasoning_effort
 
+    configured_reasoning_effort = os.getenv(
+        "NOVEL_AI_REASONING_EFFORT",
+        "",
+    ).strip()
     max_tokens = int(os.getenv("NOVEL_AI_MAX_TOKENS", "6000"))
     configured_temperature = os.getenv("NOVEL_AI_TEMPERATURE", "").strip()
-    if configured_temperature:
-        temperature = float(configured_temperature)
-    elif model.lower().startswith("kimi-k3"):
-        temperature = 1.0
-    else:
-        temperature = 0.72 if mode == "continue" else 0.35
 
-    response = await provider.chat(
-        ChatRequest(
-            system=_system_prompt(mode),
-            messages=[ChatMessage(role="user", content=user_prompt)],
-            temperature=temperature,
-            max_tokens=max_tokens,
-            extra=extra,
-        )
-    )
-    return AssistResult(content=response.content, provider=response.provider, model=response.model)
+    last_error: Exception | None = None
+    for profile in _runtime_profiles(role):
+        kind = str(profile["protocol"]).strip().lower()
+        provider_name = str(profile["name"]).strip()
+        model = str(profile["default_model"]).strip()
+        base_url = str(profile.get("base_url") or "").strip() or None
+        api_key_env = str(profile.get("api_key_env") or "").strip() or None
+
+        if kind in {"", "demo", "mock"}:
+            return _demo(mode, content, instruction)
+        if not model:
+            last_error = RuntimeError(
+                f"provider profile '{provider_name}' requires a default model before use"
+            )
+            continue
+
+        extra: dict[str, str] = {}
+        if model.lower().startswith(("gpt-5", "gpt-6")):
+            extra["reasoning_effort"] = configured_reasoning_effort or "medium"
+        elif (
+            configured_reasoning_effort
+            and kind == "openai-compatible"
+            and os.getenv("NOVEL_AI_FORWARD_REASONING_EFFORT", "0")
+            .strip()
+            .lower()
+            in {"1", "true", "yes", "on"}
+        ):
+            extra["reasoning_effort"] = configured_reasoning_effort
+
+        if configured_temperature:
+            temperature = float(configured_temperature)
+        elif model.lower().startswith("kimi-k3"):
+            temperature = 1.0
+        else:
+            temperature = 0.72 if mode == "continue" else 0.35
+
+        try:
+            provider = build_provider(
+                ProviderConfig(
+                    name=provider_name,
+                    kind=kind,
+                    base_url=base_url,
+                    api_key_env=api_key_env,
+                    default_model=model,
+                    timeout_seconds=float(
+                        os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")
+                    ),
+                )
+            )
+            response = await provider.chat(
+                ChatRequest(
+                    system=_system_prompt(mode),
+                    messages=[ChatMessage(role="user", content=user_prompt)],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    extra=extra,
+                )
+            )
+            return AssistResult(
+                content=response.content,
+                provider=response.provider,
+                model=response.model,
+            )
+        except ProviderError as exc:
+            last_error = exc
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError(f"no usable provider profile for role {role!r}")

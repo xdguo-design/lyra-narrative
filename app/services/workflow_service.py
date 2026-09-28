@@ -243,7 +243,12 @@ async def _run_step(
     started = time.perf_counter()
     prompt_version = f"{stage}-v1"
     try:
-        result = await assist(mode=mode, content=content, instruction=instruction)
+        result = await assist(
+            mode=mode,
+            content=content,
+            instruction=instruction,
+            role=role,
+        )
     except Exception as exc:
         duration_ms = max(0, int((time.perf_counter() - started) * 1000))
         _record_run_metric(run_id, prompt_version, duration_ms)
