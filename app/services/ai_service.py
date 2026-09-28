@@ -101,6 +101,7 @@ async def assist(*, mode: str, content: str, instruction: str = "") -> AssistRes
             base_url=base_url,
             api_key_env=api_key_env,
             default_model=model,
+            timeout_seconds=float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")),
         )
     )
     user_prompt = f"当前正文：\n{content[-12000:]}"
