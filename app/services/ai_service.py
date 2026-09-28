@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import shlex
+import time
 from dataclasses import dataclass
 
 from app.db import connect
@@ -274,7 +275,8 @@ async def assist(
     configured_temperature = os.getenv("NOVEL_AI_TEMPERATURE", "").strip()
 
     last_error: Exception | None = None
-    for profile in _runtime_profiles(role):
+    profiles = _runtime_profiles(role)
+    for attempt, profile in enumerate(profiles, start=1):
         kind = str(profile["protocol"]).strip().lower()
         provider_name = str(profile["name"]).strip()
         model = str(profile["default_model"]).strip()
@@ -309,6 +311,13 @@ async def assist(
         else:
             temperature = 0.72 if mode == "continue" else 0.35
 
+        attempt_started = time.perf_counter()
+        print(
+            f"[model-route] TRY role={role or 'unassigned'} "
+            f"attempt={attempt}/{len(profiles)} provider={provider_name} "
+            f"model={model}",
+            flush=True,
+        )
         try:
             provider = build_provider(
                 ProviderConfig(
@@ -331,6 +340,16 @@ async def assist(
                     extra=extra,
                 )
             )
+            elapsed_ms = max(
+                0,
+                int((time.perf_counter() - attempt_started) * 1000),
+            )
+            print(
+                f"[model-route] DONE role={role or 'unassigned'} "
+                f"attempt={attempt}/{len(profiles)} provider={response.provider} "
+                f"model={response.model} elapsed_ms={elapsed_ms}",
+                flush=True,
+            )
             return AssistResult(
                 content=response.content,
                 provider=response.provider,
@@ -338,6 +357,18 @@ async def assist(
             )
         except ProviderError as exc:
             last_error = exc
+            elapsed_ms = max(
+                0,
+                int((time.perf_counter() - attempt_started) * 1000),
+            )
+            outcome = "FALLBACK" if attempt < len(profiles) else "FAIL"
+            print(
+                f"[model-route] {outcome} role={role or 'unassigned'} "
+                f"attempt={attempt}/{len(profiles)} provider={provider_name} "
+                f"model={model} elapsed_ms={elapsed_ms} "
+                f"error={type(exc).__name__}",
+                flush=True,
+            )
 
     if last_error is not None:
         raise last_error

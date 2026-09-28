@@ -242,6 +242,11 @@ async def _run_step(
     run_id = _create_run(task_id, role, stage, content)
     started = time.perf_counter()
     prompt_version = f"{stage}-v1"
+    print(
+        f"[agent-step] START task={task_id} run={run_id} "
+        f"role={role} stage={stage}",
+        flush=True,
+    )
     try:
         result = await assist(
             mode=mode,
@@ -253,10 +258,22 @@ async def _run_step(
         duration_ms = max(0, int((time.perf_counter() - started) * 1000))
         _record_run_metric(run_id, prompt_version, duration_ms)
         _fail_run(run_id, exc)
+        print(
+            f"[agent-step] FAIL task={task_id} run={run_id} "
+            f"role={role} stage={stage} elapsed_ms={duration_ms} "
+            f"error={type(exc).__name__}",
+            flush=True,
+        )
         raise
     duration_ms = max(0, int((time.perf_counter() - started) * 1000))
     _record_run_metric(run_id, prompt_version, duration_ms)
     _finish_run(run_id, result)
+    print(
+        f"[agent-step] DONE task={task_id} run={run_id} "
+        f"role={role} stage={stage} provider={result.provider} "
+        f"model={result.model} elapsed_ms={duration_ms}",
+        flush=True,
+    )
     return result
 
 

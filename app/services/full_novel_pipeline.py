@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 
 from app.db import connect
@@ -254,7 +255,7 @@ async def _run_review_round(
         else ""
     )
 
-    reader_trace_result = await _run_step(
+    reader_trace_task = asyncio.create_task(_run_step(
         task_id=task_id,
         role="blind-reader",
         stage=f"reader-trace-r{round_no}",
@@ -276,9 +277,9 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
 【我认为正文故意留下的问题】
 【我现在期待下一步发生什么】
 任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
-    )
+    ))
 
-    dialogue_reader_result = await _run_step(
+    dialogue_reader_task = asyncio.create_task(_run_step(
         task_id=task_id,
         role="blind-dialogue-reader",
         stage=f"reader-dialogue-r{round_no}",
@@ -332,10 +333,9 @@ VERDICT: PASS 或 VERDICT: FAIL
 - 不得修改正文。""",
             ]
         ),
-    )
-    dialogue_reader_failed = "VERDICT: PASS" not in dialogue_reader_result.content.upper()
+    ))
 
-    natural_reader_result = await _run_step(
+    natural_reader_task = asyncio.create_task(_run_step(
         task_id=task_id,
         role="blind-natural-reader",
         stage=f"reader-natural-r{round_no}",
@@ -380,10 +380,9 @@ VERDICT: PASS 或 VERDICT: FAIL
 - 不得修改正文。""",
             ]
         ),
-    )
-    natural_reader_failed = "VERDICT: PASS" not in natural_reader_result.content.upper()
+    ))
 
-    artifice_reader_result = await _run_step(
+    artifice_reader_task = asyncio.create_task(_run_step(
         task_id=task_id,
         role="blind-artifice-reader",
         stage=f"reader-artifice-r{round_no}",
@@ -450,8 +449,7 @@ NONE
 - 不得修改正文。""",
             ]
         ),
-    )
-    artifice_reader_failed = "VERDICT: PASS" not in artifice_reader_result.content.upper()
+    ))
 
     cadence_source = "\n\n".join(
         item
@@ -461,7 +459,7 @@ NONE
         ]
         if item
     )
-    cadence_reader_result = await _run_step(
+    cadence_reader_task = asyncio.create_task(_run_step(
         task_id=task_id,
         role="cadence-character-reader",
         stage=f"reader-cadence-r{round_no}",
@@ -489,8 +487,34 @@ VERDICT: PASS / WATCH / FAIL
 - 小高潮不要求打斗；现实债务、关系破裂、职业权限变化同样成立。
 - 不得为了制造高潮要求作者机械添加暴力、反转或巧合。
 - 不得修改正文。""",
+    ))
+
+    (
+        reader_trace_result,
+        dialogue_reader_result,
+        natural_reader_result,
+        artifice_reader_result,
+        cadence_reader_result,
+    ) = await asyncio.gather(
+        reader_trace_task,
+        dialogue_reader_task,
+        natural_reader_task,
+        artifice_reader_task,
+        cadence_reader_task,
     )
-    cadence_reader_failed = "VERDICT: FAIL" in cadence_reader_result.content.upper()
+    dialogue_reader_failed = (
+        "VERDICT: PASS" not in dialogue_reader_result.content.upper()
+    )
+    natural_reader_failed = (
+        "VERDICT: PASS" not in natural_reader_result.content.upper()
+    )
+    artifice_reader_failed = (
+        "VERDICT: PASS" not in artifice_reader_result.content.upper()
+    )
+    cadence_reader_failed = (
+        "VERDICT: FAIL" in cadence_reader_result.content.upper()
+    )
+
 
     specs = [
         (
@@ -538,8 +562,15 @@ VERDICT: PASS / WATCH / FAIL
     ]
 
     outputs: list[str] = []
-    has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed
-    for index, (role, category, instruction) in enumerate(specs):
+    has_blocking = (
+        natural_reader_failed
+        or dialogue_reader_failed
+        or artifice_reader_failed
+        or cadence_reader_failed
+    )
+
+    async def _run_specialist(index: int, spec: tuple[str, str, str]):
+        role, category, instruction = spec
         prior = ""
         if prior_outputs and index < len(prior_outputs):
             prior = (
@@ -563,6 +594,16 @@ VERDICT: PASS / WATCH / FAIL
                 if item
             ),
         )
+        return role, category, result
+
+    specialist_results = await asyncio.gather(
+        *(
+            _run_specialist(index, spec)
+            for index, spec in enumerate(specs)
+        )
+    )
+
+    for role, category, result in specialist_results:
         outputs.append(f"[{category}] {result.content}")
         findings = _parse_review_output(result.content, draft)
         with connect() as conn:
@@ -600,6 +641,7 @@ VERDICT: PASS / WATCH / FAIL
                             finding["end_offset"],
                         ),
                     )
+
     outputs.append(f"[reader-dialogue] {dialogue_reader_result.content}")
     if dialogue_reader_failed:
         with connect() as conn:
