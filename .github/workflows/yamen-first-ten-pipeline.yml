@@ -17,7 +17,7 @@ jobs:
       NOVEL_DB_PATH: /tmp/yamen-first-ten-pipeline.db
       NOVEL_SEED_DEMO: "0"
 
-      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'SENSENOVA68' }}
+      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'KIMIK3' }}
       NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
       NARRATIVE_PROFILE_DEEPSEEKV4PRO: ${{ vars.DEEPSEEKV4PRO }}
       NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
@@ -57,7 +57,7 @@ jobs:
           import os
           import shlex
 
-          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "SENSENOVA68").strip().upper()
+          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "KIMIK3").strip().upper()
           supported = [
               "ATRIA",
               "DEEPSEEKV4PRO",
