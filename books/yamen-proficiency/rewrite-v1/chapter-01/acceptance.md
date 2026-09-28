@@ -11,6 +11,7 @@ Reader A：PASS
 Reader B：PASS
 Reader C：PASS
 Reader D：PASS
+Dialogue Authenticity Rebuild：PASS
 Multi-Review：LOCAL_POLISH
 Editor Pass：PASS
 Reader Recheck：PASS
@@ -25,6 +26,16 @@ Story State：FROZEN
 - R4：FAIL，4 处名词搭配/默认节奏器/连续性/断句问题，打回。
 - R5：FAIL，3 处叙述口气/旁白省略/指代问题，打回。
 - R6：PASS。
+
+## Dialogue Rebuild Recheck
+- 陈安 × 赵六 opening dialogue: PASS
+- 去名字测试: PASS
+- 换人测试: PASS
+- 面子 / 自我保护: PASS
+- 关系旧账: PASS
+- 身体在场: PASS
+- 情绪余波: PASS
+- Blocking: 0
 
 ## Blocking
 0
