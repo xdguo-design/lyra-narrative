@@ -1,0 +1,8 @@
+request: yamen-first-ten-formal-pipeline
+mode: formal-first-ten
+chapters: 10
+source: frozen-architecture-characters-proficiency-promises
+rewrite_v3_as_input: false
+writer_skill: 14
+refinement_skill: 11
+reader_skill: 8
