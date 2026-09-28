@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 11
+BUILTIN_WRITING_SKILL_VERSION = 12
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -253,7 +253,24 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
    - 人物动作是在生活，还是在展示证据？
    若出现两项以上，至少 LOCAL_REWRITE；调查主发动机大面积成立时 REWRITE_BLOCK。
 
-二十四、自检
+二十四、叙事肌理与连续动作（Narrative Texture Gate）
+1. “少解释”不等于“少描写”。关键声音、气味、触感、光线、动作阻力，至少要有一个可感知特征，不能只写“有人咬东西”“有味道”“他看了看”这类功能命名。
+2. 感官描写必须服务人物当下，不追求堆形容词。声音可写脆、闷、黏、拖、擦、碎；气味可写来源与身体反应；触感可写粗糙、湿冷、发胀、绷紧。每次只取一两个最有效细节。
+3. 连续动作必须按真实时间流组成句群。若“往前走→看不到→换角度→再看→发现断了”属于同一个观察动作，不要机械切成四五个单行短句。
+4. 连续三句以上都只承担“动作A / 动作B / 判断C”，且没有因果、身体、视线或环境连接，判 ACTION_FRAGMENTATION_GAP。
+5. 关键场景只剩事实骨架、读者能懂但没有可感知表面，判 SCENE_TEXTURE_GAP。此类问题不是靠加修辞解决，而是补能改变阅读体验的具体声音、动作、空间或物质状态。
+6. 对话不能只保留台词内容。非紧急问答中，至少让关键话轮中的一两处带上说话者独有的视线、手势、姿态、正在做的事或情绪反应；但不得每句都配动作。
+7. 对话的动作应和说话内容互相作用。例如老油条回答路线时，可能先看院里有没有人、再用下巴/手指路线；不是“说一句 + 随机皱眉”。
+8. 气味、声音的词必须准确。“旧汗味”表达的是陈旧汗渍/衣物气味；若现场强调人体与闷热产生的直接难闻，应使用更具体自然的“臭汗味、馊汗味”等，按场景选择，禁止用中性词削弱已建立的脏乱环境。
+9. 人物口语要自然。书面条件句“真碰上不该碰的，我不替你顶”若不符合身份，可改为更生活化的责任切割；口语化不能靠网络梗。
+10. 完稿后逐段问：
+   - 这段只有“发生了什么”，还是也能让人听见/闻见/摸到一点什么？
+   - 连续动作是不是被我为了节奏切碎了？
+   - 这句对白只有信息，还是能看见“谁在说”？
+   - 我是不是为了防解释而把必要的质感也删掉了？
+   若关键场景两项以上答“是”，至少 LOCAL_REWRITE；全文持续骨架化则 REWRITE_BLOCK。
+
+二十五、自检
 交稿前逐段检查：
 - 是否连续出现过多短句或单句段落？
 - 是否有只写“不像什么”却没有写清“像什么”的描写？
@@ -294,6 +311,10 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 人物指纹、伤势、口头禅是否被短距离反复打卡？
 - 线索是否过顺、过密、过准时，或由系统/记忆/巧合间接兜底？
 - 嫌疑人物的动作是否过于配合关键证据展示？
+- 关键声音/气味/触感是否只被功能命名，没有可感知质地？
+- 连续动作是否被切成三四个互不相连的短句？
+- 关键对白附近是否完全看不到说话人的身体、视线和当前任务？
+- 我是否把“少解释”写成了“少质感”？
 若任一项成立，先改再交。
 """
 
@@ -302,7 +323,7 @@ def builtin_writing_skill_text() -> str:
     return BUILTIN_WRITING_SKILL_CONTENT
 
 BUILTIN_REFINEMENT_SKILL_NAME = "小说精修流程"
-BUILTIN_REFINEMENT_SKILL_VERSION = 9
+BUILTIN_REFINEMENT_SKILL_VERSION = 10
 BUILTIN_REFINEMENT_SKILL_PURPOSE = (
     "用于章节与长篇修订的分阶段精修：先自洽与现实锚定，再冲突与推进，再删废话、控对白、检查自然可读性与审美取舍，最后审核并打回不合格段落。"
 )
@@ -1300,12 +1321,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 6
+BUILTIN_READER_REVIEW_SKILL_VERSION = 7
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v6】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v7】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1332,6 +1353,9 @@ D12 类型第一印象：开篇前三段让读者以为在读什么类型，是�
 D13 作者笑点：幽默来自人物与处境，还是旁白向读者眨眼。
 D14 人物毛刺鉴别：不标准表达若属于人物声音可标 CHARACTER_ROUGHNESS；作者叙述别扭不能用这个标签保护。
 D15 全文停顿测试：只要第一次读会因措辞本身停一下，而不是因剧情思考停一下，就必须记录。
+D16 叙事肌理：关键场景是否只有事实骨架，声音/气味/触感/动作阻力被写成功能标签，导致“能懂但太干”，标签 SCENE_TEXTURE_GAP。
+D17 连续动作：同一连续动作是否被机械拆成多个单行短句，导致阅读像分镜脚本而不是小说句群，标签 ACTION_FRAGMENTATION_GAP。
+D18 对话局部身体化：非紧急对白的关键话轮附近，是否完全没有说话者的姿态、视线、手中事或空间反应；若连续出现，优先复用 EMBODIED_DIALOGUE_GAP，不新造重复标签。
 
 三、正式标签
 INTENTIONAL_UNKNOWN
@@ -1345,6 +1369,8 @@ COLLOCATION_GAP
 QUANTITY_GAP
 REFERENCE_GAP
 AUTHOR_EFFECT_GAP
+SCENE_TEXTURE_GAP
+ACTION_FRAGMENTATION_GAP
 CHARACTER_ROUGHNESS
 
 四、Reader D 输出
