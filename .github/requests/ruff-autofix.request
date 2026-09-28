@@ -1,0 +1,3 @@
+request: ruff-autofix
+scope: app tests
+unsafe_fixes: true
