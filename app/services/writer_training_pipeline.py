@@ -12,7 +12,6 @@ from app.services.workflow_service import (
     get_task,
 )
 
-
 _LEVELS = {"NEEDS_WORK", "EMERGING", "STABLE", "TRANSFERABLE"}
 
 

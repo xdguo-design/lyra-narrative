@@ -1,2 +1,9 @@
 [tool.vercel]
 entrypoint = "app.main:app"
+
+
+[tool.ruff.lint]
+# Long model prompts intentionally use "\n\n".join(...) because the parts are
+# readable and often conditionally composed. FLY002's unsafe autofix flattens
+# them into large escaped f-strings and hurts maintainability.
+ignore = ["FLY002"]

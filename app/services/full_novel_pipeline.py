@@ -1062,7 +1062,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                     "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
                     (task_id,),
                 )
-            integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
+            _integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
                 task_id=task_id,
                 before=draft,
                 after=final_content,

@@ -9,8 +9,8 @@ import pytest
 from app.db import connect, init_db
 from app.services.ai_service import AssistResult
 from app.services.continuity_service import (
-    capture_story_state,
     ContinuityStateError,
+    capture_story_state,
     latest_story_state,
     persist_story_state,
     repetition_report,

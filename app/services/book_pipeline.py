@@ -8,8 +8,8 @@ from app.services.continuity_service import (
     capture_story_state,
     latest_story_state,
     record_repetition_blocking,
-    repair_repetition,
     render_story_state,
+    repair_repetition,
     repetition_report,
 )
 from app.services.full_novel_pipeline import (
