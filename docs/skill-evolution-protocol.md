@@ -431,6 +431,50 @@ CALIBRATING
 
 ---
 
+## Case SE-006｜作者施工痕迹与线索人工感
+来源：普通读者多轮复读。
+
+真实问题：
+在前述自然度、人物、局部重写完整性均改善后，仍可出现更高一层的“作者手”：
+- 动作/对白已经表达，旁白再解释；
+- 开篇像在勾设定卡；
+- 人物关系变化已经完成，对话仍循环；
+- 人物声音/动作指纹被过度展示；
+- 身体状态被持续播报；
+- 调查形成线索阶梯或小空间线索过密；
+- 记忆按剧情缺口精准补信息；
+- 系统通过奖励时机认证判断；
+- 多个“正好”形成巧合集群；
+- 嫌疑人物动作连续配合证据展示。
+
+泛化：
+“正文逻辑可以完全成立，但读者仍能感到作者在控制理解、展示人物卡、发放线索或认证答案”。
+
+升级：
+- Writer v11 Author-Hand & Story-Flow Gate；
+- Reader Skill v6 Reader C C01—C12；
+- Refinement v9 Author-Hand Gate；
+- blind-artifice-reader 正式接入每轮 Review Round；
+- F027—F038；
+- Author Artifice & Clue Flow Regression Corpus。
+
+阻断边界：
+- 单个轻微痕迹可 WATCH；
+- 同一场景两类以上明确作者痕迹，或调查整体像教程关，blocking；
+- 不允许通过机械塞假线索、废话、随机错误来“制造真实感”。
+
+当前 Chapter 1 验证：
+- CLUE_DENSITY_GAP：经蓝线/记忆/脚印空间与节拍重排后关闭；
+- SYSTEM_CONFIRMATION_LEAK：经系统触发点前移到真实寻迹动作后关闭；
+- COINCIDENCE_CLUSTER_GAP：经刘旺提前作为正常背景人物出现后明显降低；
+- EVIDENCE_DISPLAY_STAGING：仍为当前章尾剩余重点问题；
+- INTERPRETATION_ECHO_GAP / PREMISE_CHECKLIST_GAP / DIALOGUE_LOOP_GAP / VOICE_OVERPERFORMANCE_GAP / FINGERPRINT_OVERUSE_GAP / BODY_STATE_TICKER_GAP：仍可在第一章前半段找到样本，应由新 Reader C 自动报告。
+
+状态：
+CALIBRATING
+
+---
+
 # 14. Definition of Done
 
 一次 Skill Evolution 只有同时满足以下条件才算完成：
