@@ -411,4 +411,5 @@ def init_db() -> None:
             ON story_state_snapshots(project_id, chapter_number DESC, id DESC);
             """
         )
+        _ensure_builtin_skills(conn)
         _seed_demo(conn)
