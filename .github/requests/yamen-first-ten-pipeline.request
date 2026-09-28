@@ -14,3 +14,5 @@ attempt: 4
 fix: pythonpath-root
 attempt: 5
 fix: restore-db-and-seed-skills
+attempt: 6
+fix: restore-book-pipeline-and-cadence-window
