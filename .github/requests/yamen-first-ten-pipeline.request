@@ -12,3 +12,5 @@ attempt: 3
 secret_mapping: matching-profile-name
 attempt: 4
 fix: pythonpath-root
+attempt: 5
+fix: restore-db-and-seed-skills
