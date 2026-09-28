@@ -34,6 +34,7 @@ jobs:
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
+      NOVEL_AI_TIMEOUT_SECONDS: ${{ vars.NOVEL_AI_TIMEOUT_SECONDS || '240' }}
       NARRATIVE_OUTPUT_DIR: artifacts/yamen-proficiency-first-ten-pipeline
 
     steps:
