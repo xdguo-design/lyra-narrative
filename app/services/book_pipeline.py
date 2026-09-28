@@ -420,3 +420,116 @@ async def _run_frozen_chapter(
                 chapter_id=int(chapter["id"]),
                 chapter_number=chapter_number,
                 chapter_content=final_content,
+            )
+        except ContinuityStateError as exc:
+            final_blocking = True
+            with connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO review_findings(
+                        task_id,reviewer,category,severity,summary,suggestion,status
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task_id,
+                        "continuity-state-updater",
+                        "continuity",
+                        "blocking",
+                        f"Story State 更新失败：{exc}",
+                        "修复状态提取后才能继续生成下一章。",
+                        "open",
+                    ),
+                )
+
+    with connect() as conn:
+        conn.execute(
+            """
+            UPDATE writing_tasks
+            SET revised_content=?,status=?,updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (
+                final_content,
+                "reviewed" if final_blocking else "awaiting_approval",
+                task_id,
+            ),
+        )
+    return get_task(task_id) or {}
+
+
+async def run_book_pipeline(
+    *,
+    project_id: int,
+    goal: str,
+    instruction: str,
+    chapter_count: int,
+) -> dict:
+    _require_real_provider()
+    if chapter_count < 1 or chapter_count > 30:
+        raise ValueError("chapter_count must be between 1 and 30")
+
+    with connect() as conn:
+        project = conn.execute(
+            "SELECT * FROM projects WHERE id=?",
+            (project_id,),
+        ).fetchone()
+        if not project:
+            raise ValueError("project not found")
+
+    planning_task_id = await _plan_book(
+        project_id=project_id,
+        project_title=project["title"],
+        genre=project["genre"],
+        goal=goal,
+        instruction=instruction,
+        chapter_count=chapter_count,
+    )
+    with connect() as conn:
+        outline = conn.execute(
+            """
+            SELECT content FROM memories
+            WHERE project_id=? AND kind='outline' AND confirmed=1
+            ORDER BY updated_at DESC,id DESC LIMIT 1
+            """,
+            (project_id,),
+        ).fetchone()["content"]
+
+    titles = _chapter_titles(outline, chapter_count)
+    chapter_ids = _ensure_chapters(project_id, titles)
+
+    task_ids: list[int] = []
+    prior_manuscript = ""
+    stopped_on_blocking = False
+    for index, chapter_id in enumerate(chapter_ids, start=1):
+        task_id = _create_task(
+            project_id=project_id,
+            chapter_id=chapter_id,
+            goal=f"依据冻结整卷规划完成第 {index} 章候选稿",
+            instruction=(
+                f"这是第 {index}/{chapter_count} 章。必须遵守冻结架构、世界观、人物矛盾"
+                "和整卷大纲；本轮不自动人工批准。"
+            ),
+        )
+        task_ids.append(task_id)
+        result = await _run_frozen_chapter(
+            task_id=task_id,
+            chapter_number=index,
+            prior_manuscript=prior_manuscript,
+        )
+        candidate = str(result.get("revised_content") or result.get("draft") or "")
+        prior_manuscript += (
+            f"\n\n# 第 {index} 章 {titles[index - 1]}\n\n{candidate}"
+        )
+        if result.get("status") == "reviewed":
+            stopped_on_blocking = True
+            break
+
+    return {
+        "project_id": project_id,
+        "planning_task_id": planning_task_id,
+        "chapter_task_ids": task_ids,
+        "planned_chapters": chapter_count,
+        "generated_chapters": len(task_ids),
+        "stopped_on_blocking": stopped_on_blocking,
+        "status": "needs_revision" if stopped_on_blocking else "awaiting_human_approval",
+    }
