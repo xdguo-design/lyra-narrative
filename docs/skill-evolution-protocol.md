@@ -397,6 +397,38 @@ CALIBRATING
 状态：
 CALIBRATING
 
+## Case SE-005｜局部重写功能漂移与接口裂缝
+来源：人工整章首读。
+
+真实事故：
+重写第一章陈安 × 赵六开场对白后：
+1. 对话人物性显著增强；
+2. 但“现代人穿越到大梁”的开篇确认被删除，后文仍直接使用“原主”；
+3. 房内新增“运粮路线”问答后，房外旧段仍再次从零询问同一路线。
+
+根因：
+旧 LOCAL_REWRITE 只冻结事实和修改边界，没有冻结“场景必须完成的叙事功能”；同时只审修改块内部，没有强制做前后 Seam Check。
+
+泛化：
+- SCENE_FUNCTION_DRIFT：局部改写后原段必须完成的认知/身份/关系/规则/决定功能丢失；
+- LOCAL_REWRITE_SEAM_GAP：修改块与前后文拼接后出现重复问答、重复介绍或状态重置。
+
+升级：
+- Writer v10 Local Rewrite Integrity；
+- Refinement v8 Narrative Function Contract + Seam Contract；
+- Reader Skill v5 明确 Blind Reader 与 Revision Integrity 的职责边界；
+- Revision Integrity Reviewer 正式接入 Pipeline；
+- F025 / F026；
+- Revision Integrity Regression Corpus。
+
+误报边界：
+- 同一事实若第二次出现承担新证据、关系压力或验证功能，不算重复；
+- 写法可以完全改变，只要 Narrative Function Contract 仍完整；
+- Blind Reader 不负责比较 BEFORE / AFTER。
+
+状态：
+CALIBRATING
+
 ---
 
 # 14. Definition of Done
