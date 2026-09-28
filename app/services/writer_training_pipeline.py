@@ -12,7 +12,6 @@ from app.services.workflow_service import (
     get_task,
 )
 
-
 _LEVELS = {"NEEDS_WORK", "EMERGING", "STABLE", "TRANSFERABLE"}
 
 
@@ -187,25 +186,7 @@ async def run_writer_training(
         stage="training-diagnosis",
         mode="check",
         content=source_text,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                """执行阶段 A 基线诊断。只选最多 3 个会反复影响长篇质量的高杠杆能力问题，必须引用当前文本中的具体证据。
-输出格式：
-WRITER_TRAINING_DIAGNOSIS_V1
-【高杠杆问题1】...
-【证据】...
-【影响】...
-【训练目标】...
-最多三项。
-最后严格输出三行能力状态：
-【场景导演】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
-【人物行为】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
-【语言节奏】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE
-禁止改写正文，禁止给范文。""",
-            ]
-        ),
+        instruction=f"{context}\n\n{training_rules}\n\n执行阶段 A 基线诊断。只选最多 3 个会反复影响长篇质量的高杠杆能力问题，必须引用当前文本中的具体证据。\n输出格式：\nWRITER_TRAINING_DIAGNOSIS_V1\n【高杠杆问题1】...\n【证据】...\n【影响】...\n【训练目标】...\n最多三项。\n最后严格输出三行能力状态：\n【场景导演】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE\n【人物行为】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE\n【语言节奏】NEEDS_WORK / EMERGING / STABLE / TRANSFERABLE\n禁止改写正文，禁止给范文。",
     )
 
     scene_attempt = await _training_step(
@@ -214,16 +195,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
         stage="training-scene-direction-attempt",
         mode="continue",
         content=source_text,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                diagnosis.content,
-                """只做阶段 B：根据当前文本反推并重做一张 Scene Direction Card，不写正文。
-必须包含：核心张力、POV过滤、3个以内主细节、主动忽略项、快写区、慢写区、人物距离变化、结束状态、近期套路禁用项。
-重点不是补得更全，而是做取舍。""",
-            ]
-        ),
+        instruction=f"{context}\n\n{training_rules}\n\n{diagnosis.content}\n\n只做阶段 B：根据当前文本反推并重做一张 Scene Direction Card，不写正文。\n必须包含：核心张力、POV过滤、3个以内主细节、主动忽略项、快写区、慢写区、人物距离变化、结束状态、近期套路禁用项。\n重点不是补得更全，而是做取舍。",
     )
 
     scene_level = _diagnosed_level(diagnosis.content, "场景导演")
@@ -234,14 +206,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-scene-direction-feedback",
             mode="check",
             content=scene_attempt.content,
-            instruction="\n\n".join(
-                [
-                    training_rules,
-                    diagnosis.content,
-                    """批改 Scene Direction Card。最多指出 3 个问题，每个问题必须说明：哪里没有做取舍、为什么会让正文平均用力/视角漂移/节奏失焦、下一次重写只需要改什么。
-禁止替 Writer 直接写一张更好的卡。""",
-                ]
-            ),
+            instruction=f"{training_rules}\n\n{diagnosis.content}\n\n批改 Scene Direction Card。最多指出 3 个问题，每个问题必须说明：哪里没有做取舍、为什么会让正文平均用力/视角漂移/节奏失焦、下一次重写只需要改什么。\n禁止替 Writer 直接写一张更好的卡。",
         )
         scene_rewrite = await _training_step(
             task_id=task_id,
@@ -249,13 +214,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-scene-direction-rewrite",
             mode="continue",
             content=scene_attempt.content,
-            instruction="\n\n".join(
-                [
-                    training_rules,
-                    scene_feedback.content,
-                    """根据教练意见重写 Scene Direction Card。只解决指出的问题，不扩大设定，不新增关键线索。输出完整修订卡。""",
-                ]
-            ),
+            instruction=f"{training_rules}\n\n{scene_feedback.content}\n\n根据教练意见重写 Scene Direction Card。只解决指出的问题，不扩大设定，不新增关键线索。输出完整修订卡。",
         )
     else:
         scene_feedback = SimpleNamespace(
@@ -269,16 +228,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
         stage="training-character-behavior-attempt",
         mode="continue",
         content=source_text,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                scene_rewrite.content,
-                """执行阶段 C。
-第一部分先输出 Behavior Matrix：对当前核心在场人物分别写目标、恐惧/秘密、筹码、身份位置、第一反应、回避方式、承认阈值、最大让步。
-第二部分写一个 500—900 字的训练片段，只重写当前文本里人物攻防最集中的一小场。禁止解释人物在试探或撒谎，必须让行为和对白自己成立；至少一人不合作；信息分层释放。""",
-            ]
-        ),
+        instruction=f"{context}\n\n{training_rules}\n\n{scene_rewrite.content}\n\n执行阶段 C。\n第一部分先输出 Behavior Matrix：对当前核心在场人物分别写目标、恐惧/秘密、筹码、身份位置、第一反应、回避方式、承认阈值、最大让步。\n第二部分写一个 500—900 字的训练片段，只重写当前文本里人物攻防最集中的一小场。禁止解释人物在试探或撒谎，必须让行为和对白自己成立；至少一人不合作；信息分层释放。",
     )
 
     behavior_level = _diagnosed_level(diagnosis.content, "人物行为")
@@ -289,15 +239,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-character-behavior-feedback",
             mode="check",
             content=behavior_attempt.content,
-            instruction="\n\n".join(
-                [
-                    context,
-                    training_rules,
-                    """只批改人物行为训练。最多 3 个高影响问题。
-重点检查：人物是否按卡行动、是否因为剧情需要突然老实/变笨/变聪明、对白是否退化为问答表、不同人物声音是否可区分、信息是否有承认阈值。
-每项给原文证据和明确重写目标，不提供范文。""",
-                ]
-            ),
+            instruction=f"{context}\n\n{training_rules}\n\n只批改人物行为训练。最多 3 个高影响问题。\n重点检查：人物是否按卡行动、是否因为剧情需要突然老实/变笨/变聪明、对白是否退化为问答表、不同人物声音是否可区分、信息是否有承认阈值。\n每项给原文证据和明确重写目标，不提供范文。",
         )
         behavior_rewrite = await _training_step(
             task_id=task_id,
@@ -305,13 +247,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-character-behavior-rewrite",
             mode="polish",
             content=behavior_attempt.content,
-            instruction="\n\n".join(
-                [
-                    training_rules,
-                    behavior_feedback.content,
-                    """重写训练片段与必要的 Behavior Matrix。必须保留原场景事实和结果，只修人物行为、信息释放和人物声音。输出 Behavior Matrix + 完整训练片段。""",
-                ]
-            ),
+            instruction=f"{training_rules}\n\n{behavior_feedback.content}\n\n重写训练片段与必要的 Behavior Matrix。必须保留原场景事实和结果，只修人物行为、信息释放和人物声音。输出 Behavior Matrix + 完整训练片段。",
         )
     else:
         behavior_feedback = SimpleNamespace(
@@ -325,15 +261,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
         stage="training-rhythm-attempt",
         mode="polish",
         content=behavior_rewrite.content,
-        instruction="\n\n".join(
-            [
-                training_rules,
-                """执行阶段 D 语言节奏训练。不得改变事实、人物意图和信息顺序。
-先标出 2—4 个句群的节奏目的（例如：进入/承接/加压/停顿/落点），再重写训练片段。
-重点训练：3—5句句群起伏、句法变化、动作/对白/观察交替、关键处慢半拍、过渡处敢压缩、情绪少说半句、段尾不总结。
-不要为了变化使用怪句式或堆比喻。""",
-            ]
-        ),
+        instruction=f"{training_rules}\n\n执行阶段 D 语言节奏训练。不得改变事实、人物意图和信息顺序。\n先标出 2—4 个句群的节奏目的（例如：进入/承接/加压/停顿/落点），再重写训练片段。\n重点训练：3—5句句群起伏、句法变化、动作/对白/观察交替、关键处慢半拍、过渡处敢压缩、情绪少说半句、段尾不总结。\n不要为了变化使用怪句式或堆比喻。",
     )
 
     rhythm_level = _diagnosed_level(diagnosis.content, "语言节奏")
@@ -344,14 +272,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-rhythm-feedback",
             mode="check",
             content=rhythm_attempt.content,
-            instruction="\n\n".join(
-                [
-                    training_rules,
-                    """只批改语言节奏。最多 3 个问题，必须按句群而不是孤立句判断。
-检查：是否仍连续同句法、是否靠大量单句段制造假节奏、该快处拖、该慢处跳、情绪说满、人物口语被统一抛光。
-给证据和重写目标，不提供整段范文。""",
-                ]
-            ),
+            instruction=f"{training_rules}\n\n只批改语言节奏。最多 3 个问题，必须按句群而不是孤立句判断。\n检查：是否仍连续同句法、是否靠大量单句段制造假节奏、该快处拖、该慢处跳、情绪说满、人物口语被统一抛光。\n给证据和重写目标，不提供整段范文。",
         )
         rhythm_rewrite = await _training_step(
             task_id=task_id,
@@ -359,13 +280,7 @@ WRITER_TRAINING_DIAGNOSIS_V1
             stage="training-rhythm-rewrite",
             mode="polish",
             content=rhythm_attempt.content,
-            instruction="\n\n".join(
-                [
-                    training_rules,
-                    rhythm_feedback.content,
-                    """按教练反馈做最后一次定向重写。只处理语言节奏和留白，不改变事实、因果、人物行为和信息顺序。输出完整训练片段。""",
-                ]
-            ),
+            instruction=f"{training_rules}\n\n{rhythm_feedback.content}\n\n按教练反馈做最后一次定向重写。只处理语言节奏和留白，不改变事实、因果、人物行为和信息顺序。输出完整训练片段。",
         )
     else:
         rhythm_feedback = SimpleNamespace(
@@ -426,14 +341,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
             stage="training-reader-rewrite",
             mode="polish",
             content=rhythm_rewrite.content,
-            instruction="\n\n".join(
-                [
-                    reader_gap.content,
-                    """只修 Reader Gap。不得改变事实、人物动机、信息顺序和节奏训练已经成立的部分。
-目标不是多解释，而是补足一次阅读必需的语义支点、对象、因果或关系动作。有效悬念继续保留。
-只输出完整训练片段。""",
-                ]
-            ),
+            instruction=f"{reader_gap.content}\n\n只修 Reader Gap。不得改变事实、人物动机、信息顺序和节奏训练已经成立的部分。\n目标不是多解释，而是补足一次阅读必需的语义支点、对象、因果或关系动作。有效悬念继续保留。\n只输出完整训练片段。",
         )
 
     integrated_scene = await _training_step(
@@ -442,20 +350,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
         stage="training-integrated-scene",
         mode="continue",
         content=source_text,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                diagnosis.content,
-                scene_rewrite.content,
-                behavior_feedback.content,
-                rhythm_feedback.content,
-                reader_gap.content,
-                """执行阶段 F 综合训练。基于同一作品事实，重新写一个 900—1600 字完整场景。
-必须同时应用：场景取舍、POV过滤、人物行为阈值、潜台词、句群节奏。
-不得复制前面训练片段句子，不得新增关键线索，不得用总结句证明自己“学会了”。只输出正文。""",
-            ]
-        ),
+        instruction=f"{context}\n\n{training_rules}\n\n{diagnosis.content}\n\n{scene_rewrite.content}\n\n{behavior_feedback.content}\n\n{rhythm_feedback.content}\n\n{reader_gap.content}\n\n执行阶段 F 综合训练。基于同一作品事实，重新写一个 900—1600 字完整场景。\n必须同时应用：场景取舍、POV过滤、人物行为阈值、潜台词、句群节奏。\n不得复制前面训练片段句子，不得新增关键线索，不得用总结句证明自己“学会了”。只输出正文。",
     )
 
     integrated_reader_trace = await _training_step(
@@ -506,12 +401,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
             stage="training-integrated-reader-rewrite",
             mode="polish",
             content=integrated_scene.content,
-            instruction="\n\n".join(
-                [
-                    integrated_reader_gap.content,
-                    """只修 Reader Gap，不做额外润色，不增加剧情、线索或解释性总结。保留已经成立的人物行为、场景结构和节奏。只输出完整正文。""",
-                ]
-            ),
+            instruction=f"{integrated_reader_gap.content}\n\n只修 Reader Gap，不做额外润色，不增加剧情、线索或解释性总结。保留已经成立的人物行为、场景结构和节奏。只输出完整正文。",
         )
 
     integrated_reader_recheck = await _training_step(
@@ -532,16 +422,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
             stage="training-transfer-brief",
             mode="continue",
             content=source_text,
-            instruction="\n\n".join(
-                [
-                    context,
-                    training_rules,
-                    """生成阶段 G 迁移测试题，不写答案。
-要求：仍在同一作品世界，优先使用已存在人物；改变地点、即时目标或关系压力；不得复用当前训练文本的关键动作、证据、台词和章尾结构。
-题目必须能同时测试：场景取舍、人物行为、语言节奏。
-控制在 250 字以内。""",
-                ]
-            ),
+            instruction=f"{context}\n\n{training_rules}\n\n生成阶段 G 迁移测试题，不写答案。\n要求：仍在同一作品世界，优先使用已存在人物；改变地点、即时目标或关系压力；不得复用当前训练文本的关键动作、证据、台词和章尾结构。\n题目必须能同时测试：场景取舍、人物行为、语言节奏。\n控制在 250 字以内。",
         )
         transfer_case = examiner.content
 
@@ -551,14 +432,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
         stage="training-transfer-attempt",
         mode="continue",
         content=transfer_case,
-        instruction="\n\n".join(
-            [
-                context,
-                training_rules,
-                """这是迁移测试。不要查看或复述上一轮教练的具体改句，只使用你已经提炼出的写作原则。
-写 800—1400 字完整场景，保持现有人物卡与作品事实，不新增关键世界规则。只输出正文。""",
-            ]
-        ),
+        instruction=f"{context}\n\n{training_rules}\n\n这是迁移测试。不要查看或复述上一轮教练的具体改句，只使用你已经提炼出的写作原则。\n写 800—1400 字完整场景，保持现有人物卡与作品事实，不新增关键世界规则。只输出正文。",
     )
 
     transfer_reader_trace = await _training_step(
@@ -610,44 +484,8 @@ AMBIGUOUS_GAP：存在两个以上同样合理的解释。
         role="writer-coach",
         stage="training-profile",
         mode="check",
-        content="\n\n".join(
-            [
-                diagnosis.content,
-                scene_feedback.content,
-                behavior_feedback.content,
-                rhythm_feedback.content,
-                reader_trace.content,
-                reader_gap.content,
-                integrated_reader_trace.content,
-                integrated_reader_gap.content,
-                integrated_reader_recheck.content,
-                transfer_reader_trace.content,
-                transfer_review.content,
-            ]
-        ),
-        instruction="\n\n".join(
-            [
-                training_rules,
-                """蒸馏为 Writer Craft Profile。不要复述全部训练过程。
-严格输出：
-WRITER_CRAFT_PROFILE_V1
-【稳定能力 STABLE】
-- ...
-【不稳定能力 EMERGING】
-- ...
-【待训练 NEEDS_WORK】
-- ...
-【可迁移 TRANSFERABLE】
-- ...
-【高频失败模式】
-- ...
-【下一轮训练】
-- 最多2项
-【正式写作激活规则】
-- 最多6条，每条一句、可执行
-不得记录作品剧情秘密，不得修改人物卡和世界设定。""",
-            ]
-        ),
+        content=f"{diagnosis.content}\n\n{scene_feedback.content}\n\n{behavior_feedback.content}\n\n{rhythm_feedback.content}\n\n{reader_trace.content}\n\n{reader_gap.content}\n\n{integrated_reader_trace.content}\n\n{integrated_reader_gap.content}\n\n{integrated_reader_recheck.content}\n\n{transfer_reader_trace.content}\n\n{transfer_review.content}",
+        instruction=f"{training_rules}\n\n蒸馏为 Writer Craft Profile。不要复述全部训练过程。\n严格输出：\nWRITER_CRAFT_PROFILE_V1\n【稳定能力 STABLE】\n- ...\n【不稳定能力 EMERGING】\n- ...\n【待训练 NEEDS_WORK】\n- ...\n【可迁移 TRANSFERABLE】\n- ...\n【高频失败模式】\n- ...\n【下一轮训练】\n- 最多2项\n【正式写作激活规则】\n- 最多6条，每条一句、可执行\n不得记录作品剧情秘密，不得修改人物卡和世界设定。",
     )
 
     _persist_writer_profile(

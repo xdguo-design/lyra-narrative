@@ -151,60 +151,8 @@ async def _run_revision_integrity_gate(
         role="revision-integrity-reviewer",
         stage=f"revision-integrity-r{round_no}",
         mode="check",
-        content="\n\n".join(
-            [
-                "=== BEFORE REVISION ===",
-                before,
-                "=== AFTER REVISION ===",
-                after,
-            ]
-        ),
-        instruction="\n\n".join(
-            [
-                """你是 Revision Integrity Reviewer。你同时看到修改前与修改后正文。不要评价哪版更漂亮，只检查局部/整段修订是否破坏原场景功能与前后接口。
-
-先从 BEFORE 提取 Narrative Function Contract：
-1. 读者在这一段/场景结束前必须新知道什么；
-2. 必须在这里确认的身份、关系、规则、时空或世界状态；
-3. 必须发生的决定、关系变化或行动结果；
-4. AFTER 后文继续依赖哪些已建立前提。
-
-再比较 AFTER。
-
-强制检查两类失败：
-A. SCENE_FUNCTION_DRIFT
-- 原本必须落地的认知、身份、关系、规则、决定或接口被删掉；
-- 后文继续使用一个 AFTER 已没有建立的前提；
-- 为了改善人物/语言/节奏而牺牲场景入口功能。
-
-B. LOCAL_REWRITE_SEAM_GAP
-- 同一个问题在修改块后又重新问一次；
-- 同一事实被再次当作首次介绍；
-- 同一决定/关系变化重复发生；
-- 手中物、站位、伤势、情绪、空间状态被重置；
-- 新修改提前了信息，但旧后文没有同步去重；
-- 两段各自成立，拼接后出现“刚才不是已经说过/做过了吗”的阅读感。
-
-严格输出：
-REVISION_INTEGRITY_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【Narrative Function Contract】
-- 必须完成的读者认知：
-- 必须确认的身份/关系/规则：
-- 必须发生的状态变化：
-- 后文依赖接口：
-【Scene Function】PASS / FAIL
-【Seam】PASS / FAIL
-【失败标签】SCENE_FUNCTION_DRIFT / LOCAL_REWRITE_SEAM_GAP / NONE
-【逐字证据】
-【最小修复范围】
-【不得触碰范围】
-
-只要 Scene Function 或 Seam 任一 FAIL，VERDICT 必须 FAIL。
-不得因为“事实在项目设定里仍然存在”而放过正文功能丢失。""",
-                context,
-            ]
-        ),
+        content=f"=== BEFORE REVISION ===\n\n{before}\n\n=== AFTER REVISION ===\n\n{after}",
+        instruction=f"你是 Revision Integrity Reviewer。你同时看到修改前与修改后正文。不要评价哪版更漂亮，只检查局部/整段修订是否破坏原场景功能与前后接口。\n\n先从 BEFORE 提取 Narrative Function Contract：\n1. 读者在这一段/场景结束前必须新知道什么；\n2. 必须在这里确认的身份、关系、规则、时空或世界状态；\n3. 必须发生的决定、关系变化或行动结果；\n4. AFTER 后文继续依赖哪些已建立前提。\n\n再比较 AFTER。\n\n强制检查两类失败：\nA. SCENE_FUNCTION_DRIFT\n- 原本必须落地的认知、身份、关系、规则、决定或接口被删掉；\n- 后文继续使用一个 AFTER 已没有建立的前提；\n- 为了改善人物/语言/节奏而牺牲场景入口功能。\n\nB. LOCAL_REWRITE_SEAM_GAP\n- 同一个问题在修改块后又重新问一次；\n- 同一事实被再次当作首次介绍；\n- 同一决定/关系变化重复发生；\n- 手中物、站位、伤势、情绪、空间状态被重置；\n- 新修改提前了信息，但旧后文没有同步去重；\n- 两段各自成立，拼接后出现“刚才不是已经说过/做过了吗”的阅读感。\n\n严格输出：\nREVISION_INTEGRITY_V1\nVERDICT: PASS 或 VERDICT: FAIL\n【Narrative Function Contract】\n- 必须完成的读者认知：\n- 必须确认的身份/关系/规则：\n- 必须发生的状态变化：\n- 后文依赖接口：\n【Scene Function】PASS / FAIL\n【Seam】PASS / FAIL\n【失败标签】SCENE_FUNCTION_DRIFT / LOCAL_REWRITE_SEAM_GAP / NONE\n【逐字证据】\n【最小修复范围】\n【不得触碰范围】\n\n只要 Scene Function 或 Seam 任一 FAIL，VERDICT 必须 FAIL。\n不得因为“事实在项目设定里仍然存在”而放过正文功能丢失。\n\n{context}",
     )
     failed = "VERDICT: PASS" not in result.content.upper()
     if failed:
@@ -285,54 +233,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
         stage=f"reader-dialogue-r{round_no}",
         mode="check",
         content=draft,
-        instruction="\n\n".join(
-            [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
-                """你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。
-
-必须覆盖 B01—B26，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。
-
-严格输出：
-DIALOGUE_AUTHENTICITY_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【场景目标A】
-【场景目标B】
-【去名字测试】PASS / FAIL
-【换人测试】PASS / FAIL
-【声音指纹】
-【关系痕迹】
-【信息所有权】
-【非合作/回避方式】
-【对话后状态变化】
-【身体/表情/并行任务】
-【非语言指纹】
-【空间关系】
-【自我形象/面子】
-【关系记忆】
-【话轮是否过度对称】
-【情绪余波】
-【感知指纹】
-【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP / OVER_RATIONAL_DIALOGUE_GAP / SELF_PRESENTATION_GAP / RELATIONSHIP_MEMORY_GAP / TURN_TAKING_SYMMETRY_GAP / EMOTIONAL_RESIDUE_GAP / PERCEPTION_SIGNATURE_GAP / NONE
-【逐字问题片段】
-【最小修改边界】
-
-规则：
-- “对白很短”不是失败理由；“对白很长”也不是通过理由。
-- 若连续四轮以上问答主要只是问什么答什么、人物目标相同、换人后仍基本成立，VERDICT 必须 FAIL。
-- 若关键人物首次长对话后仍无法形成稳定声音指纹，VERDICT 必须 FAIL。
-- 熟人、上下级、债权人与债务人等关系必须改变说话方式。
-- 不得为了显得真实机械添加打断、反问、沉默；所有非合作行为都必须服务人物目标。
-- 对话不能只靠增加“皱眉/看了看/沉默”来伪造真实感。
-- 连续纯对白并非自动失败；紧急行动、命令、快速确认可以很短。
-- 若人物在说话时完全失去身体、手上任务、伤势和空间位置，且动作可以换给任何角色，判 EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP。
-- 若人物总能准确解释自己的真实动机、情绪和局势，判 OVER_RATIONAL_DIALOGUE_GAP。
-- 若熟人对话看不出共同历史、旧账、预判和禁区，判 RELATIONSHIP_MEMORY_GAP。
-- 若连续话轮过度整齐、严格轮流、长度接近，判 TURN_TAKING_SYMMETRY_GAP。
-- 若上一句造成的羞耻、冒犯、威胁、被看穿在后文完全不留痕迹，判 EMOTIONAL_RESIDUE_GAP。
-- 若不同人物进入同一场景时总注意同一组东西，判 PERCEPTION_SIGNATURE_GAP。
-- 不得修改正文。""",
-            ]
-        ),
+        instruction=f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}\n\n你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。\n\n必须覆盖 B01—B26，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。\n\n严格输出：\nDIALOGUE_AUTHENTICITY_V1\nVERDICT: PASS 或 VERDICT: FAIL\n【场景目标A】\n【场景目标B】\n【去名字测试】PASS / FAIL\n【换人测试】PASS / FAIL\n【声音指纹】\n【关系痕迹】\n【信息所有权】\n【非合作/回避方式】\n【对话后状态变化】\n【身体/表情/并行任务】\n【非语言指纹】\n【空间关系】\n【自我形象/面子】\n【关系记忆】\n【话轮是否过度对称】\n【情绪余波】\n【感知指纹】\n【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP / OVER_RATIONAL_DIALOGUE_GAP / SELF_PRESENTATION_GAP / RELATIONSHIP_MEMORY_GAP / TURN_TAKING_SYMMETRY_GAP / EMOTIONAL_RESIDUE_GAP / PERCEPTION_SIGNATURE_GAP / NONE\n【逐字问题片段】\n【最小修改边界】\n\n规则：\n- “对白很短”不是失败理由；“对白很长”也不是通过理由。\n- 若连续四轮以上问答主要只是问什么答什么、人物目标相同、换人后仍基本成立，VERDICT 必须 FAIL。\n- 若关键人物首次长对话后仍无法形成稳定声音指纹，VERDICT 必须 FAIL。\n- 熟人、上下级、债权人与债务人等关系必须改变说话方式。\n- 不得为了显得真实机械添加打断、反问、沉默；所有非合作行为都必须服务人物目标。\n- 对话不能只靠增加“皱眉/看了看/沉默”来伪造真实感。\n- 连续纯对白并非自动失败；紧急行动、命令、快速确认可以很短。\n- 若人物在说话时完全失去身体、手上任务、伤势和空间位置，且动作可以换给任何角色，判 EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP。\n- 若人物总能准确解释自己的真实动机、情绪和局势，判 OVER_RATIONAL_DIALOGUE_GAP。\n- 若熟人对话看不出共同历史、旧账、预判和禁区，判 RELATIONSHIP_MEMORY_GAP。\n- 若连续话轮过度整齐、严格轮流、长度接近，判 TURN_TAKING_SYMMETRY_GAP。\n- 若上一句造成的羞耻、冒犯、威胁、被看穿在后文完全不留痕迹，判 EMOTIONAL_RESIDUE_GAP。\n- 若不同人物进入同一场景时总注意同一组东西，判 PERCEPTION_SIGNATURE_GAP。\n- 不得修改正文。",
     ))
 
     natural_reader_task = asyncio.create_task(_run_step(
@@ -341,45 +242,7 @@ VERDICT: PASS 或 VERDICT: FAIL
         stage=f"reader-natural-r{round_no}",
         mode="check",
         content=draft,
-        instruction="\n\n".join(
-            [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
-                """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
-
-必须逐段、逐关键句首读，覆盖 D01—D20。不要只盯开篇和章尾。
-
-严格输出：
-NATURAL_FIRST_READ_V2
-VERDICT: PASS 或 VERDICT: FAIL
-
-若 FAIL，每个问题必须输出：
-【问题ID】D001 起递增
-【逐字原句】
-【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP / MEMORY_INTEGRATION_TOO_SMOOTH / ORALITY_GAP 中选择
-【第一次为什么会停】
-【是否只是人物毛刺】YES / NO
-【最小修改边界】
-【是否阻断交付】YES
-
-若 PASS：
-【问题】NONE
-【为什么可以直接读过去】简述
-【是否阻断交付】NO
-
-规则：
-- “能理解”不是通过理由。
-- 只要有一个明确自然度问题，VERDICT 必须 FAIL。
-- CHARACTER_ROUGHNESS 只有能明确归属于人物说话方式时才可保留。
-- 不能把作者叙述的别扭句保护成“人物毛刺”。
-- 若关键场景只剩“发生了什么”，声音、气味、触感、空间、动作阻力全被写成功能标签，判 SCENE_TEXTURE_GAP。
-- 若同一连续观察/移动动作被机械切成多个短句，读起来像分镜脚本，判 ACTION_FRAGMENTATION_GAP。
-- 若关键对白连续只剩台词信息、附近完全看不到说话人的身体/视线/手上任务，判 EMBODIED_DIALOGUE_GAP。
-- “少解释”不能成为“少描写、少质感”的通过理由。
-- 穿越/原身记忆/失忆恢复若像读取资料卡一样无摩擦，判 MEMORY_INTEGRATION_TOO_SMOOTH；不得靠解释性独白修。
-- 极短对白若语法正确但真人不这么说，像作者为了节奏砸字，判 ORALITY_GAP。
-- 不得修改正文。""",
-            ]
-        ),
+        instruction=f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}\n\n你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。\n\n必须逐段、逐关键句首读，覆盖 D01—D20。不要只盯开篇和章尾。\n\n严格输出：\nNATURAL_FIRST_READ_V2\nVERDICT: PASS 或 VERDICT: FAIL\n\n若 FAIL，每个问题必须输出：\n【问题ID】D001 起递增\n【逐字原句】\n【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP / MEMORY_INTEGRATION_TOO_SMOOTH / ORALITY_GAP 中选择\n【第一次为什么会停】\n【是否只是人物毛刺】YES / NO\n【最小修改边界】\n【是否阻断交付】YES\n\n若 PASS：\n【问题】NONE\n【为什么可以直接读过去】简述\n【是否阻断交付】NO\n\n规则：\n- “能理解”不是通过理由。\n- 只要有一个明确自然度问题，VERDICT 必须 FAIL。\n- CHARACTER_ROUGHNESS 只有能明确归属于人物说话方式时才可保留。\n- 不能把作者叙述的别扭句保护成“人物毛刺”。\n- 若关键场景只剩“发生了什么”，声音、气味、触感、空间、动作阻力全被写成功能标签，判 SCENE_TEXTURE_GAP。\n- 若同一连续观察/移动动作被机械切成多个短句，读起来像分镜脚本，判 ACTION_FRAGMENTATION_GAP。\n- 若关键对白连续只剩台词信息、附近完全看不到说话人的身体/视线/手上任务，判 EMBODIED_DIALOGUE_GAP。\n- “少解释”不能成为“少描写、少质感”的通过理由。\n- 穿越/原身记忆/失忆恢复若像读取资料卡一样无摩擦，判 MEMORY_INTEGRATION_TOO_SMOOTH；不得靠解释性独白修。\n- 极短对白若语法正确但真人不这么说，像作者为了节奏砸字，判 ORALITY_GAP。\n- 不得修改正文。",
     ))
 
     artifice_reader_task = asyncio.create_task(_run_step(
@@ -388,67 +251,7 @@ VERDICT: PASS 或 VERDICT: FAIL
         stage=f"reader-artifice-r{round_no}",
         mode="check",
         content=draft,
-        instruction="\n\n".join(
-            [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
-                """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
-
-必须覆盖 C01—C15。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台、调查是否被主角主持成解题板、显著异常是否成为孤儿信号，以及主角是否整章退化成摄像机。
-
-严格输出：
-STORY_FLOW_ARTIFICE_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【解释回声】
-【设定清单】
-【对话循环】
-【人物声音是否过演】
-【指纹/身体状态是否打卡】
-【线索阶梯】
-【线索密度】
-【记忆是否过于便利】
-【系统是否间接认证判断】
-【巧合集群】
-【证据展示摆台】
-【推理解题板感】
-【显著异常是否被角色接收】
-【主角本章是否有独占观察/选择/代价】
-【失败标签】
-【逐字证据】
-【最小修改边界】
-
-允许标签：
-INTERPRETATION_ECHO_GAP
-PREMISE_CHECKLIST_GAP
-DIALOGUE_LOOP_GAP
-VOICE_OVERPERFORMANCE_GAP
-FINGERPRINT_OVERUSE_GAP
-BODY_STATE_TICKER_GAP
-CLUE_LADDER_GAP
-CLUE_DENSITY_GAP
-CONVENIENT_MEMORY_RECALL_GAP
-SYSTEM_CONFIRMATION_LEAK
-COINCIDENCE_CLUSTER_GAP
-EVIDENCE_DISPLAY_STAGING
-INVESTIGATION_WORKSHEET_GAP
-SALIENT_SIGNAL_ORPHAN_GAP
-PROTAGONIST_AGENCY_GAP
-NONE
-
-规则：
-- 单个轻微痕迹可标 WATCH，不必强行 FAIL。
-- 同一场景出现两类以上明确作者痕迹，或调查链整体像教程关，VERDICT 必须 FAIL。
-- 不能把“有意悬念”误判为线索不足。
-- 不能为了降低线索密度要求作者机械塞假线索。
-- 人物标志动作出现一次不算打卡；短距离反复证明“这个人是谁”才算。
-- 身体状态持续影响选择是好事；只有旁白不断重复播报才算 BODY_STATE_TICKER_GAP。
-- 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。
-- 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。
-- 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。
-- 显著异常不要求立即解释答案；只要人物真实接收并形成疑问/记忆/待核查项即可通过 C14。
-- 主角不需要包办破案；一个有后果的观察、选择、代价或策略即可避免 C15，禁止为过 Gate 强行越权。
-- 不得修改正文。""",
-            ]
-        ),
+        instruction=f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}\n\n你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。\n\n必须覆盖 C01—C15。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台、调查是否被主角主持成解题板、显著异常是否成为孤儿信号，以及主角是否整章退化成摄像机。\n\n严格输出：\nSTORY_FLOW_ARTIFICE_V1\nVERDICT: PASS 或 VERDICT: FAIL\n【解释回声】\n【设定清单】\n【对话循环】\n【人物声音是否过演】\n【指纹/身体状态是否打卡】\n【线索阶梯】\n【线索密度】\n【记忆是否过于便利】\n【系统是否间接认证判断】\n【巧合集群】\n【证据展示摆台】\n【推理解题板感】\n【显著异常是否被角色接收】\n【主角本章是否有独占观察/选择/代价】\n【失败标签】\n【逐字证据】\n【最小修改边界】\n\n允许标签：\nINTERPRETATION_ECHO_GAP\nPREMISE_CHECKLIST_GAP\nDIALOGUE_LOOP_GAP\nVOICE_OVERPERFORMANCE_GAP\nFINGERPRINT_OVERUSE_GAP\nBODY_STATE_TICKER_GAP\nCLUE_LADDER_GAP\nCLUE_DENSITY_GAP\nCONVENIENT_MEMORY_RECALL_GAP\nSYSTEM_CONFIRMATION_LEAK\nCOINCIDENCE_CLUSTER_GAP\nEVIDENCE_DISPLAY_STAGING\nINVESTIGATION_WORKSHEET_GAP\nSALIENT_SIGNAL_ORPHAN_GAP\nPROTAGONIST_AGENCY_GAP\nNONE\n\n规则：\n- 单个轻微痕迹可标 WATCH，不必强行 FAIL。\n- 同一场景出现两类以上明确作者痕迹，或调查链整体像教程关，VERDICT 必须 FAIL。\n- 不能把“有意悬念”误判为线索不足。\n- 不能为了降低线索密度要求作者机械塞假线索。\n- 人物标志动作出现一次不算打卡；短距离反复证明“这个人是谁”才算。\n- 身体状态持续影响选择是好事；只有旁白不断重复播报才算 BODY_STATE_TICKER_GAP。\n- 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。\n- 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。\n- 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。\n- 显著异常不要求立即解释答案；只要人物真实接收并形成疑问/记忆/待核查项即可通过 C14。\n- 主角不需要包办破案；一个有后果的观察、选择、代价或策略即可避免 C15，禁止为过 Gate 强行越权。\n- 不得修改正文。",
     ))
 
     cadence_source = "\n\n".join(
@@ -1062,7 +865,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                     "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
                     (task_id,),
                 )
-            integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
+            _integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
                 task_id=task_id,
                 before=draft,
                 after=final_content,

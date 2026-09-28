@@ -9,8 +9,8 @@ import pytest
 from app.db import connect, init_db
 from app.services.ai_service import AssistResult
 from app.services.continuity_service import (
-    capture_story_state,
     ContinuityStateError,
+    capture_story_state,
     latest_story_state,
     persist_story_state,
     repetition_report,
@@ -87,7 +87,7 @@ def test_repetition_report_blocks_internal_and_cross_chapter_copy():
         "他们必须带着这个既成事实继续往前走，不能让事件重新开始。"
     )
     prior = repeated + "\n\n" + ("前文状态已经固定。" * 20)
-    current = "\n\n".join([repeated, repeated, repeated, repeated])
+    current = f"{repeated}\n\n{repeated}\n\n{repeated}\n\n{repeated}"
 
     report = repetition_report(current, prior)
 

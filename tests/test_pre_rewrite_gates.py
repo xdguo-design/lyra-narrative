@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 BASE = Path("books/yamen-proficiency/manual-v6-run-001")
 
 
