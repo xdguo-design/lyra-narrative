@@ -10,8 +10,8 @@ from app.services.default_skills import (
 )
 
 
-def test_refinement_skill_v8_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 8
+def test_refinement_skill_v9_defines_executable_edit_levels():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 9
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -103,7 +103,7 @@ def test_refinement_skill_templates_separate_reviewer_and_revision_responsibilit
     assert "应合并并升级为 REWRITE_BLOCK" in content
 
 
-def test_refinement_skill_v8_has_unified_reviewer_output_contract():
+def test_refinement_skill_v9_has_unified_reviewer_output_contract():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -148,7 +148,7 @@ def test_reviewer_recheck_closes_or_returns_same_issue():
     assert "禁止在 PASS 后继续反复重写同一处" in content
 
 
-def test_refinement_skill_v8_has_reality_and_readability_gate():
+def test_refinement_skill_v9_has_reality_and_readability_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     required = [
@@ -167,7 +167,7 @@ def test_refinement_skill_v8_has_reality_and_readability_gate():
         assert marker in content
 
 
-def test_refinement_skill_v8_escalates_scene_level_naturalness_failures():
+def test_refinement_skill_v9_escalates_scene_level_naturalness_failures():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
 
     assert "场景中的关键地点、设施、器物或空间关系没有现实锚点" in content
@@ -176,7 +176,7 @@ def test_refinement_skill_v8_escalates_scene_level_naturalness_failures():
     assert "只缺一个孤立锚点 → LOCAL_REWRITE" in content
 
 
-def test_refinement_skill_v8_character_humor_and_ending_rules():
+def test_refinement_skill_v9_character_humor_and_ending_rules():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     for marker in [
         "人物立体化",
@@ -207,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v10_adds_local_rewrite_integrity():
-    assert BUILTIN_WRITING_SKILL_VERSION == 10
+def test_writing_skill_v11_adds_author_hand_and_story_flow_gates():
+    assert BUILTIN_WRITING_SKILL_VERSION == 11
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -248,12 +248,25 @@ def test_writing_skill_v10_adds_local_rewrite_integrity():
         "Narrative Function Contract",
         "SCENE_FUNCTION_DRIFT",
         "LOCAL_REWRITE_SEAM_GAP",
+        "作者痕迹与推进人工感（Author-Hand & Story-Flow Gate）",
+        "INTERPRETATION_ECHO_GAP",
+        "PREMISE_CHECKLIST_GAP",
+        "DIALOGUE_LOOP_GAP",
+        "VOICE_OVERPERFORMANCE_GAP",
+        "FINGERPRINT_OVERUSE_GAP",
+        "BODY_STATE_TICKER_GAP",
+        "CLUE_LADDER_GAP",
+        "CLUE_DENSITY_GAP",
+        "CONVENIENT_MEMORY_RECALL_GAP",
+        "SYSTEM_CONFIRMATION_LEAK",
+        "COINCIDENCE_CLUSTER_GAP",
+        "EVIDENCE_DISPLAY_STAGING",
     ]
     for marker in required:
         assert marker in content
 
 
-def test_refinement_skill_v8_adds_aesthetic_editing_gate():
+def test_refinement_skill_v9_adds_aesthetic_editing_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
         "阶段 11：编辑审美门槛",
@@ -322,8 +335,8 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_reader_review_skill_v5_learns_revision_integrity_boundaries():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 5
+def test_reader_review_skill_v6_adds_author_artifice_reader_contract():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 6
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -356,6 +369,12 @@ def test_reader_review_skill_v5_learns_revision_integrity_boundaries():
         "TURN_TAKING_SYMMETRY_GAP",
         "EMOTIONAL_RESIDUE_GAP",
         "PERCEPTION_SIGNATURE_GAP",
+        "C01 解释回声",
+        "C12 证据展示摆台",
+        "INTERPRETATION_ECHO_GAP",
+        "CLUE_DENSITY_GAP",
+        "SYSTEM_CONFIRMATION_LEAK",
+        "EVIDENCE_DISPLAY_STAGING",
     ]
     for marker in required:
         assert marker in content
@@ -393,7 +412,7 @@ def test_full_pipeline_folds_human_read_into_blind_reader_d():
         assert marker not in source
 
 
-def test_refinement_skill_v8_requires_narrative_function_and_seam_contracts():
+def test_refinement_skill_v9_requires_narrative_function_and_seam_contracts():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
         "阶段 6.5：局部重写完整性门槛",
@@ -426,6 +445,26 @@ def test_full_pipeline_has_revision_integrity_gate():
         "after=final_content",
         "second_blocking = True",
         "final_blocking = final_blocking or integrity_failed_2",
+    ]
+    for marker in required:
+        assert marker in source
+
+
+def test_full_pipeline_has_author_artifice_reader_gate():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    required = [
+        'role="blind-artifice-reader"',
+        'stage=f"reader-artifice-r{round_no}"',
+        "STORY_FLOW_ARTIFICE_V1",
+        "artifice_reader_failed",
+        "has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed",
+        "INTERPRETATION_ECHO_GAP",
+        "CLUE_LADDER_GAP",
+        "CLUE_DENSITY_GAP",
+        "SYSTEM_CONFIRMATION_LEAK",
+        "EVIDENCE_DISPLAY_STAGING",
+        'outputs.append(f"[reader-artifice] {artifice_reader_result.content}")',
+        '"reader-artifice"',
     ]
     for marker in required:
         assert marker in source
