@@ -19,9 +19,20 @@ jobs:
 
       NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'SENSENOVA' }}
       NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_INFINIAI: ${{ vars.INFINIAI }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_OPENROUTER: ${{ vars.OPENROUTER }}
       NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SILICONFLOW: ${{ vars.SILICONFLOW }}
+      NARRATIVE_PROFILE_VOLCES: ${{ vars.VOLCES }}
+
       NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_INFINIAI: ${{ secrets.INFINIAI }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_OPENROUTER: ${{ secrets.OPENROUTER }}
       NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SILICONFLOW: ${{ secrets.SILICONFLOW }}
+      NARRATIVE_PROFILE_SECRET_VOLCES: ${{ secrets.VOLCES }}
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
@@ -46,13 +57,26 @@ jobs:
           import shlex
 
           profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "SENSENOVA").strip().upper()
+          supported = [
+              "ATRIA",
+              "INFINIAI",
+              "MODELSCOPE",
+              "OPENROUTER",
+              "SENSENOVA",
+              "SILICONFLOW",
+              "VOLCES",
+          ]
           profiles = {
-              "ATRIA": os.getenv("NARRATIVE_PROFILE_ATRIA", ""),
-              "SENSENOVA": os.getenv("NARRATIVE_PROFILE_SENSENOVA", ""),
+              name: os.getenv(f"NARRATIVE_PROFILE_{name}", "")
+              for name in supported
           }
           raw = profiles.get(profile_name, "").strip()
           if not raw:
-              raise SystemExit(f"provider profile {profile_name!r} is empty or missing")
+              available = ", ".join(name for name, value in profiles.items() if value.strip())
+              raise SystemExit(
+                  f"provider profile {profile_name!r} is empty or missing; "
+                  f"available configured profiles: {available or 'none'}"
+              )
 
           allowed = {
               "NOVEL_AI_KIND",
@@ -116,6 +140,8 @@ jobs:
           else:
               print("Provider secret source: unresolved")
 
+          available = ", ".join(name for name, value in profiles.items() if value.strip())
+          print(f"Available configured profiles: {available}")
           print(f"Loaded provider profile: {profile_name}")
           print(f"Protocol: {parsed['NOVEL_AI_KIND']}")
           print(f"Model: {parsed['NOVEL_AI_MODEL']}")
