@@ -25,3 +25,6 @@ attempt: 9
 provider_profile: DEEPSEEKV4PRO
 retries: 5
 checkpoint: enabled
+attempt: 10
+provider_profile: SENSENOVA68
+max_tokens: 4000
