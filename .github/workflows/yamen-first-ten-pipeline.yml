@@ -104,7 +104,11 @@ jobs:
           provider_name = parsed.get("NOVEL_AI_PROVIDER_NAME") or profile_name
           parsed["NOVEL_AI_PROVIDER_NAME"] = provider_name
 
-          secret_value = os.getenv(f"NARRATIVE_PROFILE_SECRET_{profile_name}", "").strip()
+          secret_ref = parsed.get("NOVEL_AI_API_KEY_ENV", profile_name).strip().upper()
+          secret_value = (
+              os.getenv(f"NARRATIVE_PROFILE_SECRET_{secret_ref}", "").strip()
+              or os.getenv(f"NARRATIVE_PROFILE_SECRET_{profile_name}", "").strip()
+          )
 
           github_env = os.environ["GITHUB_ENV"]
           with open(github_env, "a", encoding="utf-8") as fh:
@@ -131,7 +135,7 @@ jobs:
                   fh.write("NARRATIVE_PROVIDER_API_KEY=" + parsed["NOVEL_AI_API_KEY"] + "\n")
 
           if secret_value:
-              print("Provider secret source: matching GitHub Actions secret")
+              print(f"Provider secret source: GitHub Actions secret {secret_ref}")
           elif parsed.get("NOVEL_AI_API_KEY"):
               print("Provider secret source: profile value")
           else:
