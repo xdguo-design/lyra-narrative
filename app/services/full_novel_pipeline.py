@@ -101,7 +101,7 @@ def _persist_memory(
 def _review_contract(round_no: int) -> str:
     if round_no <= 1:
         return """NARRATIVEOS_REVIEW_V3
-审核轮次：INITIAL。请严格按“小说精修流程 v7”的 Reviewer 统一审核输出格式执行。
+审核轮次：INITIAL。请严格按“小说精修流程 v8”的 Reviewer 统一审核输出格式执行。
 每个问题一块，多个问题用单独一行 --- 分隔；没有问题只输出 NO_ISSUE。
 必须包含：问题标识、严重性、处置级别、问题类型、问题定位、逐字片段、问题说明、判级理由、修改边界、必须保留事实、禁止新增内容、执行目标、建议动作、复审要求、复审结果=PENDING。
 处置级别只能是 REWRITE_BLOCK / LOCAL_REWRITE / DELETE / POLISH / PASS。
