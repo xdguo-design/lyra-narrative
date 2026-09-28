@@ -37,3 +37,6 @@ provider_profile: KIMIK3
 attempt: 13
 provider_profile: KIMIK3
 temperature: auto-kimi-1
+attempt: 7
+provider_profile: ATRIA
+reason: continue after KIMIK3 rate limit
