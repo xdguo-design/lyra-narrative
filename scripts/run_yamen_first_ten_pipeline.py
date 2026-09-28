@@ -349,37 +349,112 @@ async def main() -> None:
     chapter_task_ids: list[int] = []
     stopped_on_blocking = False
 
-    for index, chapter_id in enumerate(chapter_ids, start=1):
-        task_id = _create_task(
-            project_id=project_id,
-            chapter_id=chapter_id,
-            goal=f"生成正式流水线前十章中的第 {index} 章候选稿",
-            instruction=(
-                SEGMENT_INSTRUCTION
-                + f"\n当前为第 {index}/{CHAPTER_COUNT} 章。"
-                + "\n只允许引用冻结 source memories、当前 Skill、Story State 和流水线自动生成的前文。"
-            ),
-        )
-        chapter_task_ids.append(task_id)
-        result = await _run_frozen_chapter(
-            task_id=task_id,
-            chapter_number=index,
-            prior_manuscript=prior_manuscript,
-        )
-        candidate = str(
-            result.get("revised_content") or result.get("draft") or ""
-        )
-        with connect() as conn:
-            conn.execute(
-                "UPDATE chapters SET content=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
-                (candidate, chapter_id),
+    output_dir = export_run(
+        project_id,
+        planning_task_id,
+        provider,
+        chapter_task_ids,
+        stopped_on_blocking,
+    )
+    print(
+        json.dumps(
+            {
+                "checkpoint": "planning",
+                "output_dir": str(output_dir),
+                "planned_chapters": CHAPTER_COUNT,
+            },
+            ensure_ascii=False,
+        ),
+        flush=True,
+    )
+
+    try:
+        for index, chapter_id in enumerate(chapter_ids, start=1):
+            task_id = _create_task(
+                project_id=project_id,
+                chapter_id=chapter_id,
+                goal=f"生成正式流水线前十章中的第 {index} 章候选稿",
+                instruction=(
+                    SEGMENT_INSTRUCTION
+                    + f"\n当前为第 {index}/{CHAPTER_COUNT} 章。"
+                    + "\n只允许引用冻结 source memories、当前 Skill、Story State 和流水线自动生成的前文。"
+                ),
             )
-        prior_manuscript += (
-            f"\n\n# 第 {index} 章 {titles[index - 1]}\n\n{candidate}"
+            chapter_task_ids.append(task_id)
+            print(
+                json.dumps(
+                    {
+                        "checkpoint": "chapter-start",
+                        "chapter": index,
+                        "task_id": task_id,
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            result = await _run_frozen_chapter(
+                task_id=task_id,
+                chapter_number=index,
+                prior_manuscript=prior_manuscript,
+            )
+            candidate = str(
+                result.get("revised_content") or result.get("draft") or ""
+            )
+            with connect() as conn:
+                conn.execute(
+                    "UPDATE chapters SET content=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                    (candidate, chapter_id),
+                )
+            prior_manuscript += (
+                f"\n\n# 第 {index} 章 {titles[index - 1]}\n\n{candidate}"
+            )
+            if result.get("status") == "reviewed":
+                stopped_on_blocking = True
+
+            output_dir = export_run(
+                project_id,
+                planning_task_id,
+                provider,
+                chapter_task_ids,
+                stopped_on_blocking,
+            )
+            print(
+                json.dumps(
+                    {
+                        "checkpoint": "chapter-complete",
+                        "chapter": index,
+                        "task_id": task_id,
+                        "status": result.get("status"),
+                        "output_dir": str(output_dir),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            if stopped_on_blocking:
+                break
+    except Exception as exc:
+        output_dir = export_run(
+            project_id,
+            planning_task_id,
+            provider,
+            chapter_task_ids,
+            stopped_on_blocking,
         )
-        if result.get("status") == "reviewed":
-            stopped_on_blocking = True
-            break
+        print(
+            json.dumps(
+                {
+                    "checkpoint": "failure",
+                    "generated_chapters": len(chapter_task_ids),
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                    "output_dir": str(output_dir),
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        raise
 
     output_dir = export_run(
         project_id,
