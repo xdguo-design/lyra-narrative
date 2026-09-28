@@ -114,6 +114,96 @@ REWRITE_BLOCK 必须解释为什么 LOCAL_REWRITE 不足；影响事实、因果
 若原问题全部解决且无新 blocking，可以输出 NO_ISSUE。"""
 
 
+async def _run_revision_integrity_gate(
+    *,
+    task_id: int,
+    before: str,
+    after: str,
+    context: str,
+    round_no: int,
+) -> tuple[str, bool]:
+    result = await _run_step(
+        task_id=task_id,
+        role="revision-integrity-reviewer",
+        stage=f"revision-integrity-r{round_no}",
+        mode="check",
+        content="\n\n".join(
+            [
+                "=== BEFORE REVISION ===",
+                before,
+                "=== AFTER REVISION ===",
+                after,
+            ]
+        ),
+        instruction="\n\n".join(
+            [
+                """你是 Revision Integrity Reviewer。你同时看到修改前与修改后正文。不要评价哪版更漂亮，只检查局部/整段修订是否破坏原场景功能与前后接口。
+
+先从 BEFORE 提取 Narrative Function Contract：
+1. 读者在这一段/场景结束前必须新知道什么；
+2. 必须在这里确认的身份、关系、规则、时空或世界状态；
+3. 必须发生的决定、关系变化或行动结果；
+4. AFTER 后文继续依赖哪些已建立前提。
+
+再比较 AFTER。
+
+强制检查两类失败：
+A. SCENE_FUNCTION_DRIFT
+- 原本必须落地的认知、身份、关系、规则、决定或接口被删掉；
+- 后文继续使用一个 AFTER 已没有建立的前提；
+- 为了改善人物/语言/节奏而牺牲场景入口功能。
+
+B. LOCAL_REWRITE_SEAM_GAP
+- 同一个问题在修改块后又重新问一次；
+- 同一事实被再次当作首次介绍；
+- 同一决定/关系变化重复发生；
+- 手中物、站位、伤势、情绪、空间状态被重置；
+- 新修改提前了信息，但旧后文没有同步去重；
+- 两段各自成立，拼接后出现“刚才不是已经说过/做过了吗”的阅读感。
+
+严格输出：
+REVISION_INTEGRITY_V1
+VERDICT: PASS 或 VERDICT: FAIL
+【Narrative Function Contract】
+- 必须完成的读者认知：
+- 必须确认的身份/关系/规则：
+- 必须发生的状态变化：
+- 后文依赖接口：
+【Scene Function】PASS / FAIL
+【Seam】PASS / FAIL
+【失败标签】SCENE_FUNCTION_DRIFT / LOCAL_REWRITE_SEAM_GAP / NONE
+【逐字证据】
+【最小修复范围】
+【不得触碰范围】
+
+只要 Scene Function 或 Seam 任一 FAIL，VERDICT 必须 FAIL。
+不得因为“事实在项目设定里仍然存在”而放过正文功能丢失。""",
+                context,
+            ]
+        ),
+    )
+    failed = "VERDICT: PASS" not in result.content.upper()
+    if failed:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "revision-integrity-reviewer",
+                    "revision-integrity",
+                    "blocking",
+                    result.content,
+                    "恢复 Narrative Function Contract，并执行前后 Seam 去重/连续性修复；不得以继续扩大改写代替接口修复。",
+                    "open",
+                ),
+            )
+    return result.content, failed
+
+
 async def _run_review_round(
     *,
     task_id: int,
@@ -676,7 +766,9 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             content=draft,
             instruction="\n\n".join(
                 [
-                    """根据八个独立 Reviewer、盲读 Reader B（对话真实性）与 Reader D（自然首读）的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。只输出重写后的完整正文。""",
+                    """根据八个独立 Reviewer、盲读 Reader B（对话真实性）与 Reader D（自然首读）的结构化意见执行修订，并严格遵守冻结的“小说精修流程” Skill。按处置级别执行：REWRITE_BLOCK 重建对应段落/场景；LOCAL_REWRITE 只改最小范围；DELETE 直接删除无效内容；POLISH 仅做语言层调整。blocking 必须修复；不得把结构问题降级成润色，也不得因局部问题扩大重写范围。保留 Reviewer 标明的事实锚点与不得触碰范围。
+
+任何 LOCAL_REWRITE 执行前必须先在内部建立 Narrative Function Contract：本段必须让读者知道什么、必须确认什么身份/关系/规则、必须发生什么决定/状态变化、后文依赖什么接口。修改完成后必须执行 Seam Check：检查重复问答、重复说明、决定/关系/动作/情绪/空间重置。不得为了改善人物或语言而写丢原场景功能。只输出重写后的完整正文。""",
                     "Reviewer 意见：\n" + "\n\n".join(review_outputs),
                     context,
                 ]
@@ -689,6 +781,14 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 (task_id,),
             )
 
+        integrity_output, integrity_failed = await _run_revision_integrity_gate(
+            task_id=task_id,
+            before=draft,
+            after=revision.content,
+            context=context,
+            round_no=1,
+        )
+
         second_outputs, second_blocking = await _run_review_round(
             task_id=task_id,
             draft=revision.content,
@@ -696,6 +796,9 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             round_no=2,
             prior_outputs=review_outputs,
         )
+        if integrity_failed:
+            second_outputs.append("[revision-integrity] " + integrity_output)
+            second_blocking = True
 
         final_content = revision.content
         if second_blocking:
@@ -707,7 +810,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 content=revision.content,
                 instruction="\n\n".join(
                     [
-                        """第二轮复审仍有 blocking。仅处理复审结果为 FAIL 的原问题，并按原问题标识与处置级别执行；REWRITE_BLOCK 才允许重建对应范围，LOCAL_REWRITE 必须保持最小修改。不得重构已经 PASS 的部分，不得越过 Reviewer 给出的修改边界。只输出完整正文。""",
+                        """第二轮复审仍有 blocking。仅处理复审结果为 FAIL 的原问题，并按原问题标识与处置级别执行；REWRITE_BLOCK 才允许重建对应范围，LOCAL_REWRITE 必须保持最小修改。不得重构已经 PASS 的部分，不得越过 Reviewer 给出的修改边界。若 blocking 包含 revision-integrity，必须先恢复原 Narrative Function Contract，再消除 Seam 重复/重置；不能只把新句子写顺。只输出完整正文。""",
                         "第二轮 Reviewer 意见：\n" + "\n\n".join(second_outputs),
                         context,
                     ]
@@ -719,6 +822,13 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                     "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
                     (task_id,),
                 )
+            integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
+                task_id=task_id,
+                before=draft,
+                after=final_content,
+                context=context,
+                round_no=2,
+            )
             _, final_blocking = await _run_review_round(
                 task_id=task_id,
                 draft=final_content,
@@ -726,6 +836,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 round_no=3,
                 prior_outputs=second_outputs,
             )
+            final_blocking = final_blocking or integrity_failed_2
         else:
             final_blocking = False
 
