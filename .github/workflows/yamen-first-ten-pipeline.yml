@@ -1,0 +1,77 @@
+name: Yamen First Ten NarrativeOS Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/yamen-first-ten-pipeline.request"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NOVEL_DB_PATH: /tmp/yamen-first-ten-pipeline.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROVIDER_NAME: ${{ vars.NARRATIVE_PROVIDER_NAME || '默认写作' }}
+      NARRATIVE_PROVIDER_PROTOCOL: ${{ vars.NARRATIVE_PROVIDER_PROTOCOL || 'openai-compatible' }}
+      NARRATIVE_PROVIDER_MODEL: ${{ vars.NARRATIVE_PROVIDER_MODEL || 'gpt-5.6-sol' }}
+      NARRATIVE_PROVIDER_BASE_URL: ${{ vars.NARRATIVE_PROVIDER_BASE_URL || 'https://api.openai.com/v1' }}
+      NARRATIVE_PROVIDER_SECRET_NAME: ${{ vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY' }}
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY'] }}
+
+      NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
+      NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
+      NARRATIVE_OUTPUT_DIR: artifacts/yamen-proficiency-first-ten-pipeline
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Validate provider selection
+        shell: bash
+        run: |
+          if [ -z "$NARRATIVE_PROVIDER_NAME" ]; then
+            echo "::error::NARRATIVE_PROVIDER_NAME must not be empty."
+            exit 2
+          fi
+          if [ -z "$NARRATIVE_PROVIDER_PROTOCOL" ]; then
+            echo "::error::NARRATIVE_PROVIDER_PROTOCOL must not be empty."
+            exit 2
+          fi
+          if [ -z "$NARRATIVE_PROVIDER_MODEL" ]; then
+            echo "::error::NARRATIVE_PROVIDER_MODEL must not be empty."
+            exit 2
+          fi
+          if [ "$NARRATIVE_PROVIDER_PROTOCOL" != "ollama" ] && [ -z "$NARRATIVE_PROVIDER_API_KEY" ]; then
+            echo "::error::Provider API key is not configured."
+            echo "::error::Expected GitHub Actions secret: $NARRATIVE_PROVIDER_SECRET_NAME"
+            exit 2
+          fi
+          echo "Provider instance: $NARRATIVE_PROVIDER_NAME"
+          echo "Protocol: $NARRATIVE_PROVIDER_PROTOCOL"
+          echo "Model: $NARRATIVE_PROVIDER_MODEL"
+          echo "Secret name: $NARRATIVE_PROVIDER_SECRET_NAME"
+
+      - name: Run formal NarrativeOS first-ten pipeline
+        run: python scripts/run_yamen_first_ten_pipeline.py
+
+      - name: Upload pipeline outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamen-proficiency-first-ten-pipeline
+          path: artifacts/yamen-proficiency-first-ten-pipeline
+          if-no-files-found: ignore
+          retention-days: 14
