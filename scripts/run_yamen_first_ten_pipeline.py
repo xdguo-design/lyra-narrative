@@ -41,11 +41,6 @@ FREEZE_SOURCES = [
         "source-promise",
         "类型 Promise Matrix",
     ),
-    (
-        "books/yamen-proficiency/manual-v6-run-001/rewrite-freeze-pack-v1.md",
-        "source-freeze-pack",
-        "正式重写 Freeze Pack",
-    ),
 ]
 
 GOAL = """从冻结设定重新生成《穿成县衙白役，我把熟练度肝满了》的前 10 章正式流水线候选稿。
@@ -144,6 +139,29 @@ def create_clean_project() -> int:
         return int(cur.lastrowid)
 
 
+def restrict_task_skills(task_id: int, allowed_names: set[str]) -> None:
+    with connect() as conn:
+        if not allowed_names:
+            conn.execute(
+                "DELETE FROM writing_task_skills WHERE task_id=?",
+                (task_id,),
+            )
+            return
+
+        placeholders = ",".join("?" for _ in allowed_names)
+        conn.execute(
+            f"""
+            DELETE FROM writing_task_skills
+            WHERE task_id=?
+              AND skill_id NOT IN (
+                  SELECT id FROM skills
+                  WHERE name IN ({placeholders})
+              )
+            """,
+            (task_id, *sorted(allowed_names)),
+        )
+
+
 def seed_frozen_sources(project_id: int) -> None:
     with connect() as conn:
         for source_path, kind, title in FREEZE_SOURCES:
@@ -175,6 +193,7 @@ async def plan_first_ten(project_id: int) -> tuple[int, str]:
         goal="依据冻结设定规划长篇前十章，不关闭第一卷",
         instruction=SEGMENT_INSTRUCTION,
     )
+    restrict_task_skills(task_id, set())
     with connect() as conn:
         conn.execute(
             "UPDATE writing_tasks SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -379,6 +398,10 @@ async def main() -> None:
                     + f"\n当前为第 {index}/{CHAPTER_COUNT} 章。"
                     + "\n只允许引用冻结 source memories、当前 Skill、Story State 和流水线自动生成的前文。"
                 ),
+            )
+            restrict_task_skills(
+                task_id,
+                {"中文小说自然叙事", "小说精修流程"},
             )
             chapter_task_ids.append(task_id)
             print(
