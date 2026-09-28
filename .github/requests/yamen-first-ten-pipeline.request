@@ -10,3 +10,5 @@ provider_profile: SENSENOVA
 attempt: 2
 attempt: 3
 secret_mapping: matching-profile-name
+attempt: 4
+fix: pythonpath-root
