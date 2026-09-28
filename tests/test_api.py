@@ -898,6 +898,232 @@ def test_zero_platform_full_production_acceptance_flow():
                 assert before_approval["content"] == seed_chapter
 
                 approved = client.post(
+                    f"/api/tasks/{task_id}/approval",
+                    json={
+                        "decision": "approved",
+                        "note": "零点站台全链路验收通过",
+                    },
+                )
+                assert approved.status_code == 200
+                approved_body = approved.json()
+                assert approved_body["status"] == "approved"
+                assert approved_body["content_sync"]["status"] == "completed"
+
+                accepted_content = client.get(
+                    f"/api/chapters/{chapter_id}"
+                ).json()["content"]
+                assert accepted_content == body["revised_content"]
+                assert seed_chapter.strip() in accepted_content
+                assert accepted_content.strip() != seed_chapter.strip()
+
+                chapter_file = (
+                    project_dir / "chapters" / f"chapter-{chapter_id:04d}.md"
+                )
+                review_file = (
+                    project_dir / "reviews" / f"task-{task_id:06d}.md"
+                )
+                version_file = (
+                    project_dir / "versions" / f"task-{task_id:06d}.md"
+                )
+                assert chapter_file.exists()
+                assert review_file.exists()
+                assert version_file.exists()
+                assert accepted_content in chapter_file.read_text(encoding="utf-8")
+                assert "Agent Runs" in review_file.read_text(encoding="utf-8")
+                assert accepted_content in version_file.read_text(encoding="utf-8")
+
+                versions = client.get(
+                    f"/api/chapters/{chapter_id}/versions"
+                ).json()
+                baseline_version = next(
+                    item
+                    for item in versions
+                    if item["note"] == "零点站台验收初稿"
+                )
+                accepted_version = next(
+                    item
+                    for item in versions
+                    if item["note"] == f"NarrativeOS task #{task_id} approved"
+                )
+
+                restored_baseline = client.post(
+                    f"/api/chapters/{chapter_id}/versions/{baseline_version['id']}/restore"
+                )
+                assert restored_baseline.status_code == 200
+                assert restored_baseline.json()["content"] == seed_chapter
+
+                restored_accepted = client.post(
+                    f"/api/chapters/{chapter_id}/versions/{accepted_version['id']}/restore"
+                )
+                assert restored_accepted.status_code == 200
+                assert restored_accepted.json()["content"] == accepted_content
+
+                chapter_file.unlink()
+                review_file.unlink()
+                version_file.unlink()
+                resync = client.post(f"/api/tasks/{task_id}/content-sync")
+                assert resync.status_code == 200
+                assert resync.json()["status"] == "completed"
+                assert chapter_file.exists()
+                assert review_file.exists()
+                assert version_file.exists()
+
+            with TestClient(app) as restarted:
+                persisted_task = restarted.get(f"/api/tasks/{task_id}")
+                assert persisted_task.status_code == 200
+                assert persisted_task.json()["status"] == "approved"
+                persisted_chapter = restarted.get(
+                    f"/api/chapters/{chapter_id}"
+                )
+                assert persisted_chapter.status_code == 200
+                assert persisted_chapter.json()["content"] == accepted_content
+        finally:
+            if previous is None:
+                os.environ.pop("NOVEL_CONTENT_ROOT", None)
+            else:
+                os.environ["NOVEL_CONTENT_ROOT"] = previous
+
+
+def test_full_novel_pipeline_rejects_demo_provider():
+    previous = os.environ.get("NOVEL_AI_KIND")
+    os.environ["NOVEL_AI_KIND"] = "demo"
+    try:
+        with TestClient(app) as client:
+            project_id = client.post(
+                "/api/projects",
+                json={"title": "完整流水线测试", "genre": "科幻"},
+            ).json()["id"]
+            chapter_id = client.get(
+                f"/api/projects/{project_id}/chapters"
+            ).json()[0]["id"]
+            task = client.post(
+                f"/api/projects/{project_id}/tasks",
+                json={
+                    "chapter_id": chapter_id,
+                    "goal": "从架构开始生成第一章",
+                    "instruction": "必须经过完整创作流水线。",
+                },
+            )
+            assert task.status_code == 201
+            response = client.post(
+                f"/api/tasks/{task.json()['id']}/run-full-pipeline"
+            )
+            assert response.status_code == 409
+            assert "real AI provider" in response.json()["detail"]
+    finally:
+        if previous is None:
+            os.environ.pop("NOVEL_AI_KIND", None)
+        else:
+            os.environ["NOVEL_AI_KIND"] = previous
+
+
+def test_book_pipeline_rejects_demo_provider():
+    previous = os.environ.get("NOVEL_AI_KIND")
+    os.environ["NOVEL_AI_KIND"] = "demo"
+    try:
+        with TestClient(app) as client:
+            project_id = client.post(
+                "/api/projects",
+                json={"title": "整书流水线测试", "genre": "科幻"},
+            ).json()["id"]
+            response = client.post(
+                f"/api/projects/{project_id}/run-book-pipeline",
+                json={
+                    "goal": "从架构开始写一部完整小说",
+                    "instruction": "必须走冻结规划与逐章审核。",
+                    "chapter_count": 8,
+                },
+            )
+            assert response.status_code == 409
+            assert "real AI provider" in response.json()["detail"]
+    finally:
+        if previous is None:
+            os.environ.pop("NOVEL_AI_KIND", None)
+        else:
+            os.environ["NOVEL_AI_KIND"] = previous
+
+
+def test_provider_profile_name_is_custom_and_protocol_is_optional():
+    with TestClient(app) as client:
+        created = client.post(
+            "/api/providers",
+            json={
+                "name": "主写作",
+                "protocol": "",
+                "enabled": True,
+            },
+        )
+        assert created.status_code == 201
+        body = created.json()
+        assert body["name"] == "主写作"
+        assert body["protocol"] == ""
+        assert body["is_default"] is False
+
+        incomplete_default = client.patch(
+            f"/api/providers/{body['id']}",
+            json={"is_default": True},
+        )
+        assert incomplete_default.status_code == 400
+
+        configured = client.patch(
+            f"/api/providers/{body['id']}",
+            json={
+                "protocol": "openai-compatible",
+                "base_url": "https://example.invalid/v1",
+                "api_key_env": "WRITER_MODEL_KEY",
+                "default_model": "writer-model",
+                "is_default": True,
+            },
+        )
+        assert configured.status_code == 200
+        configured_body = configured.json()
+        assert configured_body["name"] == "主写作"
+        assert configured_body["protocol"] == "openai-compatible"
+        assert configured_body["api_key_env"] == "WRITER_MODEL_KEY"
+        assert configured_body["is_default"] is True
+
+
+def test_provider_default_switches_between_user_named_instances():
+    with TestClient(app) as client:
+        writer = client.post(
+            "/api/providers",
+            json={
+                "name": "主写作",
+                "protocol": "openai-compatible",
+                "default_model": "writer-model",
+                "is_default": True,
+            },
+        ).json()
+        reviewer = client.post(
+            "/api/providers",
+            json={
+                "name": "科学审稿",
+                "protocol": "anthropic",
+                "default_model": "review-model",
+                "is_default": True,
+            },
+        )
+        assert reviewer.status_code == 201
+
+        rows = client.get("/api/providers").json()
+        by_name = {item["name"]: item for item in rows}
+        assert by_name["主写作"]["is_default"] is False
+        assert by_name["科学审稿"]["is_default"] is True
+
+        duplicate = client.post(
+            "/api/providers",
+            json={"name": "主写作"},
+        )
+        assert duplicate.status_code == 409
+
+        invalid = client.post(
+            "/api/providers",
+            json={"name": "错误协议", "protocol": "kimi"},
+        )
+        assert invalid.status_code == 400
+
+        deleted = client.delete(f"/api/providers/{writer['id']}")
+        assert deleted.status_code == 200
 
 
 def test_builtin_natural_prose_skill_is_seeded_and_visible():
