@@ -298,3 +298,67 @@ def test_skill_evolution_protocol_tracks_revision_integrity_case():
         "Revision Integrity Regression Corpus",
     ]:
         assert marker in protocol
+
+
+def test_author_artifice_regression_corpus_has_fail_and_pass_boundaries():
+    corpus = Path("docs/author-artifice-regression-corpus.md").read_text(encoding="utf-8")
+    fail_markers = [
+        "AF001",
+        "AF012",
+        "INTERPRETATION_ECHO_GAP",
+        "PREMISE_CHECKLIST_GAP",
+        "DIALOGUE_LOOP_GAP",
+        "VOICE_OVERPERFORMANCE_GAP",
+        "FINGERPRINT_OVERUSE_GAP",
+        "BODY_STATE_TICKER_GAP",
+        "CLUE_LADDER_GAP",
+        "CLUE_DENSITY_GAP",
+        "CONVENIENT_MEMORY_RECALL_GAP",
+        "SYSTEM_CONFIRMATION_LEAK",
+        "COINCIDENCE_CLUSTER_GAP",
+        "EVIDENCE_DISPLAY_STAGING",
+    ]
+    pass_markers = [
+        "AP001",
+        "AP010",
+        "False-positive boundaries",
+        "不允许为了降低作者痕迹机械增加废话",
+    ]
+    for marker in fail_markers + pass_markers:
+        assert marker in corpus
+
+
+def test_failure_corpus_freezes_author_artifice_and_clue_flow_modes():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    required = [
+        "F027｜动作说完，旁白再解释一遍",
+        "F028｜开篇像在勾人物设定卡",
+        "F029｜人物关系变化已经完成，对话还在原地绕",
+        "F030｜人物声音过度表演",
+        "F031｜人物指纹打卡",
+        "F032｜身体状态播报器",
+        "F033｜线索阶梯",
+        "F034｜线索密度过高",
+        "F035｜剧情缺什么，记忆就刚好补什么",
+        "F036｜系统通过奖励时机认证答案",
+        "F037｜多个“正好”叠成巧合集群",
+        "F038｜嫌疑人物变成证据展示台",
+    ]
+    for marker in required:
+        assert marker in corpus
+
+
+def test_skill_evolution_protocol_tracks_author_artifice_case():
+    protocol = Path("docs/skill-evolution-protocol.md").read_text(encoding="utf-8")
+    required = [
+        "Case SE-006｜作者施工痕迹与线索人工感",
+        "Writer v11",
+        "Reader Skill v6",
+        "Refinement v9",
+        "blind-artifice-reader",
+        "F027—F038",
+        "Author Artifice & Clue Flow Regression Corpus",
+        "EVIDENCE_DISPLAY_STAGING",
+    ]
+    for marker in required:
+        assert marker in protocol
