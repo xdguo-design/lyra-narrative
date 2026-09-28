@@ -362,3 +362,30 @@ def test_skill_evolution_protocol_tracks_author_artifice_case():
     ]
     for marker in required:
         assert marker in protocol
+
+
+def test_failure_corpus_freezes_cadence_and_character_stasis_gaps():
+    corpus = Path("docs/writer-failure-corpus.md").read_text(encoding="utf-8")
+    for marker in [
+        "F042｜三章都在推进，却没有波峰",
+        "F043｜人物连续六章原地踏步",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
+    ]:
+        assert marker in corpus
+
+
+def test_rewrite_v3_first_ten_plan_has_three_chapter_climax_cadence():
+    plan = Path("books/yamen-proficiency/rewrite-v3/chapters-01-10-plan.md").read_text(encoding="utf-8")
+    for marker in [
+        "第 3 节",
+        "第 6 节",
+        "第 9 节",
+        "小高潮①",
+        "小高潮②",
+        "小高潮③",
+        "人物变化",
+        "陈安/赵六",
+        "陈安/周虎",
+    ]:
+        assert marker in plan
