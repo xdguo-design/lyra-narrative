@@ -21,6 +21,29 @@ def _require_real_provider() -> None:
         )
 
 
+def _recent_chapter_window(project_id: int, current_position: int | None) -> str:
+    if current_position is None:
+        return ""
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT position,title,content
+            FROM chapters
+            WHERE project_id=? AND position<?
+            ORDER BY position DESC
+            LIMIT 2
+            """,
+            (project_id, current_position),
+        ).fetchall()
+    if not rows:
+        return ""
+    rows = list(reversed(rows))
+    return "\n\n".join(
+        f"【前章 {row['position']}｜{row['title']}】\n{row['content']}"
+        for row in rows
+    )
+
+
 def _persist_memory(
     *,
     project_id: int,
@@ -304,7 +327,7 @@ VERDICT: PASS 或 VERDICT: FAIL
                 BUILTIN_READER_REVIEW_SKILL_CONTENT,
                 """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
 
-必须逐段、逐关键句首读，覆盖 D01—D15。不要只盯开篇和章尾。
+必须逐段、逐关键句首读，覆盖 D01—D18。不要只盯开篇和章尾。
 
 严格输出：
 NATURAL_FIRST_READ_V2
@@ -313,7 +336,7 @@ VERDICT: PASS 或 VERDICT: FAIL
 若 FAIL，每个问题必须输出：
 【问题ID】D001 起递增
 【逐字原句】
-【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP 中选择
+【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP 中选择
 【第一次为什么会停】
 【是否只是人物毛刺】YES / NO
 【最小修改边界】
@@ -329,6 +352,10 @@ VERDICT: PASS 或 VERDICT: FAIL
 - 只要有一个明确自然度问题，VERDICT 必须 FAIL。
 - CHARACTER_ROUGHNESS 只有能明确归属于人物说话方式时才可保留。
 - 不能把作者叙述的别扭句保护成“人物毛刺”。
+- 若关键场景只剩“发生了什么”，声音、气味、触感、空间、动作阻力全被写成功能标签，判 SCENE_TEXTURE_GAP。
+- 若同一连续观察/移动动作被机械切成多个短句，读起来像分镜脚本，判 ACTION_FRAGMENTATION_GAP。
+- 若关键对白连续只剩台词信息、附近完全看不到说话人的身体/视线/手上任务，判 EMBODIED_DIALOGUE_GAP。
+- “少解释”不能成为“少描写、少质感”的通过理由。
 - 不得修改正文。""",
             ]
         ),
@@ -396,6 +423,45 @@ NONE
     )
     artifice_reader_failed = "VERDICT: PASS" not in artifice_reader_result.content.upper()
 
+    cadence_source = "\n\n".join(
+        item
+        for item in [
+            recent_chapter_window,
+            "【当前章节草稿】\n" + draft,
+        ]
+        if item
+    )
+    cadence_reader_result = await _run_step(
+        task_id=task_id,
+        role="cadence-character-reader",
+        stage=f"reader-cadence-r{round_no}",
+        mode="check",
+        content=cadence_source,
+        instruction="""你执行“三章节拍与人物状态推进”检查。若提供了前两章，则把前两章 + 当前章作为连续窗口；若不足三章，只检查人物状态是否继承、当前章是否为后续波峰积累真实压力，不因样本不足强行 FAIL。
+
+严格输出：
+THREE_CHAPTER_CADENCE_V1
+VERDICT: PASS / WATCH / FAIL
+【窗口章节】
+【压力曲线】
+【本窗口波峰】
+【波峰是否只是新线索】YES / NO
+【人物状态变化1】
+【人物状态变化2】
+【下一章必须继承】
+【失败标签】PLATEAU_CADENCE_GAP / CHARACTER_STATE_STASIS_GAP / NONE
+【证据】
+
+判定：
+- 有完整三章窗口且三章强度近似、都只是均匀推进，没有明确波峰，判 PLATEAU_CADENCE_GAP + FAIL。
+- 有完整三章窗口，但所谓高潮只是再丢一个名字/物证，人物权限、关系、责任、目标完全不变，也应 FAIL。
+- 连续窗口显示核心人物只重复既有人设、关系和权限不变化，判 CHARACTER_STATE_STASIS_GAP；若已有连续六章证据则 FAIL，否则可 WATCH。
+- 小高潮不要求打斗；现实债务、关系破裂、职业权限变化同样成立。
+- 不得为了制造高潮要求作者机械添加暴力、反转或巧合。
+- 不得修改正文。""",
+    )
+    cadence_reader_failed = "VERDICT: FAIL" in cadence_reader_result.content.upper()
+
     specs = [
         (
             "continuity-reviewer",
@@ -442,7 +508,7 @@ NONE
     ]
 
     outputs: list[str] = []
-    has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed
+    has_blocking = natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed
     for index, (role, category, instruction) in enumerate(specs):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
@@ -544,6 +610,26 @@ NONE
                 ),
             )
 
+    outputs.append(f"[reader-cadence] {cadence_reader_result.content}")
+    if cadence_reader_failed:
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "cadence-character-reader",
+                    "reader-cadence",
+                    "blocking",
+                    cadence_reader_result.content,
+                    "按三章节拍与人物状态推进门槛重构相关章节窗口；不得只在章尾补钩子，必须让压力波峰与人物关系/权限/责任变化同时落地。",
+                    "open",
+                ),
+            )
+
     outputs.append(f"[reader-naturalness] {natural_reader_result.content}")
     if natural_reader_failed:
         with connect() as conn:
@@ -605,6 +691,10 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
     extra = str(task["instruction"] or "").strip()
     seed = chapter["content"] if chapter else ""
     initial_context = _task_context(task_id, project_id)
+    recent_chapter_window = _recent_chapter_window(
+        project_id,
+        int(chapter["position"]) if chapter and chapter["position"] is not None else None,
+    )
 
     try:
         architect = await _run_step(
@@ -698,7 +788,8 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
                 item
                 for item in [
                     context,
-                    """把架构、世界规则和人物矛盾编排为可执行章节大纲，不写正文。每章必须列：开场状态、人物目标、阻碍、冲突升级、新信息、错误选择/代价、转折、章末钩子。世界规则的揭示必须通过事件和选择完成，禁止连续说明设定。""",
+                    """把架构、世界规则和人物矛盾编排为可执行章节大纲，不写正文。每章必须列：开场状态、人物目标、阻碍、冲突升级、新信息、错误选择/代价、转折、章末钩子。世界规则的揭示必须通过事件和选择完成，禁止连续说明设定。
+额外执行三章节拍：默认每 3 章至少形成一次小高潮，小高潮不能只等于“发现更大线索”，必须同时推动压力、人物选择和状态改变中的至少两项。每个 3 章单元结束时，至少两名核心人物的关系、权限、责任、目标或资源状态要发生可追踪变化。降速章也必须推进家庭、钱、职业或关系，不能原地踏步。""",
                 ]
                 if item
             ),
