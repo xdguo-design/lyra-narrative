@@ -31,6 +31,7 @@ def test_runtime_emits_agent_and_model_progress_logs():
     for marker in [
         "[model-route] TRY",
         "[model-route] DONE",
-        "[model-route] FALLBACK",
+        'outcome = "FALLBACK"',
+        "[model-route] {outcome}",
     ]:
         assert marker in ai_service

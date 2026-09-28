@@ -377,12 +377,9 @@ def test_failure_corpus_freezes_cadence_and_character_stasis_gaps():
 def test_rewrite_v3_first_ten_plan_has_three_chapter_climax_cadence():
     plan = Path("books/yamen-proficiency/rewrite-v3/chapters-01-10-plan.md").read_text(encoding="utf-8")
     for marker in [
-        "第 3 节",
-        "第 6 节",
-        "第 9 节",
-        "小高潮①",
-        "小高潮②",
-        "小高潮③",
+        "3. 《死人鞋底是干的》【小高潮①】",
+        "6. 《一贯二百钱》【小高潮②】",
+        "9. 《王顺没说完》【小高潮③】",
         "人物变化",
         "陈安/赵六",
         "陈安/周虎",

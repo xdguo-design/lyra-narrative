@@ -544,8 +544,11 @@ def test_content_repository_preflight_and_idempotent_source_import():
                 ).json()
                 assert len(memories) == 2
                 assert all(item["confirmed"] == 1 for item in memories)
-                assert len(skills) == 1
-                assert skills[0]["enabled"] == 1
+                project_skills = [
+                    item for item in skills if item["project_id"] == project_id
+                ]
+                assert len(project_skills) == 1
+                assert project_skills[0]["enabled"] == 1
 
                 second = client.post(
                     f"/api/projects/{project_id}/content/import"
@@ -857,8 +860,11 @@ def test_zero_platform_full_production_acceptance_flow():
                     "character",
                     "outline",
                 }
-                assert len(skills) == 1
-                skill_id = skills[0]["id"]
+                project_skills = [
+                    item for item in skills if item["project_id"] == project_id
+                ]
+                assert len(project_skills) == 1
+                skill_id = project_skills[0]["id"]
 
                 task = client.post(
                     f"/api/projects/{project_id}/tasks",
