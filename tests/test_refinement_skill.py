@@ -207,8 +207,8 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
         assert marker in source
 
 
-def test_writing_skill_v13_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 13
+def test_writing_skill_v14_adds_escalation_and_character_progression_gates():
+    assert BUILTIN_WRITING_SKILL_VERSION == 14
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -267,6 +267,8 @@ def test_writing_skill_v13_adds_escalation_and_character_progression_gates():
         "三章节拍与人物状态推进（Three-Chapter Escalation Gate）",
         "PLATEAU_CADENCE_GAP",
         "CHARACTER_STATE_STASIS_GAP",
+        "MEMORY_INTEGRATION_TOO_SMOOTH",
+        "ORALITY_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -341,8 +343,8 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
         assert marker in source
 
 
-def test_reader_review_skill_v7_adds_narrative_texture_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 7
+def test_reader_review_skill_v8_adds_narrative_texture_reader_contract():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 8
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -385,6 +387,10 @@ def test_reader_review_skill_v7_adds_narrative_texture_reader_contract():
         "D17 连续动作",
         "SCENE_TEXTURE_GAP",
         "ACTION_FRAGMENTATION_GAP",
+        "D19 记忆接入摩擦",
+        "D20 口语自然度",
+        "MEMORY_INTEGRATION_TOO_SMOOTH",
+        "ORALITY_GAP",
     ]
     for marker in required:
         assert marker in content
@@ -492,7 +498,7 @@ def test_refinement_skill_v11_has_three_chapter_escalation_gate():
         assert marker in content
 
 
-def test_writing_skill_v13_requires_three_chapter_climax_and_character_state_change():
+def test_writing_skill_v14_requires_three_chapter_climax_and_character_state_change():
     content = BUILTIN_WRITING_SKILL_CONTENT
     for marker in [
         "三章节拍与人物状态推进（Three-Chapter Escalation Gate）",
@@ -515,7 +521,7 @@ def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
         "CHARACTER_STATE_STASIS_GAP",
         "SCENE_TEXTURE_GAP",
         "ACTION_FRAGMENTATION_GAP",
-        "D01—D18",
+        "D01—D20",
         "cadence_reader_failed",
         'outputs.append(f"[reader-cadence] {cadence_reader_result.content}")',
         "natural_reader_failed or dialogue_reader_failed or artifice_reader_failed or cadence_reader_failed",
