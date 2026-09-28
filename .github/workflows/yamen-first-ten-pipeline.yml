@@ -17,22 +17,20 @@ jobs:
       NOVEL_DB_PATH: /tmp/yamen-first-ten-pipeline.db
       NOVEL_SEED_DEMO: "0"
 
-      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'SENSENOVA' }}
+      NARRATIVE_PROVIDER_PROFILE: ${{ vars.NARRATIVE_PROVIDER_PROFILE || 'DEEPSEEKV4PRO' }}
       NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
-      NARRATIVE_PROFILE_INFINIAI: ${{ vars.INFINIAI }}
-      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
-      NARRATIVE_PROFILE_OPENROUTER: ${{ vars.OPENROUTER }}
+      NARRATIVE_PROFILE_DEEPSEEKV4PRO: ${{ vars.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_KIMIK3: ${{ vars.KIMIK3 }}
       NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
-      NARRATIVE_PROFILE_SILICONFLOW: ${{ vars.SILICONFLOW }}
-      NARRATIVE_PROFILE_VOLCES: ${{ vars.VOLCES }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
 
       NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
-      NARRATIVE_PROFILE_SECRET_INFINIAI: ${{ secrets.INFINIAI }}
-      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
-      NARRATIVE_PROFILE_SECRET_OPENROUTER: ${{ secrets.OPENROUTER }}
+      NARRATIVE_PROFILE_SECRET_DEEPSEEKV4PRO: ${{ secrets.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_KIMIK3: ${{ secrets.KIMIK3 }}
       NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
-      NARRATIVE_PROFILE_SECRET_SILICONFLOW: ${{ secrets.SILICONFLOW }}
-      NARRATIVE_PROFILE_SECRET_VOLCES: ${{ secrets.VOLCES }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
@@ -56,15 +54,14 @@ jobs:
           import os
           import shlex
 
-          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "SENSENOVA").strip().upper()
+          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "DEEPSEEKV4PRO").strip().upper()
           supported = [
               "ATRIA",
-              "INFINIAI",
-              "MODELSCOPE",
-              "OPENROUTER",
+              "DEEPSEEKV4PRO",
+              "GLM52",
+              "KIMIK3",
               "SENSENOVA",
-              "SILICONFLOW",
-              "VOLCES",
+              "SENSENOVA68",
           ]
           profiles = {
               name: os.getenv(f"NARRATIVE_PROFILE_{name}", "")
