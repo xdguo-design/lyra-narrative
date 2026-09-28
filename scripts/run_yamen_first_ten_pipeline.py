@@ -69,18 +69,31 @@ SEGMENT_INSTRUCTION = """这是一次正式流水线验证，不允许使用 boo
 
 
 def configure_provider() -> dict[str, str]:
-    name = os.getenv("NARRATIVE_PROVIDER_NAME", "默认写作").strip()
+    name = os.getenv(
+        "NARRATIVE_PROVIDER_NAME",
+        os.getenv("NOVEL_AI_PROVIDER_NAME", "默认写作"),
+    ).strip()
     protocol = os.getenv(
-        "NARRATIVE_PROVIDER_PROTOCOL", "openai-compatible"
+        "NARRATIVE_PROVIDER_PROTOCOL",
+        os.getenv("NOVEL_AI_KIND", "openai-compatible"),
     ).strip().lower()
-    model = os.getenv("NARRATIVE_PROVIDER_MODEL", "gpt-5.6-sol").strip()
+    model = os.getenv(
+        "NARRATIVE_PROVIDER_MODEL",
+        os.getenv("NOVEL_AI_MODEL", "gpt-5.6-sol"),
+    ).strip()
     base_url = os.getenv(
-        "NARRATIVE_PROVIDER_BASE_URL", "https://api.openai.com/v1"
+        "NARRATIVE_PROVIDER_BASE_URL",
+        os.getenv("NOVEL_AI_BASE_URL", "https://api.openai.com/v1"),
     ).strip()
     secret_name = os.getenv(
-        "NARRATIVE_PROVIDER_SECRET_NAME", "OPENAI_API_KEY"
+        "NARRATIVE_PROVIDER_SECRET_NAME",
+        os.getenv("NOVEL_AI_API_KEY_ENV", "OPENAI_API_KEY"),
     ).strip()
-    api_key = os.getenv("NARRATIVE_PROVIDER_API_KEY", "").strip()
+    api_key = (
+        os.getenv("NARRATIVE_PROVIDER_API_KEY", "").strip()
+        or os.getenv("NOVEL_AI_API_KEY", "").strip()
+        or os.getenv(secret_name, "").strip()
+    )
 
     if not name:
         raise RuntimeError("NARRATIVE_PROVIDER_NAME must not be empty")
@@ -96,6 +109,7 @@ def configure_provider() -> dict[str, str]:
     os.environ["NOVEL_AI_KIND"] = protocol
     os.environ["NOVEL_AI_MODEL"] = model
     os.environ["NOVEL_AI_BASE_URL"] = base_url
+    os.environ["NARRATIVE_PROVIDER_API_KEY"] = api_key
     os.environ["NOVEL_AI_API_KEY_ENV"] = "NARRATIVE_PROVIDER_API_KEY"
     os.environ["NOVEL_AI_PROVIDER_NAME"] = name
     os.environ.setdefault("NOVEL_AI_REASONING_EFFORT", "high")
