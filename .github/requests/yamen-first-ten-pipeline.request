@@ -8,3 +8,5 @@ refinement_skill: 11
 reader_skill: 8
 provider_profile: SENSENOVA
 attempt: 2
+attempt: 3
+secret_mapping: matching-profile-name
