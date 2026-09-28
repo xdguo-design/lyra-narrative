@@ -28,3 +28,7 @@ checkpoint: enabled
 attempt: 10
 provider_profile: SENSENOVA68
 max_tokens: 4000
+attempt: 11
+provider_profile: SENSENOVA68
+slim_context: true
+reasoning_effort_forward: false
