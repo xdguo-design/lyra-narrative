@@ -104,7 +104,6 @@ def _ensure_builtin_skills(conn: sqlite3.Connection) -> None:
                 ),
             )
 
-    apply_persisted_learning_to_conn(conn, BUILTIN_SKILLS)
 
 def _seed_demo(conn: sqlite3.Connection) -> None:
     if os.getenv("NOVEL_SEED_DEMO", "1") in {"0", "false", "False"}:
