@@ -1,0 +1,58 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "4bcbc6c1bfb6495582fab7bae4524359",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "AUTO_FAST_PART1",
+  "recorded_at": "2026-09-29T13:11:17.932448+00:00",
+  "events": [
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-bag-gone: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "a51fae1b202e56c2ffbddbc4"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-disclosure-turn: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "4a54e600917604ebf45d82cb"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-five-wen: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "db04b0b05ea87d9eb666d345"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-pushed: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "654339f5de479c3698c0b0e2"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-side-door: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "feefd655f6289d375756f557"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "p1-missing-sun-cheng: rejected; chars=1182.",
+      "suggestion": "只重写当前失败段；保留已经通过的段落，不得整章洗稿。",
+      "excerpt": "",
+      "pattern_signature": "e2c7975da8eec7474380b03a"
+    }
+  ]
+}
