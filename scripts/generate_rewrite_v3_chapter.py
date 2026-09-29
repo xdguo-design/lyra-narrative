@@ -252,27 +252,39 @@ async def main() -> None:
         goal=GOAL,
         instruction=INSTRUCTION,
     )
-    record_rejection_batch(
-        task_id=task_id,
-        source="HUMAN_REJECT",
-        events=[
-            {
-                "reviewer": "human-approval",
-                "category": "chapter-reset",
-                "reason": (
-                    "第二章整体阅读感被人工打回：不能继续局部修补；"
-                    "已确认的复发风险包括问卷式盘问、作者总结腔、"
-                    "人物对白不像当场会说的话。"
-                ),
-                "suggestion": (
-                    "Writer 从第一章接口重新生成整章；Reader 优先拦截"
-                    " ORALITY_GAP、VOICE_OVERPERFORMANCE_GAP、"
-                    "TURN_TAKING_SYMMETRY_GAP 和 INVESTIGATION_WORKSHEET_GAP。"
-                ),
-                "excerpt": "第二章整体打回，从第一章接口重新生成。",
-            }
-        ],
-    )
+    with connect() as conn:
+        learned = conn.execute(
+            """
+            SELECT 1
+            FROM builtin_skill_learning_events
+            WHERE source='HUMAN_REJECT'
+              AND category='chapter-reset'
+              AND reason LIKE '第二章整体阅读感被人工打回:%'
+            LIMIT 1
+            """
+        ).fetchone()
+    if not learned:
+        record_rejection_batch(
+            task_id=task_id,
+            source="HUMAN_REJECT",
+            events=[
+                {
+                    "reviewer": "human-approval",
+                    "category": "chapter-reset",
+                    "reason": (
+                        "第二章整体阅读感被人工打回：不能继续局部修补；"
+                        "已确认的复发风险包括问卷式盘问、作者总结腔、"
+                        "人物对白不像当场会说的话。"
+                    ),
+                    "suggestion": (
+                        "Writer 从第一章接口重新生成整章；Reader 优先拦截"
+                        " ORALITY_GAP、VOICE_OVERPERFORMANCE_GAP、"
+                        "TURN_TAKING_SYMMETRY_GAP 和 INVESTIGATION_WORKSHEET_GAP。"
+                    ),
+                    "excerpt": "第二章整体打回，从第一章接口重新生成。",
+                }
+            ],
+        )
     keep_generation_skills_lean(task_id)
     prior = CHAPTER_ONE.read_text(encoding="utf-8")
 
