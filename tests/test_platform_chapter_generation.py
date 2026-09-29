@@ -20,7 +20,7 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     ).read_text(encoding="utf-8")
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
-        "NARRATIVE_WRITER_PROFILE: GLM53FLASH",
+        "NARRATIVE_WRITER_PROFILE: AGNES",
         "NARRATIVE_NATURAL_READER_PROFILE: AGNES",
         "NARRATIVE_REASONING_READER_PROFILE: MODELSCOPE",
         "NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: AGNES",
@@ -76,13 +76,13 @@ def test_writer_route_prunes_slow_providers():
     source = Path(
         ".github/workflows/rewrite-v3-chapter-generate.yml"
     ).read_text(encoding="utf-8")
-    assert "NARRATIVE_WRITER_PROFILE: GLM53FLASH" in source
+    assert "NARRATIVE_WRITER_PROFILE: AGNES" in source
     writer_line = next(
         line.strip()
         for line in source.splitlines()
         if "NARRATIVE_WRITER_FALLBACK_PROFILES:" in line
     )
-    assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES: SENSENOVA,AGNES"
+    assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES: SENSENOVA"
     assert 'NOVEL_AI_TIMEOUT_SECONDS: "120"' in source
     assert 'NOVEL_AI_HTTP_RETRIES: "0"' in source
 
@@ -92,8 +92,8 @@ def test_benchmark_selected_writer_profile_is_wired():
     for marker in [
         "NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}",
         "NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}",
-        "NARRATIVE_WRITER_PROFILE: GLM53FLASH",
-        "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: SENSENOVA",
+        "NARRATIVE_WRITER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: AGNES",
         "Validate selected writer profiles",
     ]:
         assert marker in source
