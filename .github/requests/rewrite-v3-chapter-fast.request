@@ -1,4 +1,4 @@
-attempt: 7
+attempt: 8
 chapter: 2
 mode: fast-platform-writer
-reason: glm53flash-then-agnes-with-transient-retry
+reason: strict-sequence-completion-gates-with-agnes
