@@ -36,9 +36,9 @@ def test_default_role_profiles_are_heterogeneous(monkeypatch):
     assert _role_profile_candidates("blind-artifice-reader")[0] == "MODELSCOPE"
     assert _role_profile_candidates("final-reviewer")[0] == "SENSENOVA"
     assert _role_profile_candidates("master-reader")[0] == "AGNES"
-    assert _role_profile_candidates("continuity-plot-reviewer")[0] == "AGNES"
+    assert _role_profile_candidates("continuity-plot-reviewer")[0] == "GLM53FLASH"
     assert _role_profile_candidates("character-dialogue-reviewer")[0] == "AGNES"
-    assert _role_profile_candidates("language-rhythm-reviewer")[0] == "AGNES"
+    assert _role_profile_candidates("language-rhythm-reviewer")[0] == "XINGCHENAGI"
 
 
 def test_role_profile_candidates_deduplicate(monkeypatch):
