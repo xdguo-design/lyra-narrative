@@ -172,33 +172,247 @@ def _group_patterns(batches: list[dict]) -> list[dict]:
     return result
 
 
+WRITER_REJECTION_FAMILIES = (
+    (
+        "dialogue-voice",
+        "人物与对白",
+        (
+            "ORALITY_GAP",
+            "VOICE_OVERPERFORMANCE_GAP",
+            "DIALOGUE_",
+            "RELATIONSHIP_",
+            "OVER_RATIONAL_DIALOGUE_GAP",
+            "TURN_TAKING_SYMMETRY_GAP",
+            "EMOTIONAL_RESIDUE_GAP",
+            "人物不会这样说",
+            "对白",
+            "问卷",
+            "口语",
+        ),
+        "人物先按身份、利益、关系和压力说话，再承担信息功能。关键台词必须做“说出口测试”；不要为了推进剧情让人物突然老实，也不要写成作者总结、规章或金句。",
+    ),
+    (
+        "continuity-facts",
+        "连续性与事实",
+        (
+            "CONTINUITY",
+            "MICRO_CONTINUITY_GAP",
+            "QUANTITY_GAP",
+            "REFERENCE_GAP",
+            "measurement",
+            "time",
+            "location",
+            "identity",
+            "role-drift",
+            "unit",
+            "计量",
+            "时辰",
+            "时间",
+            "地点",
+            "身份",
+            "连续",
+            "算术",
+        ),
+        "动笔前锁定时间、地点、身份、物件、伤势、计量口径和动作状态；正文中的数字必须可复算，前后动作必须能连续接上，不能靠读者替作者补。",
+    ),
+    (
+        "plot-causality",
+        "剧情因果与推进",
+        (
+            "CAUS",
+            "PLOT",
+            "MOTIVATION",
+            "PROTAGONIST_AGENCY_GAP",
+            "INVESTIGATION_WORKSHEET_GAP",
+            "CLUE_",
+            "COINCIDENCE",
+            "因果",
+            "动机",
+            "剧情",
+            "线索",
+            "主角",
+            "调查",
+        ),
+        "推进必须来自人物选择、阻力和可验证证据，不能靠作者安排的连续巧合或“发现→解释→立刻验证”的解题板。主角至少要有一个真正改变局面的观察、选择、代价或策略。",
+    ),
+    (
+        "reader-information",
+        "信息边界与读者理解",
+        (
+            "READER_GAP",
+            "AMBIGUOUS_GAP",
+            "KNOWLEDGE_PROVENANCE_GAP",
+            "UNSEEDED_CALLBACK_GAP",
+            "SALIENT_SIGNAL_ORPHAN_GAP",
+            "信息",
+            "知识来源",
+            "读者",
+            "回调",
+            "伏笔",
+            "泄漏",
+        ),
+        "读者可以暂时不知道答案，但必须知道问题是什么。人物知道一件事必须有来源；回调必须有播种；显著异常必须被人物接收；后续章节信息不得提前泄漏。",
+    ),
+    (
+        "language-rhythm",
+        "语言、叙事与节奏",
+        (
+            "NATURALNESS_GAP",
+            "AUTHOR_",
+            "SCENE_TEXTURE_GAP",
+            "ACTION_FRAGMENTATION_GAP",
+            "COLLOCATION_GAP",
+            "TONE_GAP",
+            "style",
+            "aesthetic",
+            "naturalness",
+            "语言",
+            "节奏",
+            "作者总结",
+            "模型腔",
+            "自然",
+            "描写",
+        ),
+        "优先写自然中文和可感知场景。删掉解释回声、作者点题、模板金句和机械碎句；关键处慢写，手续流程敢压缩，让动作、声音、触感和空间承担叙事。",
+    ),
+    (
+        "world-skill-boundary",
+        "世界规则、权限与技能边界",
+        (
+            "WORLD",
+            "PROFICIENCY",
+            "SYSTEM_",
+            "permission",
+            "权限",
+            "世界规则",
+            "技能",
+            "系统",
+            "越权",
+            "设定",
+        ),
+        "冻结设定、职业权限、程序和技能能力必须约束正文。不能为方便剧情临时新增规则，也不能让角色越权、系统替人物下结论或技能无练习跳级。",
+    ),
+)
+
+
+def _writer_rejection_family(item: dict) -> tuple[str, str, str]:
+    haystack = " ".join(
+        [
+            str(item.get("category") or ""),
+            str(item.get("reason") or ""),
+            str(item.get("suggestion") or ""),
+        ]
+    ).lower()
+    for key, title, markers, guidance in WRITER_REJECTION_FAMILIES:
+        if any(marker.lower() in haystack for marker in markers):
+            return key, title, guidance
+    return (
+        "other",
+        "其他已确认写作失败",
+        "正式打回即视为下轮写作约束：生成前主动检查，不能只等 Reader 在末轮发现。",
+    )
+
+
+def _summarize_writer_patterns(patterns: list[dict]) -> list[dict]:
+    grouped: dict[str, dict] = {}
+    for item in patterns:
+        key, title, guidance = _writer_rejection_family(item)
+        current = grouped.setdefault(
+            key,
+            {
+                "key": key,
+                "title": title,
+                "guidance": guidance,
+                "occurrences": 0,
+                "pattern_count": 0,
+                "reasons": [],
+                "suggestions": [],
+                "labels": set(),
+                "example": "",
+            },
+        )
+        current["occurrences"] += int(item.get("occurrences") or 0)
+        current["pattern_count"] += 1
+
+        reason = _compact(str(item.get("reason") or ""), 420)
+        if reason and reason not in current["reasons"]:
+            current["reasons"].append(reason)
+
+        suggestion = _compact(str(item.get("suggestion") or ""), 280)
+        if suggestion and suggestion not in current["suggestions"]:
+            current["suggestions"].append(suggestion)
+
+        current["labels"].update(
+            re.findall(
+                r"\b[A-Z][A-Z0-9_]{3,}(?:_GAP|_LEAK|_DRIFT)\b",
+                str(item.get("reason") or ""),
+            )
+        )
+        if item.get("excerpt"):
+            current["example"] = _compact(str(item["excerpt"]), 220)
+
+    result = list(grouped.values())
+    result.sort(
+        key=lambda item: (
+            -int(item["occurrences"]),
+            str(item["title"]),
+        )
+    )
+    return result
+
+
 def render_learning_overlay(target: str, batches: list[dict] | None = None) -> str:
     batches = load_learning_batches() if batches is None else batches
     if not batches:
         return ""
     patterns = _group_patterns(batches)
-    heading = (
-        "【自动学习记录：Writer 防复发】"
-        if target == "writer"
-        else "【自动学习记录：Reader 防漏检】"
-    )
-    intro = (
-        "以下条目来自正式打回。它们是当前内置 Skill 的主动检查项；"
-        "新问题保持 CALIBRATING，同类复发不得忽略。"
-    )
-    lines = [heading, intro]
+
+    if target == "writer":
+        summaries = _summarize_writer_patterns(patterns)
+        lines = [
+            "【作者 Skill：正式打回经验总结】",
+            (
+                "以下规则由全部正式打回自动归纳。原始原因与原文样本仍完整保存在 "
+                "builtin_skill_learning_events / JSON 证据库；作者 Skill 只保留可执行总结。"
+            ),
+            "执行顺序：写前读取 → 写中主动规避 → 写后自检。复发项优先级高于一次性新问题。",
+        ]
+        for item in summaries:
+            lines.append(
+                f"- {item['title']}｜累计打回 {item['occurrences']} 次｜"
+                f"{item['pattern_count']} 个独立失败模式"
+            )
+            lines.append(f"  作者规则：{item['guidance']}")
+            labels = sorted(item["labels"])
+            if labels:
+                lines.append("  关联标签：" + ", ".join(labels[:16]))
+            if item["suggestions"]:
+                lines.append(
+                    "  复发修复："
+                    + "；".join(item["suggestions"][:3])
+                )
+            lines.append("  已吸收的打回原因：")
+            for reason in item["reasons"]:
+                lines.append(f"    - {reason}")
+            if item["example"]:
+                lines.append(f"  最近样本：{item['example']}")
+        return "\n".join(lines)
+
+    lines = [
+        "【自动学习记录：Reader 防漏检】",
+        (
+            "以下条目来自正式打回。它们是当前内置 Skill 的主动检查项；"
+            "新问题保持 CALIBRATING，同类复发不得忽略。"
+        ),
+    ]
     for item in patterns[:120]:
         lines.append(
             f"- [{item['pattern_signature']}] "
             f"{item['category']}｜复发 {item['occurrences']} 次"
         )
         lines.append(f"  失败模式：{item['reason']}")
-        if target == "writer":
-            guidance = item["suggestion"] or "生成前主动规避同类表达或结构，不得只在末轮润色补救。"
-            lines.append(f"  写作预防：{guidance}")
-        else:
-            guidance = item["suggestion"] or "复审时主动搜索同类失败，命中后不得因意思能懂而放行。"
-            lines.append(f"  阅读拦截：{guidance}")
+        guidance = item["suggestion"] or "复审时主动搜索同类失败，命中后不得因意思能懂而放行。"
+        lines.append(f"  阅读拦截：{guidance}")
         if item["excerpt"]:
             lines.append(f"  最近样本：{item['excerpt']}")
     return "\n".join(lines)
