@@ -1,3 +1,3 @@
-attempt: 1
+attempt: 2
 profiles: AGNES,DOTS3
-reason: compare-writer-connectivity-latency
+reason: discover-dots3-glm53flash-and-compare-agnes
