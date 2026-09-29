@@ -4,7 +4,11 @@ import asyncio
 import os
 
 from app.db import connect
-from app.services.default_skills import BUILTIN_READER_REVIEW_SKILL_CONTENT
+from app.services.default_skills import (
+    reader_skill_content,
+    BUILTIN_READER_REVIEW_SKILL_NAME,
+)
+from app.services.rejection_learning import learn_from_open_blocking_findings
 from app.services.workflow_service import (
     WorkflowStateError,
     _parse_review_output,
@@ -43,6 +47,24 @@ def _recent_chapter_window(project_id: int, current_position: int | None) -> str
         f"【前章 {row['position']}｜{row['title']}】\n{row['content']}"
         for row in rows
     )
+
+
+def _task_reader_skill_content(task_id: int) -> str:
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT sv.content
+            FROM writing_task_skills wts
+            JOIN skills s ON s.id=wts.skill_id
+            JOIN skill_versions sv
+              ON sv.skill_id=wts.skill_id AND sv.version=wts.version
+            WHERE wts.task_id=? AND s.name=?
+            ORDER BY s.project_id IS NOT NULL DESC,s.id
+            LIMIT 1
+            """,
+            (task_id, BUILTIN_READER_REVIEW_SKILL_NAME),
+        ).fetchone()
+    return str(row["content"]) if row else BUILTIN_READER_REVIEW_SKILL_CONTENT
 
 
 def _active_character_cards(
@@ -349,6 +371,7 @@ async def _run_review_round(
         if row
         else ""
     )
+    reader_skill_content = _task_reader_skill_content(task_id)
 
     character_cards = (
         _active_character_cards(int(row["project_id"]), draft)
@@ -404,7 +427,7 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
         content=draft,
         instruction="\n\n".join(
             [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                reader_skill_content,
                 """你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。
 
 必须覆盖 B01—B27，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。
@@ -462,7 +485,7 @@ VERDICT: PASS 或 VERDICT: FAIL
         content=draft,
         instruction="\n\n".join(
             [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                reader_skill_content,
                 """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
 
 必须逐段、逐关键句首读，覆盖 D01—D20。不要只盯开篇和章尾。
@@ -510,7 +533,7 @@ VERDICT: PASS 或 VERDICT: FAIL
         content=draft,
         instruction="\n\n".join(
             [
-                BUILTIN_READER_REVIEW_SKILL_CONTENT,
+                reader_skill_content,
                 """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
 
 必须覆盖 C01—C15。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台、调查是否被主角主持成解题板、显著异常是否成为孤儿信号，以及主角是否整章退化成摄像机。
@@ -884,6 +907,11 @@ VERDICT: PASS / WATCH / FAIL
                     "open",
                 ),
             )
+    if has_blocking:
+        learn_from_open_blocking_findings(
+            task_id=task_id,
+            source=f"review-round-{round_no}",
+        )
     return outputs, has_blocking
 
 

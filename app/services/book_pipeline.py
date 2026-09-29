@@ -346,6 +346,8 @@ async def _run_frozen_chapter(
         context=review_context,
         round_no=1,
     )
+    context = _task_context(task_id, project_id)
+    review_context = context + "\n\n" + story_state_context
     revision = await _run_step(
         task_id=task_id,
         role="revision-agent",
@@ -373,6 +375,8 @@ async def _run_frozen_chapter(
         round_no=2,
         prior_outputs=first_reviews,
     )
+    context = _task_context(task_id, project_id)
+    review_context = context + "\n\n" + story_state_context
     final_content = revision.content
     final_blocking = second_blocking
     if second_blocking:
@@ -409,6 +413,12 @@ async def _run_frozen_chapter(
         record_repetition_blocking(
             task_id=task_id,
             report=final_repetition,
+        )
+        from app.services.rejection_learning import learn_from_open_blocking_findings
+
+        learn_from_open_blocking_findings(
+            task_id=task_id,
+            source="final-repetition-gate",
         )
         final_blocking = True
 

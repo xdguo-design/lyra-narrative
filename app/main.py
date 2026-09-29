@@ -29,6 +29,7 @@ from app.services.default_skills import (
     BUILTIN_WRITER_TRAINING_SKILL_NAME,
 )
 from app.services.full_novel_pipeline import run_full_novel_pipeline
+from app.services.rejection_learning import record_rejection_batch
 from app.services.workflow_service import WorkflowStateError
 from app.services.workflow_service import get_task as get_workflow_task
 from app.services.workflow_service import run_task as execute_workflow_task
@@ -814,6 +815,13 @@ def approve_writing_task(task_id: int, payload: ApprovalRequest):
                 f"task cannot be decided while status is {task['status']}",
             )
 
+        if payload.decision == "rejected" and not payload.note.strip():
+            raise HTTPException(
+                400,
+                "rejected approval requires a reason so built-in Writer/Reader Skills can learn",
+            )
+
+        rejected_content = str(task["revised_content"] or task["draft"] or "")
         version_id = None
         if payload.decision == "approved":
             if task["chapter_id"] is None:
@@ -858,6 +866,21 @@ def approve_writing_task(task_id: int, payload: ApprovalRequest):
             """,
             (payload.decision, task_id),
         )
+    if payload.decision == "rejected":
+        record_rejection_batch(
+            task_id=task_id,
+            source="HUMAN_REJECT",
+            events=[
+                {
+                    "reviewer": "human-approval",
+                    "category": "human-reject",
+                    "reason": payload.note.strip(),
+                    "suggestion": "下一轮 Writer 生成与 Reader 复审必须先吸收本次人工打回原因。",
+                    "excerpt": rejected_content[:500],
+                }
+            ],
+        )
+
     task_result = get_workflow_task(task_id)
     if payload.decision == "approved":
         task_result["content_sync"] = archive_task(task_id)
