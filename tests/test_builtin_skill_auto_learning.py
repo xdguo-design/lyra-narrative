@@ -159,3 +159,53 @@ def test_formal_workflows_persist_learning_back_to_repo():
         assert "contents: write" in source
         assert "Persist built-in Skill learning" in source
         assert "scripts/persist_builtin_skill_learning.sh" in source
+
+
+
+def test_writer_skill_summarizes_all_rejection_causes_without_losing_evidence(
+    monkeypatch,
+    tmp_path,
+):
+    task_id = _make_task(monkeypatch, tmp_path)
+    record_rejection_batch(
+        task_id=task_id,
+        source="complete-review",
+        events=[
+            {
+                "reviewer": "character-dialogue-reviewer",
+                "category": "character-dialogue",
+                "reason": "ORALITY_GAP：刘旺回答过于工整，像作者替人物总结。",
+                "suggestion": "按人物利益拆开信息披露，不要一问就全答。",
+                "excerpt": "我昨夜推过，是孙成让我推的。",
+            },
+            {
+                "reviewer": "master-reader",
+                "category": "dialogue",
+                "reason": "问卷式盘问：连续问什么答什么，人物没有回避和压力反应。",
+                "suggestion": "让人物先自保、拖延或只承认最小事实。",
+                "excerpt": "谁让你推的？孙成。",
+            },
+            {
+                "reviewer": "continuity-plot-reviewer",
+                "category": "continuity",
+                "reason": "计量算术不成立：前后斗数无法推出短三斗一升。",
+                "suggestion": "写前锁定同一计量口径并复算。",
+                "excerpt": "短三斗一升。",
+            },
+        ],
+    )
+
+    with connect() as conn:
+        writer = conn.execute(
+            "SELECT content FROM skills WHERE project_id IS NULL AND name=?",
+            (BUILTIN_WRITING_SKILL_NAME,),
+        ).fetchone()["content"]
+
+    assert "【作者 Skill：正式打回经验总结】" in writer
+    assert "人物与对白" in writer
+    assert "连续性与事实" in writer
+    assert "刘旺回答过于工整" in writer
+    assert "问卷式盘问" in writer
+    assert "计量算术不成立" in writer
+    assert "累计打回 2 次" in writer
+    assert "原始原因与原文样本仍完整保存在" in writer
