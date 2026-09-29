@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass
 
 from app.db import connect
+from app.services.rejection_learning import learn_from_open_blocking_findings
 from app.services.ai_service import AssistResult, assist
 
 
@@ -643,6 +644,21 @@ async def run_task(task_id: int) -> dict:
                             finding["end_offset"],
                         ),
                     )
+
+    with connect() as conn:
+        blocking = conn.execute(
+            """
+            SELECT 1 FROM review_findings
+            WHERE task_id=? AND status='open' AND severity='blocking'
+            LIMIT 1
+            """,
+            (task_id,),
+        ).fetchone()
+    if blocking:
+        learn_from_open_blocking_findings(
+            task_id=task_id,
+            source="standard-review",
+        )
 
     revision_instruction = "\n\n".join(
         item
