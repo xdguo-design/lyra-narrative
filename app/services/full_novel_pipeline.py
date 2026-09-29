@@ -1205,6 +1205,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             context=context,
             round_no=1,
         )
+        context = _task_context(task_id, project_id)
 
         revision = await _run_step(
             task_id=task_id,
@@ -1244,6 +1245,7 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             round_no=2,
             prior_outputs=review_outputs,
         )
+        context = _task_context(task_id, project_id)
         if integrity_failed:
             second_outputs.append("[revision-integrity] " + integrity_output)
             second_blocking = True
