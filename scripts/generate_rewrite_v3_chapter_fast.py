@@ -117,25 +117,45 @@ def _hard_gate_errors(text: str) -> list[str]:
         if not (pushed_at < sun_at < five_at < missing_at):
             errors.append("disclosure-order")
 
-    if five_at >= 0:
-        five_context = text[max(0, five_at - 300):five_at]
-        if not any(
-            marker in five_context
-            for marker in (
-                "好处",
-                "拿钱",
-                "拿了",
-                "给你什么",
-                "为什么肯搬",
-                "为什么帮",
-                "为什么替",
-                "收了钱",
-                "给了你",
-                "给你什么",
-                "拿他钱",
-            )
+    who_q = max(text.find("谁让你推"), text.find("谁叫你推"))
+    benefit_q = max(
+        text.find("给了你什么"),
+        text.find("给你什么"),
+        text.find("拿他钱"),
+        text.find("拿没拿好处"),
+        text.find("拿了什么好处"),
+    )
+    side_door_at = text.find("后厨侧门")
+    later_q = max(text.find("后来呢"), text.find("后来怎么"))
+    if min(pushed_at, who_q, sun_at, benefit_q, five_at, side_door_at, later_q, missing_at) >= 0:
+        if not (
+            pushed_at < who_q < sun_at < benefit_q < five_at
+            < side_door_at < later_q < missing_at
         ):
-            errors.append("five-wen-without-question")
+            errors.append("disclosure-turn-order")
+    else:
+        errors.append("missing-disclosure-turn")
+
+    if five_at >= 0 and (benefit_q < 0 or benefit_q > five_at):
+        errors.append("five-wen-without-question")
+
+    scale_at = max(text.find("抬上秤"), text.find("挂上秤"), text.find("上秤"))
+    weight_bad_at = max(text.find("重量对不上"), text.find("分量对不上"), text.find("轻了"))
+    official_dou_at = text.find("官斗")
+    if min(scale_at, weight_bad_at, official_dou_at, shortage_at) >= 0:
+        if not (scale_at < weight_bad_at < official_dou_at < shortage_at):
+            errors.append("measurement-sequence")
+    else:
+        errors.append("missing-measurement-sequence")
+
+    found_location_at = max(text.find("旧木板"), text.find("木板堆"))
+    not_my_place_at = max(
+        text.find("不是我昨夜放"),
+        text.find("不是我放的地方"),
+        text.find("我放在侧门"),
+    )
+    if found_location_at < 0 or not_my_place_at < 0:
+        errors.append("bag-relocation-not-explicit")
 
     if death_message_at >= 0:
         death_tail = text[death_message_at:]
@@ -193,7 +213,7 @@ def _instruction(
         )
 
     return f"""第二章《谁让你推的车》。只输出完整小说正文，不要标题、提纲、解释、审稿意见。
-必须写足 3000 字左右：正文目标 3000—3400 个中文字符，绝不能少于 2800。
+必须写足约 3000 字：请按 3300—3600 个中文字符来写，避免模型压缩后不足；成稿验收范围 2800—3600。
 
 【当前 Writer Skill 最近学习】
 {skill}
@@ -225,14 +245,17 @@ def _instruction(
 7. 再用昨夜相同口径官斗复量，只落地“短三斗一升”，随后封存粮袋和记录；
 8. 人物刚消化压力，才有人来报“马二死了/找到时没气”，立即收章。
 
-【刘旺披露顺序，必须逐层发生】
-1. 先日常化、回避；
-2. 周虎实际复核后，刘旺才只承认“昨夜推过一趟”；
-3. 周虎明确问“谁叫你推”，刘旺才自己说孙成；周虎不能先说孙成让他确认；
-4. 周虎必须先说出一句明确的好处追问，例如“他给了你什么？”“你拿他钱了没有？”；下一话轮刘旺才允许回答“五文”。如果正文里没有这句独立追问，禁止出现“五文”；
-5. 再往后，刘旺才承认自己把袋子放到后厨侧门后，后来袋子又不见了。
-五文之前必须出现周虎的独立追问；禁止刘旺主动顺手把五文说出来。
-前述口供完成后禁止第二次重复审同一套问题。
+【刘旺披露顺序：采用固定最小话轮骨架】
+下面 8 个话轮必须按顺序分别发生，不能合并回答；可在句间插入动作，但不要改变信息顺序：
+1. 周虎问：昨夜这车是不是你推过；
+2. 刘旺只答：推过一趟；
+3. 周虎另问：谁让你推的；
+4. 刘旺只答：孙成/孙库吏；
+5. 周虎另问：他给了你什么/你拿他钱没有；
+6. 刘旺只答：五文；
+7. 周虎另问：袋子放哪儿，刘旺答：后厨侧门；
+8. 周虎再问后来呢，刘旺才说今早还在、后来不见了。
+禁止在第2步一次性说出孙成；禁止在第4步顺手说五文；禁止第二次重复审同一套口供。
 
 【调查与权限】
 - 陈安一次只说一个能验证的事实，不替周虎审人，不指控孙成动机，不说“你是想掩盖”等定性话。
@@ -240,9 +263,10 @@ def _instruction(
 - 周虎先控现场，再拆事实；短、直接，以动作复核，不说金句。
 - 刘旺口供中昨夜只说“放在后厨侧门”；找到粮袋时必须在另一个明显不同的位置。找到后刘旺不得改口说“我昨夜其实就放在这里”。
 - 昨夜记录只写“记录着这袋按官斗实量后的数目”，不要写任何斤两数字，也不要补总斗数。
-- 正式秤重、官斗复量由周虎指挥皂役/库房程序执行；陈安可以观察、提醒异常，但不亲自拿官斗、读秤或作为正式计量人。
-- 过秤只写“重量对不上”。
-- 官斗复量必须和昨夜记录同口径；最终只说“短三斗一升”，不要补总斗数、剩余斗数做算术。
+- 正式秤重、官斗复量由周虎指挥皂役/库房程序执行；陈安只观察。
+- 必须先出现“抬上秤/挂上秤”并由周虎或皂役确认“重量对不上”；这一步不得报数字。
+- 随后才取官斗，按昨夜记录同口径复量。
+- 最终只说“短三斗一升”，不要补总斗数、剩余斗数做算术。
 - 只能确认当前事实，不得提前定性谁偷、怎么偷。
 
 【语言与连续性】
@@ -364,7 +388,7 @@ def _review_passed(review_text: str) -> bool:
 
 def _evaluate(text: str) -> tuple[list[str], bool, bool]:
     gate_errors = _hard_gate_errors(text)
-    target_ok = 2600 <= len(text) <= 3500
+    target_ok = 2800 <= len(text) <= 3600
     usable = _chapter_text_is_usable(text)
     return gate_errors, target_ok, usable
 
@@ -394,7 +418,7 @@ async def main() -> int:
 
     first_rejects = list(gate_errors)
     if not target_ok:
-        first_rejects.append(f"length={len(text)} target=3000..3400")
+        first_rejects.append(f"length={len(text)} target=2800..3600")
     if not usable:
         first_rejects.append("chapter-text-unusable")
 
@@ -465,7 +489,7 @@ async def main() -> int:
 
     final_rejects = list(gate_errors)
     if not target_ok:
-        final_rejects.append(f"length={len(text)} target=3000..3400")
+        final_rejects.append(f"length={len(text)} target=2800..3600")
     if not usable:
         final_rejects.append("chapter-text-unusable")
     if usable and target_ok and not gate_errors and not final_review_ok:
