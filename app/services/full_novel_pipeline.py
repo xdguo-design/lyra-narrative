@@ -388,7 +388,7 @@ async def _run_review_round(
     prior_outputs: list[str] | None = None,
     auto_learn: bool = True,
 ) -> tuple[list[str], bool]:
-    """Run exactly four merged reviewers in parallel, then aggregate once."""
+    """Run three automated reviewers; the fourth master-reader is external ChatGPT controller."""
     with connect() as conn:
         row = conn.execute(
             """
@@ -432,23 +432,6 @@ async def _run_review_round(
     )
 
     reviewer_specs = [
-        (
-            "master-reader",
-            "master-reader",
-            """你是主控读者，代表最终读者做整章首次阅读验收。不要替作者解释，也不要因为知道写作意图而放过正文问题。
-
-把过去分散在普通首读、自然首读、作者痕迹、三章节拍中的检查合并执行：
-1. 一遍能否顺着读懂：人物在做什么、为什么做、关系发生什么变化；
-2. 哪些地方需要回读、脑补、依靠设定资料才能成立；
-3. 调查/行动是否像真实场景，而不是教程、问卷、解题板或证据摆台；
-4. 主角是否有真实观察、选择、风险或代价，而不是摄像机；
-5. 章内压力是否有起伏，关键场面是否敢慢写，流程是否敢压缩；
-6. 是否有明显作者总结、解释回声、AI 式点题、过度设计的章尾；
-7. 章末钩子是否自然成立，是否提前泄漏下一章现场；
-8. 只把真正影响阅读和交付的问题判 blocking，不用个人口味制造问题。
-
-你只负责“作为读者，这章能不能成立、能不能顺畅读下去”。""",
-        ),
         (
             "continuity-plot-reviewer",
             "continuity-plot",
@@ -519,14 +502,7 @@ async def _run_review_round(
             )
 
         extra_context = ""
-        if role == "master-reader":
-            extra_context = (
-                "【前章窗口，仅用于判断承接；不要读取作者隐藏意图】\n"
-                + recent_chapter_window
-                if recent_chapter_window
-                else ""
-            )
-        elif role == "character-dialogue-reviewer":
+        if role == "character-dialogue-reviewer":
             extra_context = (
                 "【前章窗口，用于人物关系与说话方式连续性】\n"
                 + recent_chapter_window
