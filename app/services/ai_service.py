@@ -98,22 +98,22 @@ _FINAL_REVIEW_ROLES = {
 }
 
 _ROLE_PRIMARY_DEFAULTS = {
-    "blind-reader": "GLM52",
-    "blind-dialogue-reader": "GLM52",
-    "blind-natural-reader": "SENSENOVA68",
-    "character-voice-reviewer": "GLM52",
-    "style-reviewer": "SENSENOVA68",
-    "naturalness-reviewer": "GLM52",
+    "blind-reader": "AGNES",
+    "blind-dialogue-reader": "AGNES",
+    "blind-natural-reader": "AGNES",
+    "character-voice-reviewer": "AGNES",
+    "style-reviewer": "AGNES",
+    "naturalness-reviewer": "AGNES",
     "aesthetic-reviewer": "AGNES",
-    "blind-artifice-reader": "DEEPSEEKV4PRO",
+    "blind-artifice-reader": "MODELSCOPE",
     "cadence-character-reader": "MODELSCOPE",
-    "revision-integrity-reviewer": "DEEPSEEKV4PRO",
+    "revision-integrity-reviewer": "MODELSCOPE",
     "continuity-reviewer": "MODELSCOPE",
-    "plot-reviewer": "DEEPSEEKV4PRO",
-    "character-reviewer": "GLM52",
+    "plot-reviewer": "MODELSCOPE",
+    "character-reviewer": "AGNES",
     "world-science-reviewer": "MODELSCOPE",
-    "long-arc-reviewer": "DEEPSEEKV4PRO",
-    "reader-gap-reviewer": "DEEPSEEKV4PRO",
+    "long-arc-reviewer": "MODELSCOPE",
+    "reader-gap-reviewer": "MODELSCOPE",
     "training-examiner": "MODELSCOPE",
 }
 
@@ -137,27 +137,27 @@ def _role_profile_candidates(role: str) -> list[str]:
     settings = {
         "writer": (
             "NARRATIVE_WRITER_PROFILE",
-            "ATRIA",
+            "SENSENOVA",
             "NARRATIVE_WRITER_FALLBACK_PROFILES",
-            "AGNES,KIMIK3",
+            "AGNES",
         ),
         "natural-reader": (
             "NARRATIVE_NATURAL_READER_PROFILE",
-            "GLM52",
+            "AGNES",
             "NARRATIVE_NATURAL_READER_FALLBACK_PROFILES",
-            "SENSENOVA68,AGNES",
+            "SENSENOVA,MODELSCOPE",
         ),
         "reasoning-reader": (
             "NARRATIVE_REASONING_READER_PROFILE",
-            "DEEPSEEKV4PRO",
+            "MODELSCOPE",
             "NARRATIVE_REASONING_READER_FALLBACK_PROFILES",
-            "MODELSCOPE,GLM52",
+            "AGNES,SENSENOVA",
         ),
         "final-review": (
             "NARRATIVE_FINAL_REVIEW_PROFILE",
             "SENSENOVA",
             "NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES",
-            "DEEPSEEKV4PRO,AGNES",
+            "AGNES,MODELSCOPE",
         ),
     }
     primary_env, bucket_default, fallback_env, fallback_default = settings[bucket]
