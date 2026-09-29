@@ -450,6 +450,10 @@ async def _run_frozen_chapter(
                         "open",
                     ),
                 )
+        learn_from_open_blocking_findings(
+            task_id=task_id,
+            source="continuity-state-updater",
+        )
 
     with connect() as conn:
         conn.execute(
