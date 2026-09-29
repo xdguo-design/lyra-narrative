@@ -1,0 +1,26 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "a8a2a377543e440e902bc06e271103d1",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "AUTO_FAST_GATE",
+  "recorded_at": "2026-09-29T13:01:22.897138+00:00",
+  "events": [
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "five-wen-without-question: fast chapter gate rejected chapter-02-fast-final; chars=2383.",
+      "suggestion": "整章重写；严格遵守冻结事实、披露顺序、计量口径、人物权限和章末边界。",
+      "excerpt": "",
+      "pattern_signature": "5cd18ae9898a5bf2bd3cd769"
+    },
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "length=2383 target=3000..3400: fast chapter gate rejected chapter-02-fast-final; chars=2383.",
+      "suggestion": "整章重写；严格遵守冻结事实、披露顺序、计量口径、人物权限和章末边界。",
+      "excerpt": "",
+      "pattern_signature": "8a620708e20a05a81db00281"
+    }
+  ]
+}
