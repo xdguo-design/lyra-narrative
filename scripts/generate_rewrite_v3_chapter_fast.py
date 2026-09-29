@@ -9,7 +9,6 @@ from app.db import connect, init_db
 from app.services.book_pipeline import _chapter_text_is_usable, _create_task
 from app.services.default_skills import BUILTIN_WRITING_SKILL_NAME
 from app.services.full_novel_pipeline import _run_review_round
-from app.services.rejection_learning import learn_from_open_blocking_findings
 from app.services.workflow_service import _run_step, _task_context
 from scripts.generate_rewrite_v3_chapter import (
     CHAPTER_ONE,
