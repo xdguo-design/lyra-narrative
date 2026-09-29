@@ -14,6 +14,7 @@ def test_platform_chapter_generation_excludes_existing_chapter2_as_input():
     assert "_run_frozen_chapter(" in source
 
 
+
 def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     source = Path(
         ".github/workflows/rewrite-v3-chapter-generate.yml"
@@ -21,17 +22,14 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
         "NARRATIVE_WRITER_PROFILE: AGNES",
-        "NARRATIVE_NATURAL_READER_PROFILE: AGNES",
-        "NARRATIVE_REASONING_READER_PROFILE: MODELSCOPE",
-        "NARRATIVE_ROLE_MASTER_READER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH",
         "NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: XINGCHENAGI",
+        "NARRATIVE_PROFILE_XINGCHENAGI: ${{ vars.XINGCHENAGI }}",
         "Generate chapter 02 through NarrativeOS",
     ]:
         assert marker in source
-
-
+    assert "NARRATIVE_ROLE_MASTER_READER_PROFILE" not in source
 
 def test_platform_chapter_generation_uses_lean_context_after_human_reject():
     source = Path("scripts/generate_rewrite_v3_chapter.py").read_text(
@@ -102,7 +100,8 @@ def test_benchmark_selected_writer_profile_is_wired():
         assert marker in source
 
 
-def test_fast_chapter_runs_all_reviewers_before_reject_learning():
+
+def test_fast_chapter_waits_for_external_master_before_reject_learning():
     source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
         encoding="utf-8"
     )
@@ -111,35 +110,36 @@ def test_fast_chapter_runs_all_reviewers_before_reject_learning():
     assert "_run_review_round(" in source
     assert "auto_learn=False" in source
     assert "_insert_hard_gate_findings(" in source
-    assert "learn_from_open_blocking_findings(" in source
-    assert "chapter-02-complete-review" in source
-    assert "all_reviews_completed_before_reject" in source
+    assert 'status = "awaiting_master_review"' in source
+    assert '"master_review_pending": True' in source
+    assert '"all_reviews_completed_before_reject": False' in source
+    assert "learn_from_open_blocking_findings(" not in source
 
 
-def test_full_review_round_can_defer_learning_until_all_reviewers_finish():
+def test_full_review_round_can_defer_learning_until_all_automated_reviewers_finish():
     source = Path("app/services/full_novel_pipeline.py").read_text(
         encoding="utf-8"
     )
     assert "auto_learn: bool = True" in source
     assert "if has_blocking and auto_learn:" in source
     assert "_safe_review_task(" in source
-    assert "review_execution_failures" in source
+    assert "REVIEW_EXECUTION_FAILED" in source
 
 
-def test_review_skill_is_compressed_into_four_fixed_roles():
+def test_review_skill_is_compressed_into_three_automated_plus_external_master():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
     review_start = source.index("async def _run_review_round(")
     review_end = source.index("async def run_full_novel_pipeline", review_start)
     review_source = source[review_start:review_end]
 
-    roles = [
-        "master-reader",
+    for role in [
         "continuity-plot-reviewer",
         "character-dialogue-reviewer",
         "language-rhythm-reviewer",
-    ]
-    for role in roles:
+    ]:
         assert role in review_source
 
+    assert "external ChatGPT controller" in review_source
+    assert '"master-reader"' not in review_source
     assert "一次审核本章所有主要角色" in review_source
-    assert "Run exactly four merged reviewers in parallel" in review_source
+
