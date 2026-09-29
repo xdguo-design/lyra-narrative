@@ -1,7 +1,6 @@
 from pathlib import Path
 
 
-
 def test_review_round_runs_three_automated_roles_and_reserves_master_reader():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
 
@@ -24,6 +23,7 @@ def test_review_round_runs_three_automated_roles_and_reserves_master_reader():
     assert "blind-natural-reader" not in review_source
     assert "blind-artifice-reader" not in review_source
     assert "cadence-character-reader" not in review_source
+
 
 def test_runtime_emits_agent_and_model_progress_logs():
     workflow = Path("app/services/workflow_service.py").read_text(encoding="utf-8")
