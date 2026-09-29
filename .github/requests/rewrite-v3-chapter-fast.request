@@ -1,4 +1,4 @@
-attempt: 6
+attempt: 7
 chapter: 2
 mode: fast-platform-writer
-reason: glm53flash-then-kimik3-modelscope-strict-draft
+reason: glm53flash-then-agnes-with-transient-retry
