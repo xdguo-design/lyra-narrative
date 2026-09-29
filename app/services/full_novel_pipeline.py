@@ -290,7 +290,9 @@ AMBIGUOUS_GAP：存在两个以上同样合理解释。
                 BUILTIN_READER_REVIEW_SKILL_CONTENT,
                 """你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。
 
-必须覆盖 B01—B26，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。
+必须覆盖 B01—B27，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。
+
+新增硬门槛：逻辑正确 ≠ 口语自然。对每条关键台词做“说出口测试”：这个人物在当前身份、关系、压力和场景里，真的会这么说吗？若台词过度工整、对称、像作者总结、像金句、像规章，或需要先在脑中翻译成自然说法，必须标 ORALITY_GAP；若人物声音明显在表演“聪明/克制/专业”，并检查 VOICE_OVERPERFORMANCE_GAP。不能因为信息准确或证据边界正确而 PASS。
 
 严格输出：
 DIALOGUE_AUTHENTICITY_V1
@@ -312,7 +314,7 @@ VERDICT: PASS 或 VERDICT: FAIL
 【话轮是否过度对称】
 【情绪余波】
 【感知指纹】
-【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP / OVER_RATIONAL_DIALOGUE_GAP / SELF_PRESENTATION_GAP / RELATIONSHIP_MEMORY_GAP / TURN_TAKING_SYMMETRY_GAP / EMOTIONAL_RESIDUE_GAP / PERCEPTION_SIGNATURE_GAP / NONE
+【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP / OVER_RATIONAL_DIALOGUE_GAP / SELF_PRESENTATION_GAP / RELATIONSHIP_MEMORY_GAP / TURN_TAKING_SYMMETRY_GAP / EMOTIONAL_RESIDUE_GAP / PERCEPTION_SIGNATURE_GAP / ORALITY_GAP / VOICE_OVERPERFORMANCE_GAP / NONE
 【逐字问题片段】
 【最小修改边界】
 
@@ -377,6 +379,7 @@ VERDICT: PASS 或 VERDICT: FAIL
 - “少解释”不能成为“少描写、少质感”的通过理由。
 - 穿越/原身记忆/失忆恢复若像读取资料卡一样无摩擦，判 MEMORY_INTEGRATION_TOO_SMOOTH；不得靠解释性独白修。
 - 极短对白若语法正确但真人不这么说，像作者为了节奏砸字，判 ORALITY_GAP。
+- 所有关键对白都必须做“说出口测试”，不只检查极短句。逻辑正确但过度工整、像作者总结/金句/规章，或需要读者脑内翻译后才自然，同样判 ORALITY_GAP；不得因“意思对”放行。
 - 不得修改正文。""",
             ]
         ),
@@ -446,6 +449,7 @@ NONE
 - 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。
 - 显著异常不要求立即解释答案；只要人物真实接收并形成疑问/记忆/待核查项即可通过 C14。
 - 主角不需要包办破案；一个有后果的观察、选择、代价或策略即可避免 C15，禁止为过 Gate 强行越权。
+- 对白若为了显得聪明、专业、克制而反复写成工整金句/原则句，优先检查 VOICE_OVERPERFORMANCE_GAP；“有道理”不能作为豁免。
 - 不得修改正文。""",
             ]
         ),
@@ -545,12 +549,12 @@ VERDICT: PASS / WATCH / FAIL
         (
             "naturalness-reviewer",
             "readability",
-            "执行自然叙事硬门槛：逐段检查现实锚点、首次出现顺序、空间关系、普通读者一次阅读可理解性、朗读顺滑度、人物可记忆性和段尾/章尾自然度。重点抓作者脑内成立但正文没有说明的设施/器物、报告腔、百科腔、过密信息、需要回读的句子，以及“总得、至少、这一次、他知道、才刚刚开始”一类替读者总结的 AI 式收束。重要人物首次正式出场至少应由外貌/神态/动作/衣着/声音中的两项形成记忆点；幽默只能来自人物与处境。关键空间关系不清或成片拗口必须判 blocking + REWRITE_BLOCK；孤立名词或单句才允许 LOCAL_REWRITE。",
+            "执行自然叙事硬门槛：逐段检查现实锚点、首次出现顺序、空间关系、普通读者一次阅读可理解性、朗读顺滑度、人物可记忆性和段尾/章尾自然度。对白额外执行“说出口测试”：逻辑正确但真人不会这么说、过度工整、像作者总结/规章/金句，必须指出 ORALITY_GAP，不能因为信息准确放行。重点抓作者脑内成立但正文没有说明的设施/器物、报告腔、百科腔、过密信息、需要回读的句子，以及“总得、至少、这一次、他知道、才刚刚开始”一类替读者总结的 AI 式收束。重要人物首次正式出场至少应由外貌/神态/动作/衣着/声音中的两项形成记忆点；幽默只能来自人物与处境。关键空间关系不清或成片拗口必须判 blocking + REWRITE_BLOCK；孤立名词或单句才允许 LOCAL_REWRITE。",
         ),
         (
             "aesthetic-reviewer",
             "aesthetic",
-            "做审美复审，不按“华丽程度”评分。检查：细节是否有主次、描写是否经过当前人物视角、关键处是否舍得慢写而流程是否敢压缩、是否存在人物声音被编辑同质化、情绪是否说得过满、是否存在正确但无味的标准句群、比喻/金句是否抢戏、连续章节是否复用同一种动作形态/笑点/金手指展示/章尾钩子。审美问题必须给可定位证据；单句可 POLISH/DELETE，成片模板化或视角平均化可 REWRITE_BLOCK。不得把个人偏好冒充 blocking。",
+            "做审美复审，不按“华丽程度”评分。先对关键对白做“说出口测试”：若一句话主要让人感觉作者在写金句、总结原则或展示人物聪明，而不是人物当场会自然开口，必须指出，不能被“这句话很有道理”掩盖。检查：细节是否有主次、描写是否经过当前人物视角、关键处是否舍得慢写而流程是否敢压缩、是否存在人物声音被编辑同质化、情绪是否说得过满、是否存在正确但无味的标准句群、比喻/金句是否抢戏、连续章节是否复用同一种动作形态/笑点/金手指展示/章尾钩子。审美问题必须给可定位证据；单句可 POLISH/DELETE，成片模板化或视角平均化可 REWRITE_BLOCK。不得把个人偏好冒充 blocking。",
         ),
         (
             "reader-gap-reviewer",
