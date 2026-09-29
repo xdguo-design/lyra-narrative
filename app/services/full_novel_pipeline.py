@@ -370,7 +370,7 @@ async def _safe_review_task(coro, label: str):
     try:
         result = await coro
         return {"ok": True, "label": label, "result": result, "error": ""}
-    except Exception as exc:
+    except (RuntimeError, ValueError) as exc:
         return {
             "ok": False,
             "label": label,
