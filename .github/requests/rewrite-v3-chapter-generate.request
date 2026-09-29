@@ -1,5 +1,5 @@
-attempt: 8
+attempt: 9
 chapter: 2
 mode: platform-writer
-reason: use-dots3-glm53flash-as-stable-writer
+reason: regenerate-chapter2-with-benchmark-selected-sensenova-agnes-route
 source_policy: chapter1+4-core-character-cards+chapter2-hard-constraints+current-skills;exclude-existing-chapter2
