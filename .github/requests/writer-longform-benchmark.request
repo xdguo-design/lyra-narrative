@@ -1,0 +1,4 @@
+attempt: 1
+profiles: AGNES,DOTS3
+task: chinese-fiction-1200-1800
+reason: compare-longform-writer-stability
