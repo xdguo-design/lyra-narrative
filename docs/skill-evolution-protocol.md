@@ -534,6 +534,25 @@ CALIBRATING
 状态：
 CALIBRATING
 
+
+## Case SE-009｜逻辑正确，但嘴里说不出来
+来源：第二章《谁让你推的车》人工商业读者复读。
+
+真实问题：
+- “先记少了多少，别先替它写成丢了多少。”逻辑与证据边界都正确，但口语过度工整，像作者总结原则。
+- 旧 Reader 已有 ORALITY_GAP / VOICE_OVERPERFORMANCE_GAP，却主要检查极短句和整体声音，没有把“正确但不像人说”的完整台词作为跨 Reader 硬门槛。
+
+升级：
+- Reader v11；
+- D20 扩展到所有关键对白；
+- Reader B 新增 B27“说出口测试”；
+- blind-dialogue / blind-natural / blind-artifice / naturalness / aesthetic reviewer 同步接入；
+- 复用 ORALITY_GAP / VOICE_OVERPERFORMANCE_GAP，不新增重复标签；
+- Failure Corpus F051。
+
+状态：
+CALIBRATING
+
 # 14. Definition of Done
 
 一次 Skill Evolution 只有同时满足以下条件才算完成：
