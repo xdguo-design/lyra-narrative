@@ -287,9 +287,12 @@ def _chapter_text_is_usable(text: str) -> bool:
     terminal = tail[-1]
     if terminal not in "。！？…」』”）】":
         return False
-    if terminal in "」』”）】" and len(tail) >= 2:
-        if tail[-2] not in "。！？…—」』”）】":
-            return False
+    if (
+        terminal in "」』”）】"
+        and len(tail) >= 2
+        and tail[-2] not in "。！？…—」』”）】"
+    ):
+        return False
     return True
 
 
