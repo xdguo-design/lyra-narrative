@@ -23,7 +23,10 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
         "NARRATIVE_WRITER_PROFILE: AGNES",
         "NARRATIVE_NATURAL_READER_PROFILE: AGNES",
         "NARRATIVE_REASONING_READER_PROFILE: MODELSCOPE",
-        "NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_MASTER_READER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES",
+        "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: AGNES",
         "Generate chapter 02 through NarrativeOS",
     ]:
         assert marker in source
@@ -121,3 +124,22 @@ def test_full_review_round_can_defer_learning_until_all_reviewers_finish():
     assert "if has_blocking and auto_learn:" in source
     assert "_safe_review_task(" in source
     assert "review_execution_failures" in source
+
+
+def test_review_skill_is_compressed_into_four_fixed_roles():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review_source = source[review_start:review_end]
+
+    roles = [
+        "master-reader",
+        "continuity-plot-reviewer",
+        "character-dialogue-reviewer",
+        "language-rhythm-reviewer",
+    ]
+    for role in roles:
+        assert role in review_source
+
+    assert "一次审核本章所有主要角色" in review_source
+    assert "Run exactly four merged reviewers in parallel" in review_source
