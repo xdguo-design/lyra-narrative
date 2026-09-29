@@ -388,6 +388,7 @@ async def _run_review_round(
     prior_outputs: list[str] | None = None,
     auto_learn: bool = True,
 ) -> tuple[list[str], bool]:
+    """Run exactly four merged reviewers in parallel, then aggregate once."""
     with connect() as conn:
         row = conn.execute(
             """
@@ -398,454 +399,144 @@ async def _run_review_round(
             """,
             (task_id,),
         ).fetchone()
+
+    project_id = int(row["project_id"]) if row else 0
+    current_position = (
+        int(row["position"])
+        if row and row["position"] is not None
+        else None
+    )
     recent_chapter_window = (
-        _recent_chapter_window(
-            int(row["project_id"]),
-            int(row["position"]) if row and row["position"] is not None else None,
-        )
-        if row
+        _recent_chapter_window(project_id, current_position)
+        if project_id
         else ""
     )
     reader_skill_content = _task_reader_skill_content(task_id)
-
     character_cards = (
-        _active_character_cards(int(row["project_id"]), draft)
-        if row
+        _active_character_cards(project_id, draft)
+        if project_id
         else []
     )
-    character_voice_tasks = [
-        asyncio.create_task(
-            _run_step(
-                task_id=task_id,
-                role="character-voice-reviewer",
-                stage=f"character-voice-r{round_no}-{int(character['id'])}",
-                mode="check",
-                content=draft,
-                instruction=_character_voice_instruction(
-                    character,
-                    recent_chapter_window,
-                ),
-            )
+    character_context = "\n\n".join(
+        "\n".join(
+            item
+            for item in [
+                f"姓名：{character['name']}",
+                f"身份/角色：{character.get('role') or ''}",
+                f"角色卡：{character.get('profile') or ''}",
+                f"标签：{character.get('tags') or ''}",
+            ]
+            if item.split("：", 1)[1].strip()
         )
         for character in character_cards
-    ]
-
-    reader_trace_task = asyncio.create_task(_run_step(
-        task_id=task_id,
-        role="blind-reader",
-        stage=f"reader-trace-r{round_no}",
-        mode="check",
-        content=draft,
-        instruction="""你是第一次阅读这一章的普通小说读者。你看不到人物卡、世界设定、场景设计、作者意图、Reviewer意见或后续剧情。
-不要修改正文，也不要替作者补全。
-严格输出：
-READER_TRACE_V1
-【我理解发生了什么】
-【我理解主要人物各自想要什么】
-【我理解关系发生了什么变化】
-【我记住的最多3个细节】
-【我不确定/需要回读的地方】
-每一项必须标记为 INTENTIONAL_UNKNOWN / READER_GAP / AMBIGUOUS_GAP。
-INTENTIONAL_UNKNOWN：知道问题是什么，只是不知道答案。
-READER_GAP：不知道句子或动作在指什么。
-AMBIGUOUS_GAP：存在两个以上同样合理解释。
-【我认为正文故意留下的问题】
-【我现在期待下一步发生什么】
-任何需要依靠作者背景材料才能解释的句子，都必须记录在“不确定/需要回读”。""",
-    ))
-
-    dialogue_reader_task = asyncio.create_task(_run_step(
-        task_id=task_id,
-        role="blind-dialogue-reader",
-        stage=f"reader-dialogue-r{round_no}",
-        mode="check",
-        content=draft,
-        instruction="\n\n".join(
-            [
-                reader_skill_content,
-                """你现在只执行 Reader B 的“人物 / 关系 / 对话真实性”检查。你只看正文，不看人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者润色。
-
-必须覆盖 B01—B27，重点不是对白长短，而是“这是不是两个具体的人在说话，而且他们有身体、有关系记忆、有面子、有情绪余波，也不会像机器人一样轮流准确回答”。
-
-新增硬门槛：逻辑正确 ≠ 口语自然。对每条关键台词做“说出口测试”：这个人物在当前身份、关系、压力和场景里，真的会这么说吗？若台词过度工整、对称、像作者总结、像金句、像规章，或需要先在脑中翻译成自然说法，必须标 ORALITY_GAP；若人物声音明显在表演“聪明/克制/专业”，并检查 VOICE_OVERPERFORMANCE_GAP。不能因为信息准确或证据边界正确而 PASS。
-
-严格输出：
-DIALOGUE_AUTHENTICITY_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【场景目标A】
-【场景目标B】
-【去名字测试】PASS / FAIL
-【换人测试】PASS / FAIL
-【声音指纹】
-【关系痕迹】
-【信息所有权】
-【非合作/回避方式】
-【对话后状态变化】
-【身体/表情/并行任务】
-【非语言指纹】
-【空间关系】
-【自我形象/面子】
-【关系记忆】
-【话轮是否过度对称】
-【情绪余波】
-【感知指纹】
-【失败标签】DIALOGUE_VOICE_GAP / DIALOGUE_FUNCTIONAL_GAP / RELATIONSHIP_VOICE_GAP / DIALOGUE_PRESSURE_GAP / DIALOGUE_STATELESS_GAP / EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP / OVER_RATIONAL_DIALOGUE_GAP / SELF_PRESENTATION_GAP / RELATIONSHIP_MEMORY_GAP / TURN_TAKING_SYMMETRY_GAP / EMOTIONAL_RESIDUE_GAP / PERCEPTION_SIGNATURE_GAP / ORALITY_GAP / VOICE_OVERPERFORMANCE_GAP / NONE
-【逐字问题片段】
-【最小修改边界】
-
-规则：
-- “对白很短”不是失败理由；“对白很长”也不是通过理由。
-- 若连续四轮以上问答主要只是问什么答什么、人物目标相同、换人后仍基本成立，VERDICT 必须 FAIL。
-- 若关键人物首次长对话后仍无法形成稳定声音指纹，VERDICT 必须 FAIL。
-- 熟人、上下级、债权人与债务人等关系必须改变说话方式。
-- 不得为了显得真实机械添加打断、反问、沉默；所有非合作行为都必须服务人物目标。
-- 对话不能只靠增加“皱眉/看了看/沉默”来伪造真实感。
-- 连续纯对白并非自动失败；紧急行动、命令、快速确认可以很短。
-- 若人物在说话时完全失去身体、手上任务、伤势和空间位置，且动作可以换给任何角色，判 EMBODIED_DIALOGUE_GAP / GENERIC_ACTION_GAP。
-- 若人物总能准确解释自己的真实动机、情绪和局势，判 OVER_RATIONAL_DIALOGUE_GAP。
-- 若熟人对话看不出共同历史、旧账、预判和禁区，判 RELATIONSHIP_MEMORY_GAP。
-- 若连续话轮过度整齐、严格轮流、长度接近，判 TURN_TAKING_SYMMETRY_GAP。
-- 若上一句造成的羞耻、冒犯、威胁、被看穿在后文完全不留痕迹，判 EMOTIONAL_RESIDUE_GAP。
-- 若不同人物进入同一场景时总注意同一组东西，判 PERCEPTION_SIGNATURE_GAP。
-- 不得修改正文。""",
-            ]
-        ),
-    ))
-
-    natural_reader_task = asyncio.create_task(_run_step(
-        task_id=task_id,
-        role="blind-natural-reader",
-        stage=f"reader-natural-r{round_no}",
-        mode="check",
-        content=draft,
-        instruction="\n\n".join(
-            [
-                reader_skill_content,
-                """你现在只执行 Reader D：自然首读 / 气质。你看不到人物卡、作者意图、Scene Card、Reviewer 意见和后续剧情，也不要替作者脑补或润色。
-
-必须逐段、逐关键句首读，覆盖 D01—D20。不要只盯开篇和章尾。
-
-严格输出：
-NATURAL_FIRST_READ_V2
-VERDICT: PASS 或 VERDICT: FAIL
-
-若 FAIL，每个问题必须输出：
-【问题ID】D001 起递增
-【逐字原句】
-【标签】从 NATURALNESS_GAP / TONE_GAP / AUTHOR_JOKE_GAP / MICRO_CONTINUITY_GAP / COLLOCATION_GAP / QUANTITY_GAP / REFERENCE_GAP / AUTHOR_EFFECT_GAP / SCENE_TEXTURE_GAP / ACTION_FRAGMENTATION_GAP / EMBODIED_DIALOGUE_GAP / MEMORY_INTEGRATION_TOO_SMOOTH / ORALITY_GAP 中选择
-【第一次为什么会停】
-【是否只是人物毛刺】YES / NO
-【最小修改边界】
-【是否阻断交付】YES
-
-若 PASS：
-【问题】NONE
-【为什么可以直接读过去】简述
-【是否阻断交付】NO
-
-规则：
-- “能理解”不是通过理由。
-- 只要有一个明确自然度问题，VERDICT 必须 FAIL。
-- CHARACTER_ROUGHNESS 只有能明确归属于人物说话方式时才可保留。
-- 不能把作者叙述的别扭句保护成“人物毛刺”。
-- 若关键场景只剩“发生了什么”，声音、气味、触感、空间、动作阻力全被写成功能标签，判 SCENE_TEXTURE_GAP。
-- 若同一连续观察/移动动作被机械切成多个短句，读起来像分镜脚本，判 ACTION_FRAGMENTATION_GAP。
-- 若关键对白连续只剩台词信息、附近完全看不到说话人的身体/视线/手上任务，判 EMBODIED_DIALOGUE_GAP。
-- “少解释”不能成为“少描写、少质感”的通过理由。
-- 穿越/原身记忆/失忆恢复若像读取资料卡一样无摩擦，判 MEMORY_INTEGRATION_TOO_SMOOTH；不得靠解释性独白修。
-- 极短对白若语法正确但真人不这么说，像作者为了节奏砸字，判 ORALITY_GAP。
-- 所有关键对白都必须做“说出口测试”，不只检查极短句。逻辑正确但过度工整、像作者总结/金句/规章，或需要读者脑内翻译后才自然，同样判 ORALITY_GAP；不得因“意思对”放行。
-- 不得修改正文。""",
-            ]
-        ),
-    ))
-
-    artifice_reader_task = asyncio.create_task(_run_step(
-        task_id=task_id,
-        role="blind-artifice-reader",
-        stage=f"reader-artifice-r{round_no}",
-        mode="check",
-        content=draft,
-        instruction="\n\n".join(
-            [
-                reader_skill_content,
-                """你现在只执行 Reader C 的“阅读推进 / 作者痕迹”检查。你是第一次阅读的普通读者，不看人物卡、作者意图、Scene Card、Reviewer 意见或后续剧情，也不要替作者润色。
-
-必须覆盖 C01—C15。重点不是“逻辑对不对”，而是正文有没有暴露作者施工痕迹：解释回声、设定清单、对话循环、人物声音过演、指纹打卡、身体状态播报、线索阶梯/密度、便利记忆、系统认证泄漏、巧合集群、证据展示摆台、调查是否被主角主持成解题板、显著异常是否成为孤儿信号，以及主角是否整章退化成摄像机。
-
-严格输出：
-STORY_FLOW_ARTIFICE_V1
-VERDICT: PASS 或 VERDICT: FAIL
-【解释回声】
-【设定清单】
-【对话循环】
-【人物声音是否过演】
-【指纹/身体状态是否打卡】
-【线索阶梯】
-【线索密度】
-【记忆是否过于便利】
-【系统是否间接认证判断】
-【巧合集群】
-【证据展示摆台】
-【推理解题板感】
-【显著异常是否被角色接收】
-【主角本章是否有独占观察/选择/代价】
-【失败标签】
-【逐字证据】
-【最小修改边界】
-
-允许标签：
-INTERPRETATION_ECHO_GAP
-PREMISE_CHECKLIST_GAP
-DIALOGUE_LOOP_GAP
-VOICE_OVERPERFORMANCE_GAP
-FINGERPRINT_OVERUSE_GAP
-BODY_STATE_TICKER_GAP
-CLUE_LADDER_GAP
-CLUE_DENSITY_GAP
-CONVENIENT_MEMORY_RECALL_GAP
-SYSTEM_CONFIRMATION_LEAK
-COINCIDENCE_CLUSTER_GAP
-EVIDENCE_DISPLAY_STAGING
-INVESTIGATION_WORKSHEET_GAP
-SALIENT_SIGNAL_ORPHAN_GAP
-PROTAGONIST_AGENCY_GAP
-NONE
-
-规则：
-- 单个轻微痕迹可标 WATCH，不必强行 FAIL。
-- 同一场景出现两类以上明确作者痕迹，或调查链整体像教程关，VERDICT 必须 FAIL。
-- 不能把“有意悬念”误判为线索不足。
-- 不能为了降低线索密度要求作者机械塞假线索。
-- 人物标志动作出现一次不算打卡；短距离反复证明“这个人是谁”才算。
-- 身体状态持续影响选择是好事；只有旁白不断重复播报才算 BODY_STATE_TICKER_GAP。
-- 系统只要通过触发时机让读者等价理解成“刚才推理正确”，就算 SYSTEM_CONFIRMATION_LEAK。
-- 嫌疑人物正常工作不算 EVIDENCE_DISPLAY_STAGING；只有其动作/位置连续配合关键证据展示才算。
-- 两条相关线索连续出现不自动算 INVESTIGATION_WORKSHEET_GAP；只有主角连续三步以上都把“发现→解释→验证→兑现”当场主持完，读者明显感觉在看解题板时才判。
-- 显著异常不要求立即解释答案；只要人物真实接收并形成疑问/记忆/待核查项即可通过 C14。
-- 主角不需要包办破案；一个有后果的观察、选择、代价或策略即可避免 C15，禁止为过 Gate 强行越权。
-- 对白若为了显得聪明、专业、克制而反复写成工整金句/原则句，优先检查 VOICE_OVERPERFORMANCE_GAP；“有道理”不能作为豁免。
-- 不得修改正文。""",
-            ]
-        ),
-    ))
-
-    cadence_source = "\n\n".join(
-        item
-        for item in [
-            recent_chapter_window,
-            "【当前章节草稿】\n" + draft,
-        ]
-        if item
-    )
-    cadence_reader_task = asyncio.create_task(_run_step(
-        task_id=task_id,
-        role="cadence-character-reader",
-        stage=f"reader-cadence-r{round_no}",
-        mode="check",
-        content=cadence_source,
-        instruction="""你执行“三章节拍与人物状态推进”检查。若提供了前两章，则把前两章 + 当前章作为连续窗口；若不足三章，只检查人物状态是否继承、当前章是否为后续波峰积累真实压力，不因样本不足强行 FAIL。
-
-严格输出：
-THREE_CHAPTER_CADENCE_V1
-VERDICT: PASS / WATCH / FAIL
-【窗口章节】
-【压力曲线】
-【本窗口波峰】
-【波峰是否只是新线索】YES / NO
-【人物状态变化1】
-【人物状态变化2】
-【下一章必须继承】
-【失败标签】PLATEAU_CADENCE_GAP / CHARACTER_STATE_STASIS_GAP / NONE
-【证据】
-
-判定：
-- 有完整三章窗口且三章强度近似、都只是均匀推进，没有明确波峰，判 PLATEAU_CADENCE_GAP + FAIL。
-- 有完整三章窗口，但所谓高潮只是再丢一个名字/物证，人物权限、关系、责任、目标完全不变，也应 FAIL。
-- 连续窗口显示核心人物只重复既有人设、关系和权限不变化，判 CHARACTER_STATE_STASIS_GAP；若已有连续六章证据则 FAIL，否则可 WATCH。
-- 小高潮不要求打斗；现实债务、关系破裂、职业权限变化同样成立。
-- 不得为了制造高潮要求作者机械添加暴力、反转或巧合。
-- 不得修改正文。""",
-    ))
-
-    reader_packets = await asyncio.gather(
-        _safe_review_task(reader_trace_task, "reader-trace"),
-        _safe_review_task(dialogue_reader_task, "reader-dialogue"),
-        _safe_review_task(natural_reader_task, "reader-naturalness"),
-        _safe_review_task(artifice_reader_task, "reader-artifice"),
-        _safe_review_task(cadence_reader_task, "reader-cadence"),
     )
 
-    review_execution_failures: list[dict[str, str]] = []
-
-    def _packet_content(packet: dict) -> str:
-        if packet["ok"]:
-            return str(packet["result"].content)
-        review_execution_failures.append(
-            {"label": str(packet["label"]), "error": str(packet["error"])}
-        )
-        return (
-            "VERDICT: FAIL\n"
-            "【执行失败】" + str(packet["error"]) + "\n"
-            "【说明】该 Reviewer 未完成，整轮审核不得通过。"
-        )
-
-    reader_trace_content = _packet_content(reader_packets[0])
-    dialogue_reader_content = _packet_content(reader_packets[1])
-    natural_reader_content = _packet_content(reader_packets[2])
-    artifice_reader_content = _packet_content(reader_packets[3])
-    cadence_reader_content = _packet_content(reader_packets[4])
-
-    class _ReviewResultProxy:
-        def __init__(self, content: str):
-            self.content = content
-
-    reader_trace_result = _ReviewResultProxy(reader_trace_content)
-    dialogue_reader_result = _ReviewResultProxy(dialogue_reader_content)
-    natural_reader_result = _ReviewResultProxy(natural_reader_content)
-    artifice_reader_result = _ReviewResultProxy(artifice_reader_content)
-    cadence_reader_result = _ReviewResultProxy(cadence_reader_content)
-
-    dialogue_reader_failed = (
-        "VERDICT: PASS" not in dialogue_reader_content.upper()
-    )
-    natural_reader_failed = (
-        "VERDICT: PASS" not in natural_reader_content.upper()
-    )
-    artifice_reader_failed = (
-        "VERDICT: PASS" not in artifice_reader_content.upper()
-    )
-    cadence_reader_failed = (
-        "VERDICT: FAIL" in cadence_reader_content.upper()
-        or not reader_packets[4]["ok"]
-    )
-
-    character_voice_packets = (
-        await asyncio.gather(
-            *[
-                _safe_review_task(task, f"character-voice-{index}")
-                for index, task in enumerate(character_voice_tasks)
-            ]
-        )
-        if character_voice_tasks
-        else []
-    )
-    character_voice_results = []
-    for packet in character_voice_packets:
-        character_voice_results.append(
-            _ReviewResultProxy(_packet_content(packet))
-        )
-    character_voice_failures = [
-        (character, result)
-        for character, result in zip(
-            character_cards,
-            character_voice_results,
-            strict=True,
-        )
-        if "VERDICT: PASS" not in result.content.upper()
-    ]
-
-
-    specs = [
+    reviewer_specs = [
         (
-            "continuity-reviewer",
-            "continuity",
-            "检查人物状态、称谓、时间线、地点、道具、伏笔和已确认世界规则是否连续。特别检查跨章回调：正文说‘昨儿那个/又是/还记得’时，前文是否真的播种；未播种却当成既有前情，标 UNSEEDED_CALLBACK_GAP 并按影响判 blocking。发现硬冲突必须标 blocking。",
+            "master-reader",
+            "master-reader",
+            """你是主控读者，代表最终读者做整章首次阅读验收。不要替作者解释，也不要因为知道写作意图而放过正文问题。
+
+把过去分散在普通首读、自然首读、作者痕迹、三章节拍中的检查合并执行：
+1. 一遍能否顺着读懂：人物在做什么、为什么做、关系发生什么变化；
+2. 哪些地方需要回读、脑补、依靠设定资料才能成立；
+3. 调查/行动是否像真实场景，而不是教程、问卷、解题板或证据摆台；
+4. 主角是否有真实观察、选择、风险或代价，而不是摄像机；
+5. 章内压力是否有起伏，关键场面是否敢慢写，流程是否敢压缩；
+6. 是否有明显作者总结、解释回声、AI 式点题、过度设计的章尾；
+7. 章末钩子是否自然成立，是否提前泄漏下一章现场；
+8. 只把真正影响阅读和交付的问题判 blocking，不用个人口味制造问题。
+
+你只负责“作为读者，这章能不能成立、能不能顺畅读下去”。""",
         ),
         (
-            "plot-reviewer",
-            "plot",
-            "检查因果、人物动机、冲突升级、信息揭示、场景目标、代价和章末钩子。额外检查主角本章是否有独占观察、选择、代价或策略；若关键推进几乎全由配角完成而主角只在场，标 PROTAGONIST_AGENCY_GAP。剧情靠解释推进或冲突不足时明确指出。",
-        ),
-        (
-            "character-reviewer",
-            "character",
-            "检查人物欲望、秘密、错误选择、关系冲突与行为一致性。必须逐个对照已冻结人物卡：性格、利益、恐惧、秘密、底线、说话习惯、当前处境是否真正约束了行为和对白。特别检查：谨慎/怕事的人是否过早坦白，强势的人是否无理由配合，嘴硬的人是否被一问就答，掌握信息的人是否不会试探或撒谎。重点识别全员好人、人物工具化、动机不足，以及“为了让剧情顺利推进而让人物突然变老实”的问题。",
-        ),
-        (
-            "world-science-reviewer",
-            "world-science",
-            "检查世界规则与科学设定能否由既定假设推导，术语是否前后一致，是否出现为了剧情临时新增规则。硬逻辑矛盾标 blocking。",
-        ),
-        (
-            "long-arc-reviewer",
-            "long-arc",
-            """你是 Long Arc Reviewer。结合当前任务上下文中的 Story Bible、第一卷总纲、Foreshadow Registry、Proficiency Skill Tree、Conflict & Opponent Ladder 检查长篇漂移。
+            "continuity-plot-reviewer",
+            "continuity-plot",
+            """你负责【连续性与剧情】，合并原 continuity / plot / world-science / long-arc / reader-gap 职责。
 
-必须检查：
-1. VOLUME_OUTLINE_DRIFT：本章是否改变了冻结的阶段功能、人物状态目标或阶段结局；
-2. FORESHADOW_EARLY_REVEAL：是否在计划节点前泄露作者端真相；
-3. FORESHADOW_DROPPED：本章应推进的已登记伏笔是否无故消失，或使用“回调”却从未播种；
-4. PROFICIENCY_TIER_LEAP：技能是否无真实练习就出现/升级，或系统越权给答案、知识、身份；
-5. CONFLICT_ENGINE_DRIFT：钱、身份、家庭、职业与案件是否被单一调查线长期吞掉；
-6. OPPONENT_FLATTENING：已冻结对手是否突然变蠢、全盘自白、失去程序/经济/关系优势；
-7. LONG_TERM_STATE_DRIFT：人物得到的权限、信用、债务、关系后果是否与前章和阶段目标连续。
+必须覆盖：
+1. 时间线、地点、称谓、身份、伤势、手中物、空间位置是否连续；
+2. 世界规则、职业权限、程序、计量、物证和技能边界是否一致；
+3. 因果链是否成立，人物为什么行动、信息从哪里来，是否存在知识来源缺口；
+4. 信息揭示顺序、悬念、冲突升级、章末钩子是否符合本章功能；
+5. 是否擅自新增设定、证据、伤病、请假、精确时刻、便利记录或巧合；
+6. 是否提前泄漏后续章信息，或吃掉已冻结伏笔；
+7. 是否出现长线阶段漂移、技能跳级、对手突然变蠢或程序优势消失；
+8. 有意未知可以保留，但当前场景必须让读者知道“自己不知道什么”。
 
-输出必须使用 NARRATIVEOS_REVIEW_V1；仅当偏离会破坏卷级结构、伏笔回收或技能边界时判 blocking。不要因为标题、具体场景写法与总纲不同就机械 FAIL；只要功能等价且不破坏冻结接口可以 PASS。""",
+事实、因果、权限、时间线、证据边界问题优先判 blocking。""",
         ),
         (
-            "style-reviewer",
-            "style",
-            "检查叙述视角、节奏、句式、对白、氛围、人物外貌/神态塑造、幽默来源、重复表达和说明性语言。重点抓连续碎短句、空洞排除式描写、陌生术语未落地、功能性对白、模型腔，以及前文已表达后又用总结句点题的 AI 式收束。重要人物首次出场只有姓名/职业而没有可记忆特征时也要指出。成片问题按 Skill 判级，不要把结构问题当成 POLISH。",
+            "character-dialogue-reviewer",
+            "character-dialogue",
+            """你负责【人物与对白】，一次审核本章所有主要角色，不再为每个角色单独启动 Reviewer。
+
+必须覆盖：
+1. 对照在场人物卡，逐个检查性格、利益、恐惧、秘密、底线和当前压力是否约束行为；
+2. 信息披露阈值：怕事的人会先自保，掌握信息的人会回避/试探，不能因为剧情需要突然全盘坦白；
+3. 人物权限是否越界，谁该问、谁该回答、谁能调账、谁能下结论；
+4. 所有关键对白做“说出口测试”：真人在这个身份、关系和压力下真的会这么说吗；
+5. 检查作者总结腔、规章腔、金句腔、过度理性对白和为了显聪明而表演的声音；
+6. 检查连续一问一答、严格轮流、长度过整齐、问什么答什么的问卷感；
+7. 熟人关系、上下级、同级之间必须有不同说话方式和关系记忆；
+8. 对白时人物不能失去身体、手上任务、站位、伤势和情绪余波；
+9. 一次输出所有主要角色的问题，不得重复同一问题四遍。
+
+角色资料如下：
+"""
+            + (character_context or "本章未匹配到结构化角色卡；只能依据正文与既有前章判断。"),
         ),
         (
-            "naturalness-reviewer",
-            "readability",
-            "执行自然叙事硬门槛：逐段检查现实锚点、首次出现顺序、空间关系、普通读者一次阅读可理解性、朗读顺滑度、人物可记忆性和段尾/章尾自然度。对白额外执行“说出口测试”：逻辑正确但真人不会这么说、过度工整、像作者总结/规章/金句，必须指出 ORALITY_GAP，不能因为信息准确放行。重点抓作者脑内成立但正文没有说明的设施/器物、报告腔、百科腔、过密信息、需要回读的句子，以及“总得、至少、这一次、他知道、才刚刚开始”一类替读者总结的 AI 式收束。重要人物首次正式出场至少应由外貌/神态/动作/衣着/声音中的两项形成记忆点；幽默只能来自人物与处境。关键空间关系不清或成片拗口必须判 blocking + REWRITE_BLOCK；孤立名词或单句才允许 LOCAL_REWRITE。",
-        ),
-        (
-            "aesthetic-reviewer",
-            "aesthetic",
-            "做审美复审，不按“华丽程度”评分。先对关键对白做“说出口测试”：若一句话主要让人感觉作者在写金句、总结原则或展示人物聪明，而不是人物当场会自然开口，必须指出，不能被“这句话很有道理”掩盖。检查：细节是否有主次、描写是否经过当前人物视角、关键处是否舍得慢写而流程是否敢压缩、是否存在人物声音被编辑同质化、情绪是否说得过满、是否存在正确但无味的标准句群、比喻/金句是否抢戏、连续章节是否复用同一种动作形态/笑点/金手指展示/章尾钩子。审美问题必须给可定位证据；单句可 POLISH/DELETE，成片模板化或视角平均化可 REWRITE_BLOCK。不得把个人偏好冒充 blocking。",
-        ),
-        (
-            "reader-gap-reviewer",
-            "reader",
-            "这是独立盲读者的首次阅读报告：\n"
-            + reader_trace_result.content
-            + "\n\n你不是模拟读者，而是 Reader Gap Reviewer。结合正文与已确认上下文，检查作者意图是否真正落在正文里。重点区分：semantic-gap、causal-gap、motivation-gap、relationship-gap、salience-gap、suspense-gap、emotion-gap。强制审计关键人物知识来源：每个关键行动前，正文是否给出亲见、转述、记录、调查或既有前情；只能靠读者脑补来源时标 KNOWLEDGE_PROVENANCE_GAP。有意悬念可以保留，但读者必须清楚自己不知道什么；如果读者连句子对象、人物目的、关系变化或必要因果都要靠作者资料才能补全，必须指出。不能用‘读者多读两遍就懂’作为通过理由。严格按 Reader Gate v3 判定：INTENTIONAL_UNKNOWN 可 PASS；READER_GAP 必须修；AMBIGUOUS_GAP 只有多个解释均为作者有意且不损害当前场景理解时才可 PASS。关键理解缺失可判 blocking；孤立语义支点缺失可 LOCAL_REWRITE。",
+            "language-rhythm-reviewer",
+            "language-rhythm",
+            """你负责【语言与节奏】，合并原 style / naturalness / aesthetic / artifice / cadence 的语言层职责。
+
+必须覆盖：
+1. 中文语序、搭配、指代、数量、动作连续性是否第一遍就自然；
+2. 是否碎短句过多、分镜化、报告腔、百科腔、说明腔、功能性段落过密；
+3. 场景是否有必要的空间、声音、触感、动作阻力，而不是只剩事件摘要；
+4. 句群长短是否有变化，关键处是否有停顿和余味，流程是否拖沓；
+5. 是否反复使用“不是A而是B”、总结句、点题句、模板比喻、作者金句等模型腔；
+6. 情绪是否已经由动作/对白表现却又被旁白重复解释；
+7. 人物语言是否被统一修成一种漂亮、克制、完整的声音；
+8. 段落/场景/章尾是否自然收束，不用“他知道/至少/总得/才刚刚开始”硬造力度；
+9. 审美判断必须可定位、可执行，不能把个人偏好当 blocking；
+10. 语言问题若只是单句可 LOCAL_REWRITE；只有成片模板化、节奏失衡或场景失真才 REWRITE_BLOCK。""",
         ),
     ]
 
-    outputs: list[str] = []
-    has_blocking = (
-        bool(character_voice_failures)
-        or natural_reader_failed
-        or dialogue_reader_failed
-        or artifice_reader_failed
-        or cadence_reader_failed
-        or bool(review_execution_failures)
-    )
-
-    if review_execution_failures:
-        with connect() as conn:
-            for failure in review_execution_failures:
-                conn.execute(
-                    """
-                    INSERT INTO review_findings(
-                        task_id,reviewer,category,severity,summary,suggestion,status
-                    ) VALUES(?,?,?,?,?,?,?)
-                    """,
-                    (
-                        task_id,
-                        str(failure["label"]),
-                        "review-execution",
-                        "blocking",
-                        "Reviewer 执行失败：" + str(failure["error"]),
-                        "修复该 Reviewer 调用后，重新完成所有 Reviewer 的全量审核；不得用其他 Reviewer 结果替代。",
-                        "open",
-                    ),
-                )
-
-    async def _run_specialist(index: int, spec: tuple[str, str, str]):
-        role, category, instruction = spec
+    async def _run_merged_reviewer(
+        index: int,
+        role: str,
+        category: str,
+        instruction: str,
+    ):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
             prior = (
-                "上一轮同一 Reviewer 的审核结果如下。RECHECK 时必须沿用其中的问题标识逐条复审：\n"
+                "上一轮同一合并 Reviewer 的结果如下；RECHECK 时必须逐条复审原问题：\n"
                 + prior_outputs[index]
             )
-        result = await _run_step(
+
+        extra_context = ""
+        if role == "master-reader":
+            extra_context = (
+                "【前章窗口，仅用于判断承接；不要读取作者隐藏意图】\n"
+                + recent_chapter_window
+                if recent_chapter_window
+                else ""
+            )
+        elif role == "character-dialogue-reviewer":
+            extra_context = (
+                "【前章窗口，用于人物关系与说话方式连续性】\n"
+                + recent_chapter_window
+                if recent_chapter_window
+                else ""
+            )
+        else:
+            extra_context = context
+
+        return await _run_step(
             task_id=task_id,
             role=role,
             stage=f"review-r{round_no}",
@@ -854,50 +545,60 @@ VERDICT: PASS / WATCH / FAIL
             instruction="\n\n".join(
                 item
                 for item in [
+                    reader_skill_content,
                     instruction,
                     _review_contract(round_no),
                     prior,
-                    context,
+                    extra_context,
                 ]
                 if item
             ),
         )
-        return role, category, result
 
-    specialist_packets = await asyncio.gather(
-        *(
+    packets = await asyncio.gather(
+        *[
             _safe_review_task(
-                _run_specialist(index, spec),
-                f"specialist-{spec[0]}",
+                _run_merged_reviewer(index, role, category, instruction),
+                role,
             )
-            for index, spec in enumerate(specs)
-        )
+            for index, (role, category, instruction) in enumerate(reviewer_specs)
+        ]
     )
 
-    specialist_results = []
-    for packet, spec in zip(specialist_packets, specs, strict=True):
-        if packet["ok"]:
-            specialist_results.append(packet["result"])
-            continue
-        role, category, _instruction = spec
-        review_execution_failures.append(
-            {"label": str(packet["label"]), "error": str(packet["error"])}
-        )
-        specialist_results.append(
-            (
-                role,
-                category,
-                _ReviewResultProxy(
-                    "NARRATIVEOS_REVIEW_V3\n"
-                    "【严重性】blocking\n"
-                    "【问题说明】Reviewer 执行失败，整轮审核不完整。\n"
-                    "【建议动作】修复 Reviewer 执行后重新完成全量审核。\n"
-                    "【执行错误】" + str(packet["error"])
-                ),
-            )
-        )
+    outputs: list[str] = []
+    has_blocking = False
 
-    for role, category, result in specialist_results:
+    for packet, (role, category, _instruction) in zip(
+        packets,
+        reviewer_specs,
+        strict=True,
+    ):
+        if not packet["ok"]:
+            has_blocking = True
+            error_text = str(packet["error"])
+            outputs.append(
+                f"[{category}] REVIEW_EXECUTION_FAILED: {error_text}"
+            )
+            with connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO review_findings(
+                        task_id,reviewer,category,severity,summary,suggestion,status
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task_id,
+                        role,
+                        category,
+                        "blocking",
+                        f"Reviewer 执行失败：{error_text}",
+                        "修复该 Reviewer 调用后重新完成四角色全量审核；不得用其他 Reviewer 代替。",
+                        "open",
+                    ),
+                )
+            continue
+
+        result = packet["result"]
         outputs.append(f"[{category}] {result.content}")
         findings = _parse_review_output(result.content, draft)
         with connect() as conn:
@@ -936,119 +637,13 @@ VERDICT: PASS / WATCH / FAIL
                         ),
                     )
 
-    for character, result in zip(
-        character_cards,
-        character_voice_results,
-        strict=True,
-    ):
-        name = str(character["name"])
-        outputs.append(f"[character-voice:{name}] {result.content}")
-        if "VERDICT: PASS" in result.content.upper():
-            continue
-        with connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO review_findings(
-                    task_id,reviewer,category,severity,summary,suggestion,status
-                ) VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    task_id,
-                    "character-voice-reviewer",
-                    f"character-voice:{name}",
-                    "blocking",
-                    result.content,
-                    "只按角色自审给出的 FAIL 台词做最小口语修订；保留事实、证据边界、人物权限、关系和行动结果。",
-                    "open",
-                ),
-            )
-
-    outputs.append(f"[reader-dialogue] {dialogue_reader_result.content}")
-    if dialogue_reader_failed:
-        with connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO review_findings(
-                    task_id,reviewer,category,severity,summary,suggestion,status
-                ) VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    task_id,
-                    "blind-dialogue-reader",
-                    "reader-dialogue",
-                    "blocking",
-                    dialogue_reader_result.content,
-                    "按 Reader B 给出的最小修改边界重写功能性对白；不得仅增加字数，必须增强人物目标、声音和关系痕迹。",
-                    "open",
-                ),
-            )
-
-    outputs.append(f"[reader-artifice] {artifice_reader_result.content}")
-    if artifice_reader_failed:
-        with connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO review_findings(
-                    task_id,reviewer,category,severity,summary,suggestion,status
-                ) VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    task_id,
-                    "blind-artifice-reader",
-                    "reader-artifice",
-                    "blocking",
-                    artifice_reader_result.content,
-                    "按 Reader C 给出的最小修改边界降低作者痕迹；优先删解释回声、压缩重复对话、降低线索密度与巧合展示，不得机械添加假线索。",
-                    "open",
-                ),
-            )
-
-    outputs.append(f"[reader-cadence] {cadence_reader_result.content}")
-    if cadence_reader_failed:
-        with connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO review_findings(
-                    task_id,reviewer,category,severity,summary,suggestion,status
-                ) VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    task_id,
-                    "cadence-character-reader",
-                    "reader-cadence",
-                    "blocking",
-                    cadence_reader_result.content,
-                    "按三章节拍与人物状态推进门槛重构相关章节窗口；不得只在章尾补钩子，必须让压力波峰与人物关系/权限/责任变化同时落地。",
-                    "open",
-                ),
-            )
-
-    outputs.append(f"[reader-naturalness] {natural_reader_result.content}")
-    if natural_reader_failed:
-        with connect() as conn:
-            conn.execute(
-                """
-                INSERT INTO review_findings(
-                    task_id,reviewer,category,severity,summary,suggestion,status
-                ) VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    task_id,
-                    "blind-natural-reader",
-                    "reader-naturalness",
-                    "blocking",
-                    natural_reader_result.content,
-                    "按 Reader D 给出的最小修改边界修复；不得顺手改写已通过内容。",
-                    "open",
-                ),
-            )
     if has_blocking and auto_learn:
         learn_from_open_blocking_findings(
             task_id=task_id,
             source=f"review-round-{round_no}",
         )
-    return outputs, has_blocking
 
+    return outputs, has_blocking
 
 async def run_full_novel_pipeline(task_id: int) -> dict:
     _require_real_provider()
