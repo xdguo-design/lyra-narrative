@@ -1,5 +1,5 @@
-attempt: 10
+attempt: 11
 chapter: 2
 mode: platform-writer
-reason: retry-chapter2-with-120s-full-context-timeout
+reason: run-chapter2-with-glm53flash-priority-route
 source_policy: chapter1+4-core-character-cards+chapter2-hard-constraints+current-skills;exclude-existing-chapter2
