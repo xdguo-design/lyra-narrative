@@ -1,0 +1,96 @@
+name: GLM53 Profile Probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/glm53-profile-probe.request"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_GLM53: ${{ vars.GLM53 }}
+      NARRATIVE_PROFILE_GLM5_3_FLASH: ${{ vars.GLM5_3_FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM53FLASH: ${{ secrets.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM53: ${{ secrets.GLM53 }}
+      NARRATIVE_PROFILE_SECRET_GLM5_3_FLASH: ${{ secrets.GLM5_3_FLASH }}
+      NOVEL_AI_HTTP_RETRIES: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Probe configured GLM53 profiles
+        shell: bash
+        run: |
+          PYTHONPATH=. python - <<'PY'
+          import asyncio, json, os, time
+          from app.ai import ChatMessage, ChatRequest, ProviderConfig, build_provider
+          from app.services.ai_service import _named_provider_profile
+
+          NAMES = ("GLM53FLASH", "GLM53", "GLM5_3_FLASH")
+
+          async def main():
+              any_profile = False
+              any_success = False
+              for name in NAMES:
+                  profile = _named_provider_profile(name)
+                  if profile is None:
+                      print(json.dumps({"profile": name, "configured": False}), flush=True)
+                      continue
+                  any_profile = True
+                  print(json.dumps({
+                      "profile": name,
+                      "configured": True,
+                      "provider": profile.get("name"),
+                      "model": profile.get("default_model"),
+                      "has_secret": bool(profile.get("api_key_env")),
+                  }, ensure_ascii=False), flush=True)
+                  if not profile.get("api_key_env"):
+                      continue
+                  provider = build_provider(ProviderConfig(
+                      name=str(profile["name"]),
+                      kind=str(profile["protocol"]),
+                      base_url=str(profile.get("base_url") or "") or None,
+                      api_key_env=str(profile["api_key_env"]),
+                      default_model=str(profile["default_model"]),
+                      timeout_seconds=35,
+                  ))
+                  started=time.perf_counter()
+                  try:
+                      res=await provider.chat(ChatRequest(
+                          system="你是连通性测试助手。",
+                          messages=[ChatMessage(role="user", content="只回复两个汉字：正常")],
+                          temperature=0.1,
+                          max_tokens=32,
+                      ))
+                      ok=bool(res.content.strip())
+                      any_success = any_success or ok
+                      print(json.dumps({
+                          "profile": name,
+                          "ok": ok,
+                          "resolved_model": res.model,
+                          "elapsed_ms": int((time.perf_counter()-started)*1000),
+                          "sample": res.content.strip()[:40],
+                      }, ensure_ascii=False), flush=True)
+                  except Exception as exc:
+                      print(json.dumps({
+                          "profile": name,
+                          "ok": False,
+                          "elapsed_ms": int((time.perf_counter()-started)*1000),
+                          "error_type": type(exc).__name__,
+                          "error": str(exc)[:500],
+                      }, ensure_ascii=False), flush=True)
+              raise SystemExit(0 if any_success else (2 if any_profile else 3))
+
+          asyncio.run(main())
+          PY
