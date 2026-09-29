@@ -1,0 +1,58 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "79470875538a4b9991493106579c6671",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T12:44:01.096705+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "disclosure-threshold",
+      "reason": "DISCLOSURE_THRESHOLD_GAP：周虎在刘旺承认“昨夜推过一趟”后，没有让刘旺自己回答“谁叫你推”，而是周虎先直接说出“孙成”，再逼刘旺确认，破坏分层承认阈值。",
+      "suggestion": "固定顺序：刘旺只认推车→周虎问谁叫推→刘旺自己说孙成→周虎另问好处→刘旺才说五文。上级不能替嫌疑人报答案。",
+      "excerpt": "“孙成。”周虎直接说了名字。 / “你怎么知道是他！”",
+      "pattern_signature": "6d2005a479814bab3640fd81"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "canon-drift",
+      "reason": "CANON_FACT_DRIFT：赵六再次被写成从怀里掏出昨夜入库抄本/旧账，和冻结人物权限冲突；此前同类错误已经被正式打回。",
+      "suggestion": "赵六不得持有库账、回票、折纸、抄本或小册子。账目只能由周虎按县衙程序调取，赵六只提供经验、风险判断和现场配合。",
+      "excerpt": "“赵六从怀里掏出一册旧账……昨夜交接时他随手抄录了主要入库项。”",
+      "pattern_signature": "dfdcb157b7e56910660c4aaa"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "measurement-consistency",
+      "reason": "MEASUREMENT_UNIT_DRIFT：正文先把入库记录写成“五十斤”，随后又用官斗直接宣布“短三斗一升”，仍在用不同量纲支撑同一短缺结论。",
+      "suggestion": "秤只能确认重量异常，不报具体斤两；最终短缺必须和昨夜记录使用同一官斗口径，只输出冻结结论“短三斗一升”。",
+      "excerpt": "“标重五十斤。” / “短三斗一升。”",
+      "pattern_signature": "621632f26aa6c6053594e238"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "duplicate-interrogation",
+      "reason": "INVESTIGATION_WORKSHEET_GAP：短缺确认后又把刘旺押回来，重复问“昨夜是不是你推的、孙成是不是给五文”，把已经完成的信息披露重新演一遍，并新增“封条是你撕的”无来源事实。",
+      "suggestion": "已完成的口供不得二次从头审。复量后只做封存、责任控制和下一步安排；不能为制造戏剧性重新走问答流程或补造新罪证。",
+      "excerpt": "“昨夜，是你把粮袋推到侧门的，对吧？” / “孙成付了你五文钱。袋子上的封条是你撕开的。”",
+      "pattern_signature": "5c7d93102f575187537cb264"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "timeline-continuity",
+      "reason": "TIME_DETAIL_DRIFT：正文擅自加入“子时、卯时、申时”等精确时刻，冻结材料没有这些时间锚点，且会改变昨日搬粮时间线。",
+      "suggestion": "没有来源的精确时刻不得补造。第二章只使用“昨晚/昨夜/今早/同一上午”等已有时间层级。",
+      "excerpt": "“昨夜子时后” / “今早卯时” / “昨日申时”",
+      "pattern_signature": "2a708017d5a3371cb47fbfa4"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "object-consistency",
+      "reason": "GRAIN_TYPE_DRIFT：同一破口赈粮袋在正文中出现“散豆、粟米、小麦碎屑”等不同粮食品类，物证对象漂移。",
+      "suggestion": "本章统一使用“粮/米/粟米”一种口径，不为了现场细节随意切换豆类、小麦或其他粮食品种。",
+      "excerpt": "“地上全是散豆” / “粟米” / “小麦碎屑”",
+      "pattern_signature": "b998bcc31d3c430826a72386"
+    }
+  ]
+}
