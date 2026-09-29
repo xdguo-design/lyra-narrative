@@ -1,0 +1,34 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "c511958f737248a082ddb33dcae43260",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T10:10:00+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "longform-repetition",
+      "reason": "LONGFORM_REPETITION_LOOP：DOTS3 在第三轮第二章后半段整块重复同一问话/孙成到场段落多次，最终截断在半句，属于长文循环失控。",
+      "suggestion": "长章节检测到大段高相似重复时立即判失败；Writer 不得通过重复旧段填充长度。DOTS3 暂不用于第二章正文主写。",
+      "excerpt": "“过了没多久，皂役来报……”及其后孙成到场段落连续重复多次，最终停在“过了没多久”。",
+      "pattern_signature": "3130878877705eee6d3611c7"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "canon-drift",
+      "reason": "CANON_FACT_DRIFT：完整流水线候选又新造“磨坊老赵、铁箍记录、粗米领用路线”等未冻结事实，把失粮案改成另一条故事。",
+      "suggestion": "Writer/润色层不得新增解决主案所需的地点、账证、人物或业务流程；没有冻结依据的磨坊、铁箍记录等必须拦截。",
+      "excerpt": "“磨坊的老赵” / “铁箍记录” / “领粗米豆磨粉”",
+      "pattern_signature": "41185832df85ed00872ebfca"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "character-voice",
+      "reason": "ORALITY_GAP / CHARACTER_FUNCTIONALIZATION：完整流水线中周虎、孙成进入戏剧化逼供和崩溃台词，出现“我没有说刘旺。我说的是周虎”等不自然甚至语义错乱对白。",
+      "suggestion": "对白生成后必须做说出口测试和指代检查；周虎短、直接、控现场，不发表戏剧化金句；孙成靠程序争解释权，不轻易崩溃。",
+      "excerpt": "“我没有说刘旺。我说的，是周虎。” / “你抓的是刘旺。周虎说，我没抓错。”",
+      "pattern_signature": "6fb97d37dd3c541e49cbe909"
+    }
+  ]
+}
