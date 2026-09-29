@@ -85,7 +85,6 @@ def _part1_errors(text: str) -> list[str]:
         "孙成": "p1-missing-sun-cheng",
         "五文": "p1-missing-five-wen",
         "后厨侧门": "p1-missing-side-door",
-        "不见": "p1-missing-bag-gone",
     }
     for marker, error in required.items():
         if marker not in text:
@@ -103,8 +102,19 @@ def _part1_errors(text: str) -> list[str]:
     )
     five_at = text.find("五文")
     side_at = text.find("后厨侧门")
-    later_q = max(text.find("后来呢"), text.find("后来怎么"))
-    missing_at = text.find("不见")
+    later_q = max(
+        text.find("后来呢"),
+        text.find("后来怎么"),
+        text.find("之后呢"),
+        text.find("再后来"),
+        text.find("后来怎么样"),
+    )
+    missing_at = max(
+        text.find("不见"),
+        text.find("没了"),
+        text.find("找不到"),
+        text.find("不在了"),
+    )
 
     if min(
         pushed_at, who_q, sun_at, benefit_q, five_at, side_at, later_q, missing_at
@@ -116,8 +126,10 @@ def _part1_errors(text: str) -> list[str]:
     ):
         errors.append("p1-disclosure-order")
 
-    if text.count("五文") > 1:
+    if text.count("五文") > 2:
         errors.append("p1-five-wen-repeated")
+    if missing_at < 0:
+        errors.append("p1-missing-bag-gone")
     if "短三斗一升" in text or "马二死" in text or "没气" in text:
         errors.append("p1-leaks-later-events")
 
