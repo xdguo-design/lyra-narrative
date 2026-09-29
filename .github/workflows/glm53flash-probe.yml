@@ -1,0 +1,29 @@
+name: GLM53Flash Probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/glm53flash-probe.request"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NOVEL_AI_HTTP_RETRIES: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Probe GLM 5.3 Flash aliases
+        run: PYTHONPATH=. python scripts/probe_glm53flash.py
