@@ -149,34 +149,6 @@ async def main() -> int:
             flush=True,
         )
 
-    with connect() as conn:
-        conn.execute(
-            "UPDATE writing_tasks SET draft=?,revised_content=?,status='awaiting_approval' WHERE id=?",
-            (text, text, task_id),
-        )
-        rows = conn.execute(
-            "SELECT role,stage,status,provider,model,error FROM agent_runs WHERE task_id=? ORDER BY id",
-            (task_id,),
-        ).fetchall()
-
-    manifest = {
-        "task_id": task_id,
-        "usable": _chapter_text_is_usable(text),
-        "chars": len(text),
-        "target_chars": 3000,
-        "parts": {
-            "part_1_chars": len(part1_text),
-            "part_2_chars": len(part2_text),
-        },
-        "runs": [dict(row) for row in rows],
-    }
-    (OUTPUT_DIR / "manifest.json").write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    print(json.dumps(manifest, ensure_ascii=False), flush=True)
-    return 0 if manifest["usable"] else 2
-
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "chapter-02-fast-candidate.md").write_text(
         "# 第二章 谁让你推的车\n\n" + text + "\n",
@@ -197,6 +169,11 @@ async def main() -> int:
         "task_id": task_id,
         "usable": _chapter_text_is_usable(text),
         "chars": len(text),
+        "target_chars": 3000,
+        "parts": {
+            "part_1_chars": len(part1_text),
+            "part_2_chars": len(part2_text),
+        },
         "runs": [dict(row) for row in rows],
     }
     (OUTPUT_DIR / "manifest.json").write_text(
