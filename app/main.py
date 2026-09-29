@@ -97,6 +97,18 @@ class ApprovalRequest(BaseModel):
     note: str = ""
 
 
+class MasterReviewFinding(BaseModel):
+    category: str = "master-reader"
+    reason: str = Field(min_length=1, max_length=2000)
+    suggestion: str = ""
+    excerpt: str = ""
+
+
+class MasterReviewRequest(BaseModel):
+    decision: str = Field(pattern="^(approved|rejected)$")
+    findings: list[MasterReviewFinding] = Field(default_factory=list)
+
+
 class BookPipelineRequest(BaseModel):
     goal: str = Field(min_length=1, max_length=2000)
     instruction: str = ""
@@ -801,6 +813,94 @@ async def run_project_book_pipeline(project_id: int, payload: BookPipelineReques
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
         raise HTTPException(502, str(exc)) from exc
+
+
+@app.post("/api/tasks/{task_id}/master-review")
+def submit_master_review(task_id: int, payload: MasterReviewRequest):
+    with connect() as conn:
+        task = conn.execute(
+            "SELECT * FROM writing_tasks WHERE id=?",
+            (task_id,),
+        ).fetchone()
+        if not task:
+            raise HTTPException(404, "task not found")
+        if task["status"] != "awaiting_master_review":
+            raise HTTPException(
+                409,
+                f"task cannot receive master review while status is {task['status']}",
+            )
+        if payload.decision == "rejected" and not payload.findings:
+            raise HTTPException(400, "rejected master review requires findings")
+
+        for finding in payload.findings:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "master-reader",
+                    finding.category.strip() or "master-reader",
+                    "blocking" if payload.decision == "rejected" else "warning",
+                    finding.reason.strip(),
+                    finding.suggestion.strip(),
+                    "open",
+                ),
+            )
+            if finding.excerpt.strip():
+                finding_id = conn.execute(
+                    "SELECT last_insert_rowid() AS id"
+                ).fetchone()["id"]
+                conn.execute(
+                    """
+                    INSERT INTO review_finding_refs(
+                        finding_id,excerpt,start_offset,end_offset
+                    ) VALUES(?,?,NULL,NULL)
+                    """,
+                    (finding_id, finding.excerpt.strip()[:1000]),
+                )
+
+        blocking = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) AS n
+                FROM review_findings
+                WHERE task_id=? AND status='open' AND severity='blocking'
+                """,
+                (task_id,),
+            ).fetchone()["n"]
+        )
+
+    learning = {"recorded": 0, "batch_id": None, "skill_versions": {}}
+    if blocking:
+        from app.services.rejection_learning import learn_from_open_blocking_findings
+
+        learning = learn_from_open_blocking_findings(
+            task_id=task_id,
+            source="complete-review-with-master",
+        )
+
+    status = "reviewed" if blocking else "awaiting_approval"
+    with connect() as conn:
+        conn.execute(
+            """
+            UPDATE writing_tasks
+            SET status=?,updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (status, task_id),
+        )
+
+    result = get_workflow_task(task_id) or {}
+    result["master_review"] = {
+        "decision": payload.decision,
+        "finding_count": len(payload.findings),
+        "blocking_count": blocking,
+        "learning": learning,
+    }
+    return result
 
 
 @app.post("/api/tasks/{task_id}/approval")
