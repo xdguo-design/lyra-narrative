@@ -373,6 +373,7 @@ async def _run_review_round(
     context: str,
     round_no: int,
     prior_outputs: list[str] | None = None,
+    auto_learn: bool = True,
 ) -> tuple[list[str], bool]:
     with connect() as conn:
         row = conn.execute(
@@ -944,7 +945,7 @@ VERDICT: PASS / WATCH / FAIL
                     "open",
                 ),
             )
-    if has_blocking:
+    if has_blocking and auto_learn:
         learn_from_open_blocking_findings(
             task_id=task_id,
             source=f"review-round-{round_no}",
