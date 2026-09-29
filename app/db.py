@@ -8,7 +8,10 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.services.default_skills import BUILTIN_SKILLS
-from app.services.skill_learning_store import apply_db_learning_to_conn
+from app.services.skill_learning_store import (
+    apply_db_learning_to_conn,
+    import_archived_learning_to_conn,
+)
 
 
 def db_path() -> Path:
@@ -452,5 +455,6 @@ def init_db() -> None:
             """
         )
         _ensure_builtin_skills(conn)
+        import_archived_learning_to_conn(conn)
         apply_db_learning_to_conn(conn, BUILTIN_SKILLS)
         _seed_demo(conn)
