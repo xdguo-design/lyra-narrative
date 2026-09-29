@@ -58,7 +58,7 @@ jobs:
 
       NOVEL_AI_REASONING_EFFORT: medium
       NOVEL_AI_MAX_TOKENS: "6500"
-      NOVEL_AI_TIMEOUT_SECONDS: "60"
+      NOVEL_AI_TIMEOUT_SECONDS: "120"
       NOVEL_AI_HTTP_RETRIES: "0"
       NOVEL_AI_RETRY_BASE_SECONDS: "3"
       NARRATIVE_OUTPUT_DIR: artifacts/rewrite-v3-chapter-generate
