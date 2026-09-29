@@ -138,7 +138,7 @@ async def _plan_book(
         role="story-architect",
         stage="book-architecture",
         mode="continue",
-        content=prior,
+        content="",
         instruction="\n\n".join(
             item
             for item in [
@@ -259,17 +259,38 @@ async def _plan_book(
 
 def _chapter_text_is_usable(text: str) -> bool:
     stripped = str(text or "").strip()
-    if len(stripped) < 800:
+    if len(stripped) < 1800:
         return False
-    body = re.sub(r"^\\s*第[^\\n]{0,30}章[^\\n]*\\n?", "", stripped, count=1)
-    if len(body.strip()) < 700:
+
+    body = re.sub(
+        r"^\s*第[^\n]{0,30}章[^\n]*\n?",
+        "",
+        stripped,
+        count=1,
+    ).strip()
+    if len(body) < 1600:
         return False
+
     paragraphs = [
         item.strip()
-        for item in re.split(r"\\n\\s*\\n", body)
+        for item in re.split(r"\n\s*\n", body)
         if item.strip()
     ]
-    return len(paragraphs) >= 5
+    if len(paragraphs) < 8:
+        return False
+
+    # A successful provider response can still be a token-truncated chapter.
+    # Do not let an obviously unfinished sentence enter Reader or Skill learning.
+    tail = body.rstrip()
+    if not tail:
+        return False
+    terminal = tail[-1]
+    if terminal not in "。！？…」』”）】":
+        return False
+    if terminal in "」』”）】" and len(tail) >= 2:
+        if tail[-2] not in "。！？…—」』”）】":
+            return False
+    return True
 
 
 def _blocking_review_digest(task_id: int, max_chars: int = 12000) -> str:
@@ -344,7 +365,7 @@ async def _run_frozen_chapter(
                 context,
                 story_state_context,
                 "最近前文片段（只负责语气、场景和章末承接；事实状态以 Story State 为准，不得复制前文）：\n" + prior,
-                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文，并执行本次冻结的写作 Skill。Story State 中已经发生的伤势、知识、关系、道具消耗、地点损坏和伏笔状态都是不可逆历史，除非本章明确发生新的事件改变它。不得重复已经发生过的“第一次”、揭密、交接或跨界场景；不得提前消耗后续章节核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动。普通叙事不要默认切成碎短句；让动作、感觉、观察和人物关系形成完整语流。陌生术语首次出现必须落到读者能立即理解的语境中；对白必须有情绪目的和人物关系，禁止资料问答式推进。只输出当前章节正文，严禁复制前文章节。""",
+                """严格从冻结章节大纲中定位当前章节节点，写出完整章节正文，并执行本次冻结的写作 Skill。目标篇幅约 2500—4500 个中文字符；必须把本章计划节点走完，并以完整动作、场景变化或新麻烦收束，不得在半句、半场景中截断。Story State 中已经发生的伤势、知识、关系、道具消耗、地点损坏和伏笔状态都是不可逆历史，除非本章明确发生新的事件改变它。不得重复已经发生过的“第一次”、揭密、交接或跨界场景；不得提前消耗后续章节核心反转，不得新造世界规则。设定只能通过行动、环境、证据、冲突与后果出现。人物必须带着自己的秘密和利益行动。普通叙事不要默认切成碎短句；让动作、感觉、观察和人物关系形成完整语流。陌生术语首次出现必须落到读者能立即理解的语境中；对白必须有情绪目的和人物关系，禁止资料问答式推进。只输出当前章节正文，严禁复制前文章节。""",
             ]
         ),
     )
@@ -371,7 +392,7 @@ async def _run_frozen_chapter(
                     "上一轮 Writer 只返回标题或空壳正文，属于无效输出。",
                     "本轮必须直接写出完整章节，不得只输出章名、提纲、说明或占位符。",
                     "从当前正文的章末场景直接续写；不得复制前文。",
-                    "正文必须包含完整场景、人物动作、对白、冲突推进和章末出口。",
+                    "正文目标 2500—4500 个中文字符，必须包含完整场景、人物动作、对白、冲突推进和章末出口，结尾不得半句截断。",
                     "只输出新章节正文。",
                 ]
             ),
