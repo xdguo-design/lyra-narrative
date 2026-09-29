@@ -366,6 +366,19 @@ VERDICT: PASS 或 VERDICT: FAIL
     return result.content, failed
 
 
+async def _safe_review_task(coro, label: str):
+    try:
+        result = await coro
+        return {"ok": True, "label": label, "result": result, "error": ""}
+    except Exception as exc:
+        return {
+            "ok": False,
+            "label": label,
+            "result": None,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
 async def _run_review_round(
     *,
     task_id: int,
@@ -655,36 +668,73 @@ VERDICT: PASS / WATCH / FAIL
 - 不得修改正文。""",
     ))
 
-    (
-        reader_trace_result,
-        dialogue_reader_result,
-        natural_reader_result,
-        artifice_reader_result,
-        cadence_reader_result,
-    ) = await asyncio.gather(
-        reader_trace_task,
-        dialogue_reader_task,
-        natural_reader_task,
-        artifice_reader_task,
-        cadence_reader_task,
+    reader_packets = await asyncio.gather(
+        _safe_review_task(reader_trace_task, "reader-trace"),
+        _safe_review_task(dialogue_reader_task, "reader-dialogue"),
+        _safe_review_task(natural_reader_task, "reader-naturalness"),
+        _safe_review_task(artifice_reader_task, "reader-artifice"),
+        _safe_review_task(cadence_reader_task, "reader-cadence"),
     )
+
+    review_execution_failures: list[dict[str, str]] = []
+
+    def _packet_content(packet: dict) -> str:
+        if packet["ok"]:
+            return str(packet["result"].content)
+        review_execution_failures.append(
+            {"label": str(packet["label"]), "error": str(packet["error"])}
+        )
+        return (
+            "VERDICT: FAIL\n"
+            "【执行失败】" + str(packet["error"]) + "\n"
+            "【说明】该 Reviewer 未完成，整轮审核不得通过。"
+        )
+
+    reader_trace_content = _packet_content(reader_packets[0])
+    dialogue_reader_content = _packet_content(reader_packets[1])
+    natural_reader_content = _packet_content(reader_packets[2])
+    artifice_reader_content = _packet_content(reader_packets[3])
+    cadence_reader_content = _packet_content(reader_packets[4])
+
+    class _ReviewResultProxy:
+        def __init__(self, content: str):
+            self.content = content
+
+    reader_trace_result = _ReviewResultProxy(reader_trace_content)
+    dialogue_reader_result = _ReviewResultProxy(dialogue_reader_content)
+    natural_reader_result = _ReviewResultProxy(natural_reader_content)
+    artifice_reader_result = _ReviewResultProxy(artifice_reader_content)
+    cadence_reader_result = _ReviewResultProxy(cadence_reader_content)
+
     dialogue_reader_failed = (
-        "VERDICT: PASS" not in dialogue_reader_result.content.upper()
+        "VERDICT: PASS" not in dialogue_reader_content.upper()
     )
     natural_reader_failed = (
-        "VERDICT: PASS" not in natural_reader_result.content.upper()
+        "VERDICT: PASS" not in natural_reader_content.upper()
     )
     artifice_reader_failed = (
-        "VERDICT: PASS" not in artifice_reader_result.content.upper()
+        "VERDICT: PASS" not in artifice_reader_content.upper()
     )
     cadence_reader_failed = (
-        "VERDICT: FAIL" in cadence_reader_result.content.upper()
+        "VERDICT: FAIL" in cadence_reader_content.upper()
+        or not reader_packets[4]["ok"]
     )
-    character_voice_results = (
-        await asyncio.gather(*character_voice_tasks)
+
+    character_voice_packets = (
+        await asyncio.gather(
+            *[
+                _safe_review_task(task, f"character-voice-{index}")
+                for index, task in enumerate(character_voice_tasks)
+            ]
+        )
         if character_voice_tasks
         else []
     )
+    character_voice_results = []
+    for packet in character_voice_packets:
+        character_voice_results.append(
+            _ReviewResultProxy(_packet_content(packet))
+        )
     character_voice_failures = [
         (character, result)
         for character, result in zip(
@@ -764,7 +814,28 @@ VERDICT: PASS / WATCH / FAIL
         or dialogue_reader_failed
         or artifice_reader_failed
         or cadence_reader_failed
+        or bool(review_execution_failures)
     )
+
+    if review_execution_failures:
+        with connect() as conn:
+            for failure in review_execution_failures:
+                conn.execute(
+                    """
+                    INSERT INTO review_findings(
+                        task_id,reviewer,category,severity,summary,suggestion,status
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task_id,
+                        str(failure["label"]),
+                        "review-execution",
+                        "blocking",
+                        "Reviewer 执行失败：" + str(failure["error"]),
+                        "修复该 Reviewer 调用后，重新完成所有 Reviewer 的全量审核；不得用其他 Reviewer 结果替代。",
+                        "open",
+                    ),
+                )
 
     async def _run_specialist(index: int, spec: tuple[str, str, str]):
         role, category, instruction = spec
@@ -793,12 +864,38 @@ VERDICT: PASS / WATCH / FAIL
         )
         return role, category, result
 
-    specialist_results = await asyncio.gather(
+    specialist_packets = await asyncio.gather(
         *(
-            _run_specialist(index, spec)
+            _safe_review_task(
+                _run_specialist(index, spec),
+                f"specialist-{spec[0]}",
+            )
             for index, spec in enumerate(specs)
         )
     )
+
+    specialist_results = []
+    for packet, spec in zip(specialist_packets, specs, strict=True):
+        if packet["ok"]:
+            specialist_results.append(packet["result"])
+            continue
+        role, category, _instruction = spec
+        review_execution_failures.append(
+            {"label": str(packet["label"]), "error": str(packet["error"])}
+        )
+        specialist_results.append(
+            (
+                role,
+                category,
+                _ReviewResultProxy(
+                    "NARRATIVEOS_REVIEW_V3\n"
+                    "【严重性】blocking\n"
+                    "【问题说明】Reviewer 执行失败，整轮审核不完整。\n"
+                    "【建议动作】修复 Reviewer 执行后重新完成全量审核。\n"
+                    "【执行错误】" + str(packet["error"])
+                ),
+            )
+        )
 
     for role, category, result in specialist_results:
         outputs.append(f"[{category}] {result.content}")
