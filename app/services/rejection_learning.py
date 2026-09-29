@@ -117,6 +117,7 @@ def record_rejection_batch(
         project_id=project_id,
         source=source,
         events=event_list,
+        payload=payload,
     )
 
     return {
