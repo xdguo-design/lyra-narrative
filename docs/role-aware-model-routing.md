@@ -4,10 +4,10 @@
 
 当前默认路由：
 
-- Writer / Planner / Revision: ATRIA -> AGNES -> KIMIK3
-- Automated Natural Reader: GLM52 -> SENSENOVA68 -> AGNES
-- Reasoning Reader: DEEPSEEKV4PRO -> MODELSCOPE -> GLM52
-- Final Machine Review: SENSENOVA -> DEEPSEEKV4PRO -> AGNES
+- Writer / Planner / Revision: SENSENOVA -> AGNES
+- Automated Natural Reader: AGNES -> SENSENOVA -> MODELSCOPE
+- Reasoning Reader: MODELSCOPE -> AGNES -> SENSENOVA
+- Final Machine Review: SENSENOVA -> AGNES -> MODELSCOPE
 
 说明：
 
@@ -22,15 +22,15 @@
 
 Default specialist primaries are intentionally different:
 
-- blind-reader: GLM52
-- blind-natural-reader: SENSENOVA68
+- blind-reader: AGNES
+- blind-natural-reader: AGNES
 - aesthetic-reviewer: AGNES
-- blind-artifice-reader: DEEPSEEKV4PRO
+- blind-artifice-reader: MODELSCOPE
 - cadence-character-reader: MODELSCOPE
 - continuity-reviewer: MODELSCOPE
-- plot-reviewer: DEEPSEEKV4PRO
-- character-reviewer: GLM52
-- reader-gap-reviewer: DEEPSEEKV4PRO
+- plot-reviewer: MODELSCOPE
+- character-reviewer: AGNES
+- reader-gap-reviewer: MODELSCOPE
 
 A role can be overridden with:
 NARRATIVE_ROLE_<ROLE_NAME_WITH_UNDERSCORES>_PROFILE
@@ -42,4 +42,4 @@ NARRATIVE_ROLE_<ROLE_NAME_WITH_UNDERSCORES>_PROFILE
 
 This layer is intentionally separate from blind Reader v11. Character Voice Review may read the target character card and recent chapter window; blind readers still receive no character cards or reviewer outputs. A failure in either channel blocks dialogue approval.
 
-Character reviewers run in parallel, use the natural-reader routing bucket, and log under stages such as `character-voice-r1-<character_id>`. The default profile is GLM52 with the normal natural-reader fallback chain.
+Character reviewers run in parallel, use the natural-reader routing bucket, and log under stages such as `character-voice-r1-<character_id>`. The default profile is AGNES with the normal natural-reader fallback chain.
