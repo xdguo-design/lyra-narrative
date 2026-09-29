@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.services.default_skills import BUILTIN_SKILLS
+from app.services.skill_learning_store import apply_persisted_learning_to_conn
 
 
 def db_path() -> Path:
@@ -102,6 +103,8 @@ def _ensure_builtin_skills(conn: sqlite3.Connection) -> None:
                     skill["id"],
                 ),
             )
+
+    apply_persisted_learning_to_conn(conn, BUILTIN_SKILLS)
 
 def _seed_demo(conn: sqlite3.Connection) -> None:
     if os.getenv("NOVEL_SEED_DEMO", "1") in {"0", "false", "False"}:
@@ -261,6 +264,25 @@ def init_db() -> None:
                 chapter_version_id INTEGER REFERENCES chapter_versions(id) ON DELETE SET NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS skill_rejection_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL REFERENCES writing_tasks(id) ON DELETE CASCADE,
+                project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+                batch_id TEXT NOT NULL,
+                source TEXT NOT NULL,
+                reviewer TEXT NOT NULL DEFAULT '',
+                category TEXT NOT NULL DEFAULT '',
+                pattern_signature TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                suggestion TEXT NOT NULL DEFAULT '',
+                excerpt TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(batch_id, pattern_signature, reviewer)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_skill_rejection_events_project
+            ON skill_rejection_events(project_id, created_at);
 
             CREATE TABLE IF NOT EXISTS memories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

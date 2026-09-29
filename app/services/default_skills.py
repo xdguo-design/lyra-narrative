@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 16
+BUILTIN_WRITING_SKILL_VERSION = 17
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -352,6 +352,14 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 重大记忆/身份切换是否像资料加载一样过于顺滑？
 - 极短对白是否只是作者压缩，而不是人物自然会说的话？
 若任一项成立，先改再交。
+
+十七、内置 Skill 自动学习
+1. 任何正式打回都属于训练信号：Reader / Character Voice / Reviewer / Final Review / 人工验收只要明确拒绝，本次失败必须先写入内置 Skill，再允许下一轮重写。
+2. Writer Skill 必须保存“失败模式 + 真实样本 + 预防动作”，让后续新任务默认继承；不得只改当前正文。
+3. 同类失败再次出现时记为复发，不重复制造同义规则；复发意味着既有规则需要加强或回归测试不足。
+4. 新问题先作为 CALIBRATING 学习项进入 Skill；只有经过泛化、正反例与误报边界验证后，才升级成新的硬标签或 blocking Gate。
+5. 自动学习不能覆盖事实/因果/人物信息边界；修复规则若与更高优先级约束冲突，以事实、因果、世界规则和人物动机为先。
+6. 每次 Writer / Revision 开始前，必须读取当前任务冻结的最新 Skill 版本；打回后的同一任务也要切换到新版本，禁止继续使用打回前的旧 Skill。
 """
 
 
@@ -1389,12 +1397,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 11
+BUILTIN_READER_REVIEW_SKILL_VERSION = 12
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v11】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v12】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1633,6 +1641,14 @@ C15 主角能动性：一章的关键发现、决定、推进和后果是否几�
 原则：
 人工阅读是训练信号，不是永久流水线工位。
 同类问题一旦被成功固化，后续应由 Reader 自动承担。
+
+十一、内置 Reader 自动学习
+1. 不管是谁打回，只要形成正式拒绝，就必须同时写入 Reader Skill：记录“为什么当时应该拦住、以后最早在哪一层拦住”。
+2. 人工验收拒绝使用来源 HUMAN_REJECT；其优先级与机器 blocking 相同，不能只留在聊天或审批备注里。
+3. 当前任务被打回后，下一次 Reader 复审必须使用升级后的 Reader Skill 版本；用旧规则复审属于流程错误。
+4. 同类问题再次出现时记录复发次数和新样本，不重复造同义标签；复发必须被视为回归失败。
+5. 新学习项默认 CALIBRATING，不因一次打回就强行全局泛化；但对“同一失败模式”必须立即作为主动检查项。
+6. 自动学习只证明“以后要检查”，不证明正文已经修好；正文仍必须重新盲读并 PASS。
 """
 
 
