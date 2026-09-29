@@ -1,0 +1,46 @@
+name: Writer Provider Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/writer-provider-smoke.request"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOVEL_SEED_DEMO: "0"
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NOVEL_AI_HTTP_RETRIES: "0"
+      NOVEL_AI_TIMEOUT_SECONDS: "30"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Probe AGNES and DOTS3
+        run: PYTHONPATH=. python scripts/smoke_test_writer_profiles.py
+
+      - name: Upload smoke results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: writer-provider-smoke
+          path: artifacts/writer-provider-smoke
+          if-no-files-found: warn
+          retention-days: 7
