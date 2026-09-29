@@ -61,7 +61,7 @@ def test_long_arc_reviewer_blocks_long_form_drift():
         "LONG_TERM_STATE_DRIFT",
     ]:
         assert marker in pipeline
-    assert '"long-arc-reviewer": "DEEPSEEKV4PRO"' in ai
+    assert '"long-arc-reviewer": "MODELSCOPE"' in ai
 
 
 def test_targeted_reader_review_seeds_long_form_control_pack():
