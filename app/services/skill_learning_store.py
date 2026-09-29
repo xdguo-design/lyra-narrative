@@ -85,8 +85,9 @@ def persist_learning_batch(
     project_id: int,
     source: str,
     events: list[dict[str, str]],
+    payload: dict | None = None,
 ) -> dict:
-    payload = build_learning_batch(
+    payload = payload or build_learning_batch(
         task_id=task_id,
         project_id=project_id,
         source=source,
