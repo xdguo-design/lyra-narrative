@@ -7,7 +7,7 @@ on:
       - ".github/requests/long-consistency-test.request"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   consistency:
@@ -85,3 +85,8 @@ jobs:
           path: artifacts/long-consistency-test
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
+

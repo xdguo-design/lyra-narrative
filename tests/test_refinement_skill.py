@@ -208,7 +208,7 @@ def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
 
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 16
+    assert BUILTIN_WRITING_SKILL_VERSION == 17
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -344,7 +344,7 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
 
 
 def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -537,9 +537,9 @@ def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
 
 
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
-    assert BUILTIN_WRITING_SKILL_VERSION == 16
+    assert BUILTIN_WRITING_SKILL_VERSION == 17
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     for marker in [
         "INVESTIGATION_WORKSHEET_GAP",
@@ -560,9 +560,9 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
 
 
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
-    assert BUILTIN_WRITING_SKILL_VERSION == 16
+    assert BUILTIN_WRITING_SKILL_VERSION == 17
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     combined = (
         f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
@@ -588,7 +588,7 @@ def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
 
 
 def test_reader_v11_enforces_spoken_dialogue_mouth_test_across_readers():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     for marker in [
         "跨 Reader 口语硬门槛",

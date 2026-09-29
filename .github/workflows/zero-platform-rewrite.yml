@@ -7,7 +7,7 @@ on:
       - ".github/requests/zero-platform-rewrite.request"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   rewrite:
@@ -71,3 +71,8 @@ jobs:
           path: artifacts/zero-platform-platform-rewrite
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
+

@@ -7,7 +7,7 @@ on:
       - ".github/requests/yamen-first-ten-pipeline.request"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -216,3 +216,8 @@ jobs:
           path: artifacts/yamen-proficiency-first-ten-pipeline
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
+

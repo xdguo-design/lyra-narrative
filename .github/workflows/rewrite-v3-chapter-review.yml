@@ -7,7 +7,7 @@ on:
       - ".github/requests/rewrite-v3-chapter-review.request"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   review:
@@ -73,3 +73,8 @@ jobs:
           path: artifacts/rewrite-v3-chapter-review
           if-no-files-found: error
           retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
+
