@@ -4,8 +4,8 @@ import time
 from dataclasses import dataclass
 
 from app.db import connect
-from app.services.rejection_learning import learn_from_open_blocking_findings
 from app.services.ai_service import AssistResult, assist
+from app.services.rejection_learning import learn_from_open_blocking_findings
 
 
 class WorkflowStateError(RuntimeError):
