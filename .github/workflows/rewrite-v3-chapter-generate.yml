@@ -77,7 +77,6 @@ jobs:
         run: |
           test -n "$NARRATIVE_PROFILE_DOTS3" || { echo "DOTS3 profile variable is missing"; exit 1; }
           test -n "$NARRATIVE_PROFILE_SECRET_DOTS3" || { echo "DOTS3 secret is missing"; exit 1; }
-          echo "$NARRATIVE_PROFILE_DOTS3" | grep -qi "glm-5.3" || { echo "DOTS3 is not configured for GLM 5.3 Flash"; exit 1; }
 
       - name: Generate chapter 02 through NarrativeOS
         run: PYTHONPATH=. python scripts/generate_rewrite_v3_chapter.py
