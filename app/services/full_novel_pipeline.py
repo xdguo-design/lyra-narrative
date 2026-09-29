@@ -359,6 +359,10 @@ VERDICT: PASS 或 VERDICT: FAIL
                     "open",
                 ),
             )
+        learn_from_open_blocking_findings(
+            task_id=task_id,
+            source=f"revision-integrity-r{round_no}",
+        )
     return result.content, failed
 
 
