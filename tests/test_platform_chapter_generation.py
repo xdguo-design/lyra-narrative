@@ -20,7 +20,7 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     ).read_text(encoding="utf-8")
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
-        "NARRATIVE_WRITER_PROFILE: SENSENOVA",
+        "NARRATIVE_WRITER_PROFILE: DOTS3",
         "NARRATIVE_NATURAL_READER_PROFILE: GLM52",
         "NARRATIVE_REASONING_READER_PROFILE: DEEPSEEKV4PRO",
         "NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: GLM52",
@@ -76,7 +76,7 @@ def test_writer_route_prunes_slow_providers():
     source = Path(
         ".github/workflows/rewrite-v3-chapter-generate.yml"
     ).read_text(encoding="utf-8")
-    assert "NARRATIVE_WRITER_PROFILE: SENSENOVA" in source
+    assert "NARRATIVE_WRITER_PROFILE: DOTS3" in source
     writer_line = next(
         line.strip()
         for line in source.splitlines()
@@ -85,3 +85,15 @@ def test_writer_route_prunes_slow_providers():
     assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES:"
     assert 'NOVEL_AI_TIMEOUT_SECONDS: "60"' in source
     assert 'NOVEL_AI_HTTP_RETRIES: "0"' in source
+
+
+def test_dots3_writer_profile_is_wired():
+    source = Path(".github/workflows/rewrite-v3-chapter-generate.yml").read_text(encoding="utf-8")
+    for marker in [
+        "NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}",
+        "NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}",
+        "NARRATIVE_WRITER_PROFILE: DOTS3",
+        "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: DOTS3",
+        "Validate DOTS3 writer profile",
+    ]:
+        assert marker in source
