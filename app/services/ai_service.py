@@ -137,9 +137,9 @@ def _role_profile_candidates(role: str) -> list[str]:
     settings = {
         "writer": (
             "NARRATIVE_WRITER_PROFILE",
-            "SENSENOVA",
+            "GLM53FLASH",
             "NARRATIVE_WRITER_FALLBACK_PROFILES",
-            "AGNES",
+            "SENSENOVA,AGNES",
         ),
         "natural-reader": (
             "NARRATIVE_NATURAL_READER_PROFILE",
