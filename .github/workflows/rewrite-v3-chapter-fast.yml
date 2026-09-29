@@ -1,0 +1,53 @@
+name: Rewrite v3 Chapter Fast Draft
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/rewrite-v3-chapter-fast.request"
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NOVEL_DB_PATH: /tmp/rewrite-v3-chapter-fast.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+
+      NARRATIVE_WRITER_PROFILE: GLM53FLASH
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,SENSENOVA,AGNES
+      NOVEL_AI_MAX_TOKENS: "4800"
+      NOVEL_AI_TIMEOUT_SECONDS: "90"
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+      - name: Generate fast chapter draft
+        run: PYTHONPATH=. python scripts/generate_rewrite_v3_chapter_fast.py
+      - name: Upload fast draft
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rewrite-v3-chapter-fast-draft
+          path: artifacts/rewrite-v3-chapter-fast-draft
+          if-no-files-found: error
+          retention-days: 7
