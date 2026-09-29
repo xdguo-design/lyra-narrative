@@ -1,0 +1,58 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "91f19e77f2be4ab1a34a32792105cbf2",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T12:31:58.972219+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "measurement-consistency",
+      "reason": "MEASUREMENT_ARITHMETIC_GAP：复量数据自相矛盾。正文写“昨夜入库记录五斗，今早实有一斗四升”，随后却宣布“短三斗一升”；按同一斗升口径差值并不成立。",
+      "suggestion": "任何计量结论必须先做算术一致性校验。若剧情只冻结“短三斗一升”，正文不要擅自补写总斗数和剩余斗数；直接写同口径复量后确认短三斗一升即可。",
+      "excerpt": "“昨夜入库记录是五斗……实有一斗四升。短三斗一升。”",
+      "pattern_signature": "d520272f4b3eb12d0dc41aeb"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "next-chapter-boundary",
+      "reason": "NEXT_CHAPTER_LEAK：第二章章末把马二死亡发现写成“去他家叫门，门开着”，擅自确定发现地点并与第三章冻结的湿巷/移尸线冲突。",
+      "suggestion": "第二章只允许死讯进入：有人来报“马二死了/找到时已经没气”。不得交代在哪里找到、谁先看到、门窗状态、尸体姿态、鞋底、雨水或现场物证。",
+      "excerpt": "“我刚才去他家叫门，门开着……没气了。”",
+      "pattern_signature": "c9e246d8b1eda47fa13c3fe9"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "canon-drift",
+      "reason": "CANON_FACT_DRIFT：正文为了制造可疑感擅自新增“孙成今早请假，说腿疼”，冻结设定没有该事实，且会改变后续对孙成的调查状态。",
+      "suggestion": "没有冻结来源的人物状态、请假、伤病、行踪、口供、证据都不得临场补造。需要孙成暂未出现时，只写当前未见到他或由周虎另行找人，不替设定补原因。",
+      "excerpt": "“他今早请了假，说腿疼。”",
+      "pattern_signature": "2bac21d81d6652d7149e981c"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "author-summary",
+      "reason": "AUTHOR_SUMMARY_GAP：正文再次出现作者替人物总结案情和心理的句子，如“心里清楚接下来要验的东西更要紧”“三者之间必然有联系”，削弱现场感并越过证据边界。",
+      "suggestion": "删掉作者结论，让判断落到人物可见动作、停顿、复核和短对白。陈安只能确认可验证事实，不能由旁白替他把异常自动串成因果。",
+      "excerpt": "“心里清楚接下来要验的东西，比刚才问话更要紧。”",
+      "pattern_signature": "8ad5e51dd36e46c25aad5c39"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "action-continuity",
+      "reason": "MICRO_CONTINUITY_GAP：刘旺前文已经“把柴放下”，后文又变成“手里攥着那捆柴”，同一场景手中物状态被无解释重置。",
+      "suggestion": "每次局部续写和分段拼接前检查人物手中物、站位、伤势和正在做的动作；物件状态改变后，后文不得自动恢复。",
+      "excerpt": "“刘旺把柴放下” / “手里攥着那捆柴”",
+      "pattern_signature": "9ae66e1f0fec8178afb6ac94"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "procedure-sequence",
+      "reason": "PROCEDURE_SEQUENCE_GAP：冻结流程要求先用秤确认重量对不上，再用官斗同口径复量；正文却先完成官斗复量，随后才补称重，程序顺序倒置。",
+      "suggestion": "调查流程中的程序节点必须按冻结顺序落地：先秤重异常→再调昨夜记录→再用官斗同口径复量→最后得出短三斗一升。不得在结论后补做前置验证。",
+      "excerpt": "先“一斗一斗地量”得出短缺，之后才“重新称了一下”。",
+      "pattern_signature": "2aaf220f832414ebdfa1dd61"
+    }
+  ]
+}
