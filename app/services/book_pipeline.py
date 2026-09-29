@@ -138,7 +138,7 @@ async def _plan_book(
         role="story-architect",
         stage="book-architecture",
         mode="continue",
-        content="",
+        content=prior,
         instruction="\n\n".join(
             item
             for item in [
@@ -256,6 +256,49 @@ async def _plan_book(
         )
     return task_id
 
+
+def _chapter_text_is_usable(text: str) -> bool:
+    stripped = str(text or "").strip()
+    if len(stripped) < 800:
+        return False
+    body = re.sub(r"^\\s*第[^\\n]{0,30}章[^\\n]*\\n?", "", stripped, count=1)
+    if len(body.strip()) < 700:
+        return False
+    paragraphs = [
+        item.strip()
+        for item in re.split(r"\\n\\s*\\n", body)
+        if item.strip()
+    ]
+    return len(paragraphs) >= 5
+
+
+def _blocking_review_digest(task_id: int, max_chars: int = 12000) -> str:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT reviewer,category,summary,suggestion
+            FROM review_findings
+            WHERE task_id=? AND status='open' AND severity='blocking'
+            ORDER BY id
+            """,
+            (task_id,),
+        ).fetchall()
+
+    chunks: list[str] = []
+    total = 0
+    for row in rows:
+        summary = str(row["summary"] or "").strip()
+        suggestion = str(row["suggestion"] or "").strip()
+        chunk = (
+            f"[{row['reviewer']}/{row['category']}]\\n"
+            f"问题：{summary[:1200]}\\n"
+            f"修复：{suggestion[:800]}"
+        )
+        if total + len(chunk) > max_chars:
+            break
+        chunks.append(chunk)
+        total += len(chunk)
+    return "\\n\\n".join(chunks)
 
 async def _run_frozen_chapter(
     *,
