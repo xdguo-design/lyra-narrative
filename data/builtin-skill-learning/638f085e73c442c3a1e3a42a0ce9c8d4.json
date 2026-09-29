@@ -1,0 +1,42 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "638f085e73c442c3a1e3a42a0ce9c8d4",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T10:20:00+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "disclosure-threshold",
+      "reason": "DISCLOSURE_THRESHOLD_GAP：第三次复发。第七轮开头刘旺在周虎复核之前就主动说“孙库吏让我送的”，后续又在未被单独追问好处前主动说五文钱。",
+      "suggestion": "升级为硬时序：正文前段不得出现刘旺主动说“孙成/五文”。必须先由周虎压实推车事实；随后两个独立追问分别解锁孙成与五文钱。",
+      "excerpt": "“孙库吏让我送的。” / “还给了五文钱。”",
+      "pattern_signature": "f66e31feed1fdb462e31bca2"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "chapter-function",
+      "reason": "CHAPTER_FUNCTION_GAP：正文到了章末仍未真正找回破口赈粮袋，也没有完成官斗复量短三斗一升，只写成“准备复核”，导致第二章计划节点未完成。",
+      "suggestion": "马二死亡消息出现前必须完成：找到昨日破口赈粮袋→确认位置异常/被再次移动→周虎调取昨夜记录→用官斗按同口径复量→明确短三斗一升。",
+      "excerpt": "“把官斗拿来。我要复核……”之后直接进入马二死亡消息。",
+      "pattern_signature": "7dbd98f1c5a6f9021d5340fc"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "author-summary",
+      "reason": "AUTHOR_SUMMARY_GAP：正文用“周虎的程序走得很稳”“赵六不是怕麻烦，他是怕责任”等作者替人物总结的句子解释行为，削弱现场感。",
+      "suggestion": "禁止作者替人物下结论；把判断改成可见动作、停顿、收声、站位和一句当场对白。特别搜索“陈安心里清楚/周虎是在/赵六不是…而是…”类句式。",
+      "excerpt": "“周虎的程序走得很稳……” / “赵六不是怕麻烦，他是怕责任。”",
+      "pattern_signature": "fb224f1f24ebb774ab85e8fa"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "evidence-boundary",
+      "reason": "EVIDENCE_OVERCLAIM_GAP：陈安从一处车辙转折直接推断“有人刻意避开什么”，证据不足，超出他只说能确认事实的边界。",
+      "suggestion": "陈安只描述痕迹本身，如“印子在这里拐了/到这里断了/像这辆车”；动机和行为人必须留给后续复核。",
+      "excerpt": "“那不是车自己拐的弯，而是有人在后面推着，刻意避开了某样东西。”",
+      "pattern_signature": "8b9a8c564481a8c158c59940"
+    }
+  ]
+}
