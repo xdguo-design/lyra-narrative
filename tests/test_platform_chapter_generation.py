@@ -83,7 +83,7 @@ def test_writer_route_prunes_slow_providers():
         if "NARRATIVE_WRITER_FALLBACK_PROFILES:" in line
     )
     assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES: AGNES"
-    assert 'NOVEL_AI_TIMEOUT_SECONDS: "60"' in source
+    assert 'NOVEL_AI_TIMEOUT_SECONDS: "120"' in source
     assert 'NOVEL_AI_HTTP_RETRIES: "0"' in source
 
 
