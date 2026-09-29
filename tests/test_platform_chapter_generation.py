@@ -99,11 +99,25 @@ def test_benchmark_selected_writer_profile_is_wired():
         assert marker in source
 
 
-def test_fast_chapter_gate_regex_import_is_wired():
+def test_fast_chapter_runs_all_reviewers_before_reject_learning():
     source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
         encoding="utf-8"
     )
     assert "import re" in source
     assert "re.search(" in source
-    assert "fast-reviewer" in source
-    assert "record_rejection_batch" in source
+    assert "_run_review_round(" in source
+    assert "auto_learn=False" in source
+    assert "_insert_hard_gate_findings(" in source
+    assert "learn_from_open_blocking_findings(" in source
+    assert "chapter-02-complete-review" in source
+    assert "all_reviews_completed_before_reject" in source
+
+
+def test_full_review_round_can_defer_learning_until_all_reviewers_finish():
+    source = Path("app/services/full_novel_pipeline.py").read_text(
+        encoding="utf-8"
+    )
+    assert "auto_learn: bool = True" in source
+    assert "if has_blocking and auto_learn:" in source
+    assert "_safe_review_task(" in source
+    assert "review_execution_failures" in source
