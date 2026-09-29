@@ -47,22 +47,24 @@ def test_yamen_generation_uses_long_form_control_pack_by_scope():
     assert '"lean_generation_context_used": True' in current
 
 
-def test_long_arc_reviewer_blocks_long_form_drift():
+
+def test_continuity_plot_reviewer_covers_long_form_drift():
     pipeline = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
     ai = Path("app/services/ai_service.py").read_text(encoding="utf-8")
+    review_start = pipeline.index("async def _run_review_round(")
+    review_end = pipeline.index("async def run_full_novel_pipeline", review_start)
+    review = pipeline[review_start:review_end]
     for marker in [
-        '"long-arc-reviewer"',
-        "VOLUME_OUTLINE_DRIFT",
-        "FORESHADOW_EARLY_REVEAL",
-        "FORESHADOW_DROPPED",
-        "PROFICIENCY_TIER_LEAP",
-        "CONFLICT_ENGINE_DRIFT",
-        "OPPONENT_FLATTENING",
-        "LONG_TERM_STATE_DRIFT",
+        '"continuity-plot-reviewer"',
+        "长线阶段漂移",
+        "技能跳级",
+        "对手突然变蠢",
+        "伏笔",
+        "世界规则",
+        "知识来源缺口",
     ]:
-        assert marker in pipeline
-    assert '"long-arc-reviewer": "MODELSCOPE"' in ai
-
+        assert marker in review
+    assert '"continuity-plot-reviewer": "GLM53FLASH"' in ai
 
 def test_targeted_reader_review_seeds_long_form_control_pack():
     source = Path("scripts/review_rewrite_v3_chapter.py").read_text(
