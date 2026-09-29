@@ -97,3 +97,13 @@ def test_benchmark_selected_writer_profile_is_wired():
         "Validate selected writer profiles",
     ]:
         assert marker in source
+
+
+def test_fast_chapter_gate_regex_import_is_wired():
+    source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    assert "import re" in source
+    assert "re.search(" in source
+    assert "fast-reviewer" in source
+    assert "record_rejection_batch" in source
