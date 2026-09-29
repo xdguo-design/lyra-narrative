@@ -54,3 +54,18 @@ def test_platform_chapter_generation_uses_lean_context_after_human_reject():
         "OPPONENT_LADDER",
     ]:
         assert forbidden not in source
+
+
+
+def test_chapter_gate_rejects_truncated_successful_outputs():
+    source = Path("app/services/book_pipeline.py").read_text(encoding="utf-8")
+    for marker in [
+        "len(stripped) < 1800",
+        "len(body) < 1600",
+        'terminal not in "。！？…」』”）】"',
+        "2500—4500",
+        "writer returned invalid chapter stub after semantic retry",
+    ]:
+        assert marker in source
+    assert 'stage="book-architecture"' in source
+    assert 'content=""' in source
