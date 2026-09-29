@@ -120,7 +120,7 @@ _ROLE_PRIMARY_DEFAULTS = {
     "reader-gap-reviewer": "MODELSCOPE",
     "training-examiner": "MODELSCOPE",
     "master-reader": "AGNES",
-    "continuity-plot-reviewer": "AGNES",
+    "continuity-plot-reviewer": "GLM53FLASH",
     "character-dialogue-reviewer": "AGNES",
     "language-rhythm-reviewer": "XINGCHENAGI",
 }
