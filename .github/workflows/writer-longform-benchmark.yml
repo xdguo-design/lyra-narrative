@@ -1,0 +1,45 @@
+name: Writer Longform Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/writer-longform-benchmark.request"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NOVEL_SEED_DEMO: "0"
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Benchmark AGNES and DOTS3
+        run: PYTHONPATH=. python scripts/benchmark_writer_profiles.py
+
+      - name: Upload benchmark outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: writer-longform-benchmark
+          path: artifacts/writer-benchmark
+          if-no-files-found: warn
+          retention-days: 7
