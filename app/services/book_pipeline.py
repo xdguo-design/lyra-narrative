@@ -287,13 +287,11 @@ def _chapter_text_is_usable(text: str) -> bool:
     terminal = tail[-1]
     if terminal not in "。！？…」』”）】":
         return False
-    if (
+    return not (
         terminal in "」』”）】"
         and len(tail) >= 2
         and tail[-2] not in "。！？…—」』”）】"
-    ):
-        return False
-    return True
+    )
 
 
 def _blocking_review_digest(task_id: int, max_chars: int = 12000) -> str:
