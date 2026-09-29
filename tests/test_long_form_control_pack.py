@@ -25,7 +25,7 @@ def test_volume_outline_covers_all_first_volume_chapters():
         assert f"### {chapter}" in text
 
 
-def test_yamen_generation_seeds_long_form_control_pack():
+def test_yamen_generation_uses_long_form_control_pack_by_scope():
     current = Path("scripts/generate_rewrite_v3_chapter.py").read_text(
         encoding="utf-8"
     )
@@ -39,8 +39,12 @@ def test_yamen_generation_seeds_long_form_control_pack():
         "proficiency-skill-tree-v1.md",
         "conflict-opponent-ladder-v1.md",
     ]:
-        assert marker in current
         assert marker in first_ten
+
+    assert "keep_generation_skills_lean" in current
+    assert "_persist_memory(" not in current
+    assert '"long_form_control_pack_used": False' in current
+    assert '"lean_generation_context_used": True' in current
 
 
 def test_long_arc_reviewer_blocks_long_form_drift():
