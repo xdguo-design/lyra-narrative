@@ -167,9 +167,9 @@ async def run_profile(profile_name: str, out_dir: Path) -> dict:
 async def main() -> int:
     out_dir = Path("artifacts/model-pool-benchmark")
     out_dir.mkdir(parents=True, exist_ok=True)
-    results = []
-    for profile_name in PROFILES:
-        results.append(await run_profile(profile_name, out_dir))
+    results = await asyncio.gather(
+        *(run_profile(profile_name, out_dir) for profile_name in PROFILES)
+    )
 
     (out_dir / "results.json").write_text(
         json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8"
