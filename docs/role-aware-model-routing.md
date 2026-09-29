@@ -34,3 +34,12 @@ Default specialist primaries are intentionally different:
 
 A role can be overridden with:
 NARRATIVE_ROLE_<ROLE_NAME_WITH_UNDERSCORES>_PROFILE
+
+
+## Character Voice Review
+
+`character-voice-reviewer` is a card-aware dialogue gate that runs for each structured character whose name appears in the current draft. Each active character reviews only their own spoken lines, line by line, and answers one core question: would I actually say this here, given my identity, relationship, interests, pressure, and established voice?
+
+This layer is intentionally separate from blind Reader v11. Character Voice Review may read the target character card and recent chapter window; blind readers still receive no character cards or reviewer outputs. A failure in either channel blocks dialogue approval.
+
+Character reviewers run in parallel, use the natural-reader routing bucket, and log under stages such as `character-voice-r1-<character_id>`. The default profile is GLM52 with the normal natural-reader fallback chain.

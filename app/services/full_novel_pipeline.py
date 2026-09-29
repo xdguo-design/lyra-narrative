@@ -45,6 +45,101 @@ def _recent_chapter_window(project_id: int, current_position: int | None) -> str
     )
 
 
+def _active_character_cards(
+    project_id: int,
+    draft: str,
+    limit: int = 8,
+) -> list[dict]:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT id,name,role,profile,tags
+            FROM characters
+            WHERE project_id=?
+            ORDER BY id
+            """,
+            (project_id,),
+        ).fetchall()
+
+    active = [
+        dict(row)
+        for row in rows
+        if str(row["name"] or "").strip()
+        and str(row["name"]).strip() in draft
+    ]
+    active.sort(
+        key=lambda item: (
+            -draft.count(str(item["name"])),
+            int(item["id"]),
+        )
+    )
+    return active[:limit]
+
+
+def _character_voice_instruction(
+    character: dict,
+    recent_chapter_window: str,
+) -> str:
+    name = str(character["name"])
+    role = str(character.get("role") or "").strip()
+    profile = str(character.get("profile") or "").strip()
+    tags = str(character.get("tags") or "").strip()
+    card = "\n".join(
+        item
+        for item in [
+            f"姓名：{name}",
+            f"身份/角色：{role}" if role else "",
+            f"角色卡：{profile}" if profile else "",
+            f"标签：{tags}" if tags and tags != "[]" else "",
+        ]
+        if item
+    )
+    return "\n\n".join(
+        item
+        for item in [
+            f"""你现在不是通用 Reviewer，而是【{name}】的 Character Voice Reviewer。
+你只能审核【{name}】在当前正文里说出的台词，以及紧邻这些台词、会改变说话方式的动作/关系压力。
+你的判断标准不是“这句话意思对不对”，而是“以我的身份、脾气、关系、利益和此刻压力，我真的会这么说吗”。
+
+角色卡：
+{card}
+
+硬规则：
+1. 当前正文中属于【{name}】的每一句对白都必须逐句列出，PASS 也要列；不得只挑明显问题。
+2. 做“说出口测试”：逻辑正确、证据边界正确、人物显得聪明，都不能替代口语自然。
+3. 若一句话过度工整、对称、像作者总结、像规章、像金句、像为了证明人物聪明/专业而写，必须 FAIL。
+4. 若角色卡较薄，只能依据正文已经建立的身份、关系、行为和前章表现判断；不得凭空发明方言、口头禅或背景。
+5. 不得修改剧情、事实、证据边界、人物权限和行动结果。更自然说法只能改台词表达。
+6. 熟人关系必须带关系记忆；上下级、同级、陌生人说话方式不能互换。
+7. 任何一条关键对白 FAIL，则总 VERDICT 必须 FAIL。
+
+严格输出：
+CHARACTER_VOICE_REVIEW_V1
+CHARACTER: {name}
+VERDICT: PASS 或 VERDICT: FAIL
+
+对每一句属于【{name}】的对白依次输出：
+【原句】逐字原句
+【角色判断】PASS / FAIL
+【标签】ORALITY_GAP / VOICE_OVERPERFORMANCE_GAP / DIALOGUE_VOICE_GAP / RELATIONSHIP_VOICE_GAP / OVER_RATIONAL_DIALOGUE_GAP / NONE
+【为什么像/不像我】一句到三句
+【更自然说法】FAIL 时给一版；PASS 时写 KEEP
+【必须保留】这句承担的事实、关系、权限或情绪功能
+
+最后输出：
+【整体声音】一句话概括当前章节里【{name}】的声音是否稳定。
+【不得触碰】列出修订时不能破坏的角色边界。""",
+            (
+                "【前章窗口，仅用于关系记忆和既有说话方式】\n"
+                + recent_chapter_window
+                if recent_chapter_window
+                else ""
+            ),
+        ]
+        if item
+    )
+
+
 def _persist_memory(
     *,
     project_id: int,
@@ -254,6 +349,28 @@ async def _run_review_round(
         if row
         else ""
     )
+
+    character_cards = (
+        _active_character_cards(int(row["project_id"]), draft)
+        if row
+        else []
+    )
+    character_voice_tasks = [
+        asyncio.create_task(
+            _run_step(
+                task_id=task_id,
+                role="character-voice-reviewer",
+                stage=f"character-voice-r{round_no}-{int(character['id'])}",
+                mode="check",
+                content=draft,
+                instruction=_character_voice_instruction(
+                    character,
+                    recent_chapter_window,
+                ),
+            )
+        )
+        for character in character_cards
+    ]
 
     reader_trace_task = asyncio.create_task(_run_step(
         task_id=task_id,
@@ -518,6 +635,20 @@ VERDICT: PASS / WATCH / FAIL
     cadence_reader_failed = (
         "VERDICT: FAIL" in cadence_reader_result.content.upper()
     )
+    character_voice_results = (
+        await asyncio.gather(*character_voice_tasks)
+        if character_voice_tasks
+        else []
+    )
+    character_voice_failures = [
+        (character, result)
+        for character, result in zip(
+            character_cards,
+            character_voice_results,
+            strict=True,
+        )
+        if "VERDICT: PASS" not in result.content.upper()
+    ]
 
 
     specs = [
@@ -567,7 +698,8 @@ VERDICT: PASS / WATCH / FAIL
 
     outputs: list[str] = []
     has_blocking = (
-        natural_reader_failed
+        bool(character_voice_failures)
+        or natural_reader_failed
         or dialogue_reader_failed
         or artifice_reader_failed
         or cadence_reader_failed
@@ -645,6 +777,33 @@ VERDICT: PASS / WATCH / FAIL
                             finding["end_offset"],
                         ),
                     )
+
+    for character, result in zip(
+        character_cards,
+        character_voice_results,
+        strict=True,
+    ):
+        name = str(character["name"])
+        outputs.append(f"[character-voice:{name}] {result.content}")
+        if "VERDICT: PASS" in result.content.upper():
+            continue
+        with connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO review_findings(
+                    task_id,reviewer,category,severity,summary,suggestion,status
+                ) VALUES(?,?,?,?,?,?,?)
+                """,
+                (
+                    task_id,
+                    "character-voice-reviewer",
+                    f"character-voice:{name}",
+                    "blocking",
+                    result.content,
+                    "只按角色自审给出的 FAIL 台词做最小口语修订；保留事实、证据边界、人物权限、关系和行动结果。",
+                    "open",
+                ),
+            )
 
     outputs.append(f"[reader-dialogue] {dialogue_reader_result.content}")
     if dialogue_reader_failed:

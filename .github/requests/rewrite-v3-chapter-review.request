@@ -3,5 +3,5 @@ chapter: books/yamen-proficiency/rewrite-v3/chapter-02/final-candidate.md
 previous_chapter: books/yamen-proficiency/rewrite-v3/chapter-01/final-candidate.md
 routing: heterogeneous
 commercial_reader: chatgpt-in-conversation
-attempt: 3
-reason: parallel-readers-and-live-progress-logs
+attempt: 4
+reason: character-voice-review-layer

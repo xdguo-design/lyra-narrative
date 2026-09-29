@@ -30,6 +30,34 @@ OUTPUT_DIR = Path(
 )
 
 
+CHARACTER_CARDS = [
+    (
+        "陈安",
+        "县衙白役 / 主角",
+        "谨慎、克制，先观察再下判断；刚进入这套身份与规则，不越权。说话偏短，不抢着解释自己聪明；不确定时会明确保留。",
+        '["谨慎","克制","不越权"]',
+    ),
+    (
+        "赵六",
+        "老白役 / 陈安同伴",
+        "在县衙混久了，怕惹事、会躲责任，嘴上贫但不真莽；熟人之间会损两句，遇到班头立刻收着。说话更口语、更短。",
+        '["老油条","怕事","嘴贫"]',
+    ),
+    (
+        "周虎",
+        "班头",
+        "有权威、重程序、办事直接。问话短，命令清楚，不喜欢解释大道理；可以谨慎区分事实与推断，但不会临场说成工整格言。",
+        '["班头","程序意识","短句命令"]',
+    ),
+    (
+        "刘旺",
+        "后厨跑腿 / 厨役",
+        "干杂活，怕被牵连，遇到追问会先自保、半答、解释自己为什么没错；说话粗直，有火气，不会主动替调查者整理逻辑。",
+        '["后厨","自保","粗直"]',
+    ),
+]
+
+
 def create_review_task(previous: str, current: str) -> int:
     with connect() as conn:
         old = conn.execute(
@@ -60,6 +88,15 @@ def create_review_task(previous: str, current: str) -> int:
             (project_id, "第二章", 2, current, "draft"),
         )
         del first
+
+        for name, role, profile, tags in CHARACTER_CARDS:
+            conn.execute(
+                """
+                INSERT INTO characters(project_id,name,role,profile,tags)
+                VALUES(?,?,?,?,?)
+                """,
+                (project_id, name, role, profile, tags),
+            )
 
         task = conn.execute(
             "INSERT INTO writing_tasks(project_id,chapter_id,goal,instruction,status) "
