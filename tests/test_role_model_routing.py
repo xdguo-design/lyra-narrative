@@ -27,9 +27,9 @@ def test_default_role_profiles_are_heterogeneous(monkeypatch):
     for key in keys:
         monkeypatch.delenv(key, raising=False)
 
-    assert _role_profile_candidates("writer")[0] == "ATRIA"
-    assert _role_profile_candidates("blind-reader")[0] == "GLM52"
-    assert _role_profile_candidates("blind-artifice-reader")[0] == "DEEPSEEKV4PRO"
+    assert _role_profile_candidates("writer")[0] == "SENSENOVA"
+    assert _role_profile_candidates("blind-reader")[0] == "AGNES"
+    assert _role_profile_candidates("blind-artifice-reader")[0] == "MODELSCOPE"
     assert _role_profile_candidates("final-reviewer")[0] == "SENSENOVA"
 
 
@@ -51,10 +51,10 @@ def test_specialist_readers_are_spread_across_profiles(monkeypatch):
     ]:
         monkeypatch.delenv(key, raising=False)
 
-    assert _role_profile_candidates("blind-artifice-reader")[0] == "DEEPSEEKV4PRO"
+    assert _role_profile_candidates("blind-artifice-reader")[0] == "MODELSCOPE"
     assert _role_profile_candidates("continuity-reviewer")[0] == "MODELSCOPE"
-    assert _role_profile_candidates("character-reviewer")[0] == "GLM52"
-    assert _role_profile_candidates("blind-natural-reader")[0] == "SENSENOVA68"
+    assert _role_profile_candidates("character-reviewer")[0] == "AGNES"
+    assert _role_profile_candidates("blind-natural-reader")[0] == "AGNES"
 
 
 def test_named_profile_can_reuse_shared_profile_secret(monkeypatch):
