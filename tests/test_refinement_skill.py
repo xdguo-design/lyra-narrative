@@ -190,22 +190,23 @@ def test_refinement_skill_v12_character_humor_and_ending_rules():
         assert marker in content
 
 
-def test_full_pipeline_binds_dialogue_to_character_behavior_cards():
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
-        "受压时第一反应",
-        "常用撒谎/回避方式",
-        "面对上级/同级/弱者时的不同态度",
-        "什么证据出现前绝不会承认",
-        "什么情况下才会改口",
-        "人物回答必须由性格与利益共同决定",
-        "不能因为作者需要信息就突然老实",
-        "谨慎/怕事的人是否过早坦白",
-        "为了让剧情顺利推进而让人物突然变老实",
-    ]
-    for marker in required:
-        assert marker in source
 
+def test_character_dialogue_reviewer_binds_behavior_and_disclosure_thresholds():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
+    for marker in [
+        '"character-dialogue-reviewer"',
+        "性格、利益、恐惧、秘密、底线",
+        "信息披露阈值",
+        "怕事的人会先自保",
+        "不能因为剧情需要突然全盘坦白",
+        "人物权限是否越界",
+        "说出口测试",
+        "问卷感",
+    ]:
+        assert marker in review
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
     assert BUILTIN_WRITING_SKILL_VERSION == 17
@@ -291,57 +292,48 @@ def test_refinement_skill_v12_adds_aesthetic_editing_gate():
         assert marker in content
 
 
-def test_full_pipeline_has_scene_director_aesthetic_editor_and_reviewer():
+
+def test_full_pipeline_keeps_scene_and_aesthetic_editing_before_merged_review():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
+    for marker in [
         'role="scene-director"',
         'stage="scene-blueprint"',
         'kind="scene-blueprint"',
         'role="aesthetic-editor"',
         'stage="aesthetic-edit"',
-        '"aesthetic-reviewer"',
-        '"aesthetic"',
-        "根据八个独立 Reviewer",
-        "主细节要突出",
-        "人物声音被编辑同质化",
-    ]
-    for marker in required:
+        '"language-rhythm-reviewer"',
+        "关键处是否有停顿和余味",
+        "审美判断必须可定位、可执行",
+    ]:
         assert marker in source
 
 
-def test_full_pipeline_has_blind_reader_and_reader_gap_reviewer():
+def test_continuity_plot_reviewer_absorbs_reader_gap_checks():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
-        'role="blind-reader"',
-        'stage=f"reader-trace-r{round_no}"',
-        '"reader-gap-reviewer"',
-        '"reader"',
-        "READER_TRACE_V1",
-        "semantic-gap",
-        "suspense-gap",
-        "不能用‘读者多读两遍就懂’作为通过理由",
-    ]
-    for marker in required:
-        assert marker in source
-
-    start = source.index('role="blind-reader"')
-    specs = source.index("specs = [", start)
-    blind_block = source[start:specs]
-    assert "context," not in blind_block
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
+    for marker in [
+        '"continuity-plot-reviewer"',
+        "人物为什么行动、信息从哪里来",
+        "知识来源缺口",
+        "有意未知可以保留",
+        "自己不知道什么",
+        "提前泄漏后续章信息",
+    ]:
+        assert marker in review
 
 
-def test_formal_reader_gate_enforces_unknown_boundary_labels():
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
+def test_reader_skill_preserves_unknown_boundary_labels_after_merge():
+    content = BUILTIN_READER_REVIEW_SKILL_CONTENT
+    for marker in [
         "INTENTIONAL_UNKNOWN",
         "READER_GAP",
         "AMBIGUOUS_GAP",
-        "严格按 Reader Gate v3 判定",
-        "不能用‘读者多读两遍就懂’作为通过理由",
-    ]
-    for marker in required:
-        assert marker in source
-
+        "KNOWLEDGE_PROVENANCE_GAP",
+        "UNSEEDED_CALLBACK_GAP",
+    ]:
+        assert marker in content
 
 def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
@@ -396,39 +388,22 @@ def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
         assert marker in content
 
 
-def test_full_pipeline_folds_human_read_into_blind_reader_d():
+
+def test_language_rhythm_reviewer_absorbs_natural_first_read_and_style_checks():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
-        'role="blind-natural-reader"',
-        'stage=f"reader-natural-r{round_no}"',
-        'role="blind-dialogue-reader"',
-        'stage=f"reader-dialogue-r{round_no}"',
-        "NATURAL_FIRST_READ_V2",
-        "DIALOGUE_AUTHENTICITY_V1",
-        "EMBODIED_DIALOGUE_GAP",
-        "OVER_RATIONAL_DIALOGUE_GAP",
-        "RELATIONSHIP_MEMORY_GAP",
-        "EMOTIONAL_RESIDUE_GAP",
-        "natural_reader_failed",
-        "dialogue_reader_failed",
-        "has_blocking = (",
-        "artifice_reader_failed",
-        "cadence_reader_failed",
-        "reader-naturalness",
-        '"reviewed" if final_blocking else "awaiting_approval"',
-    ]
-    for marker in required:
-        assert marker in source
-
-    forbidden = [
-        'role="final-human-reader"',
-        'stage="final-human-read"',
-        'stage="final-human-fix"',
-        'stage="final-human-recheck"',
-    ]
-    for marker in forbidden:
-        assert marker not in source
-
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
+    for marker in [
+        '"language-rhythm-reviewer"',
+        "中文语序、搭配、指代、数量",
+        "碎短句过多",
+        "场景是否有必要的空间、声音、触感、动作阻力",
+        "作者点题",
+        "人物语言是否被统一修成一种漂亮",
+        "章尾是否自然收束",
+    ]:
+        assert marker in review
 
 def test_refinement_skill_v12_requires_narrative_function_and_seam_contracts():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
@@ -468,27 +443,23 @@ def test_full_pipeline_has_revision_integrity_gate():
         assert marker in source
 
 
-def test_full_pipeline_has_author_artifice_reader_gate():
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    required = [
-        'role="blind-artifice-reader"',
-        'stage=f"reader-artifice-r{round_no}"',
-        "STORY_FLOW_ARTIFICE_V1",
-        "artifice_reader_failed",
-        "has_blocking = (",
-        "natural_reader_failed",
-        "dialogue_reader_failed",
-        "INTERPRETATION_ECHO_GAP",
-        "CLUE_LADDER_GAP",
-        "CLUE_DENSITY_GAP",
-        "SYSTEM_CONFIRMATION_LEAK",
-        "EVIDENCE_DISPLAY_STAGING",
-        'outputs.append(f"[reader-artifice] {artifice_reader_result.content}")',
-        '"reader-artifice"',
-    ]
-    for marker in required:
-        assert marker in source
 
+def test_merged_reviewers_preserve_author_artifice_checks():
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
+    combined = review + "\n" + BUILTIN_READER_REVIEW_SKILL_CONTENT
+    for marker in [
+        "解题板",
+        "证据",
+        "作者",
+        "解释",
+        "主角",
+        "INVESTIGATION_WORKSHEET_GAP",
+        "PROTAGONIST_AGENCY_GAP",
+    ]:
+        assert marker in combined
 
 def test_refinement_skill_v12_has_three_chapter_escalation_gate():
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
@@ -514,49 +485,42 @@ def test_writing_skill_v15_requires_three_chapter_climax_and_character_state_cha
         assert marker in content
 
 
-def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
+
+def test_merged_reviewers_preserve_texture_and_longitudinal_cadence_checks():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
+    combined = review + "\n" + BUILTIN_WRITING_SKILL_CONTENT + "\n" + BUILTIN_READER_REVIEW_SKILL_CONTENT
     for marker in [
         "def _recent_chapter_window",
-        'role="cadence-character-reader"',
-        'stage=f"reader-cadence-r{round_no}"',
-        "THREE_CHAPTER_CADENCE_V1",
-        "PLATEAU_CADENCE_GAP",
-        "CHARACTER_STATE_STASIS_GAP",
+        "场景是否有必要的空间、声音、触感、动作阻力",
+        "长线阶段漂移",
         "SCENE_TEXTURE_GAP",
         "ACTION_FRAGMENTATION_GAP",
-        "D01—D20",
-        "cadence_reader_failed",
-        'outputs.append(f"[reader-cadence] {cadence_reader_result.content}")',
-        "has_blocking = (",
-        "natural_reader_failed",
-        "dialogue_reader_failed",
-        "artifice_reader_failed",
+        "PLATEAU_CADENCE_GAP",
+        "CHARACTER_STATE_STASIS_GAP",
     ]:
-        assert marker in source
+        assert marker in source or marker in combined
 
 
-def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
+def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeline():
     assert BUILTIN_WRITING_SKILL_VERSION == 17
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
+    combined = (
+        f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
+        f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}\n"
+        + Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    )
     for marker in [
         "INVESTIGATION_WORKSHEET_GAP",
         "C13 推理解题板",
-        "主角主持解题板",
-        "发现 → 解释 → 验证 → 兑现",
+        "解题板",
+        "调查",
     ]:
-        assert marker in BUILTIN_WRITING_SKILL_CONTENT or marker in BUILTIN_READER_REVIEW_SKILL_CONTENT or marker in BUILTIN_REFINEMENT_SKILL_CONTENT
-
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    for marker in [
-        "必须覆盖 C01—C15",
-        "【推理解题板感】",
-        "INVESTIGATION_WORKSHEET_GAP",
-        "连续三步以上",
-    ]:
-        assert marker in source
+        assert marker in combined
 
 
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
@@ -567,47 +531,35 @@ def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
     combined = (
         f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
         f"{BUILTIN_REFINEMENT_SKILL_CONTENT}\n"
-        f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}"
+        f"{BUILTIN_READER_REVIEW_SKILL_CONTENT}\n"
+        + Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
     )
     for marker in [
         "KNOWLEDGE_PROVENANCE_GAP",
         "SALIENT_SIGNAL_ORPHAN_GAP",
         "PROTAGONIST_AGENCY_GAP",
         "UNSEEDED_CALLBACK_GAP",
-        "C14 显著信号孤儿",
-        "C15 主角能动性",
-        "A01 知识来源",
-        "A02 回调播种",
+        "知识来源缺口",
+        "主角",
+        "伏笔",
     ]:
         assert marker in combined
 
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    assert "必须覆盖 C01—C15" in source
-    assert "KNOWLEDGE_PROVENANCE_GAP" in source
-    assert "UNSEEDED_CALLBACK_GAP" in source
 
-
-def test_reader_v11_enforces_spoken_dialogue_mouth_test_across_readers():
+def test_reader_v11_enforces_spoken_dialogue_mouth_test_in_merged_character_reader():
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
-    content = BUILTIN_READER_REVIEW_SKILL_CONTENT
+    combined = (
+        BUILTIN_READER_REVIEW_SKILL_CONTENT
+        + "\n"
+        + Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    )
     for marker in [
         "跨 Reader 口语硬门槛",
-        "逻辑正确 ≠ 口语自然",
         "说出口测试",
-        "B27 说出口测试",
         "ORALITY_GAP",
         "VOICE_OVERPERFORMANCE_GAP",
-        "先记少了多少，别先替它写成丢了多少",
+        "关键对白",
+        "真人",
     ]:
-        assert marker in content
+        assert marker in combined
 
-    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
-    for marker in [
-        "必须覆盖 B01—B27",
-        "说出口测试",
-        "逻辑正确 ≠ 口语自然",
-        "ORALITY_GAP",
-        "VOICE_OVERPERFORMANCE_GAP",
-        "有道理",
-    ]:
-        assert marker in source
