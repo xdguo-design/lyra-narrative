@@ -1,0 +1,18 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "d789e544a9b84958b3900e9ffc641df5",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "AUTO_FAST_GATE",
+  "recorded_at": "2026-09-29T13:00:46.505837+00:00",
+  "events": [
+    {
+      "reviewer": "fast-hard-gate",
+      "category": "fast-gate",
+      "reason": "five-wen-without-question: fast chapter gate rejected chapter-02-fast-draft; chars=3216.",
+      "suggestion": "整章重写；严格遵守冻结事实、披露顺序、计量口径、人物权限和章末边界。",
+      "excerpt": "",
+      "pattern_signature": "d8a980226b0f0a8fcc029701"
+    }
+  ]
+}
