@@ -77,6 +77,9 @@ _NATURAL_READER_ROLES = {
     "style-reviewer",
     "naturalness-reviewer",
     "aesthetic-reviewer",
+    "master-reader",
+    "character-dialogue-reviewer",
+    "language-rhythm-reviewer",
 }
 
 _REASONING_READER_ROLES = {
@@ -90,6 +93,7 @@ _REASONING_READER_ROLES = {
     "long-arc-reviewer",
     "reader-gap-reviewer",
     "training-examiner",
+    "continuity-plot-reviewer",
 }
 
 _FINAL_REVIEW_ROLES = {
@@ -115,6 +119,10 @@ _ROLE_PRIMARY_DEFAULTS = {
     "long-arc-reviewer": "MODELSCOPE",
     "reader-gap-reviewer": "MODELSCOPE",
     "training-examiner": "MODELSCOPE",
+    "master-reader": "AGNES",
+    "continuity-plot-reviewer": "AGNES",
+    "character-dialogue-reviewer": "AGNES",
+    "language-rhythm-reviewer": "AGNES",
 }
 
 
