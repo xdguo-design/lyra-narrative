@@ -297,20 +297,16 @@ async def main() -> int:
         )
 
     findings = _review_summary(task_id)
-    has_any_blocking = has_review_blocking or bool(hard_errors) or not usable
-    has_any_blocking = has_any_blocking or any(
+    has_automated_blocking = has_review_blocking or bool(hard_errors) or not usable
+    has_automated_blocking = has_automated_blocking or any(
         str(item.get("severity")) == "blocking" for item in findings
     )
 
-    # One unified reject-learning batch, after the complete review set is available.
+    # Do not reject or learn yet. The fourth reviewer is the external
+    # ChatGPT master reader. Only after that review is added may the
+    # combined findings be accepted or rejected as one batch.
     learning = {"recorded": 0, "batch_id": None, "skill_versions": {}}
-    if has_any_blocking:
-        learning = learn_from_open_blocking_findings(
-            task_id=task_id,
-            source="chapter-02-complete-review",
-        )
-
-    status = "reviewed" if has_any_blocking else "awaiting_approval"
+    status = "awaiting_master_review"
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "chapter-02-fast-candidate.md").write_text(
@@ -352,7 +348,10 @@ async def main() -> int:
         "blocking_count": sum(
             1 for item in findings if str(item.get("severity")) == "blocking"
         ),
-        "all_reviews_completed_before_reject": True,
+        "automated_reviewer_count": len(review_outputs),
+        "automated_blocking": has_automated_blocking,
+        "master_review_pending": True,
+        "all_reviews_completed_before_reject": False,
         "learning_batch_id": learning.get("batch_id"),
         "status": status,
         "runs": [dict(row) for row in runs],
@@ -362,7 +361,7 @@ async def main() -> int:
         encoding="utf-8",
     )
     print(json.dumps(manifest, ensure_ascii=False), flush=True)
-    return 0 if status == "awaiting_approval" else 2
+    return 0
 
 
 if __name__ == "__main__":
