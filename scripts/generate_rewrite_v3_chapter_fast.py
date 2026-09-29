@@ -62,6 +62,8 @@ def _hard_gate_errors(text: str) -> list[str]:
         "卯时": "invented-time-detail",
         "申时": "invented-time-detail",
         "三更": "invented-time-detail",
+        "五更": "invented-time-detail",
+        "半夜": "invented-time-detail",
         "赵六从怀里掏": "zhaoliu-invented-record",
         "赵六掏出本子": "zhaoliu-invented-record",
         "赵六掏出一册": "zhaoliu-invented-record",
