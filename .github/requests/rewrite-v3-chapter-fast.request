@@ -1,4 +1,4 @@
-attempt: 14
+attempt: 15
 chapter: 2
 mode: fast-platform-writer
-reason: hardened-agnes-fast-reader-3000-char
+reason: retry-after-regex-gate-fix
