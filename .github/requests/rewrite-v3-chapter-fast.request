@@ -1,4 +1,4 @@
-attempt: 9
+attempt: 10
 chapter: 2
 mode: fast-platform-writer
-reason: regenerate-chapter2-with-restored-glm53flash
+reason: split-3000-char-chapter-with-glm53flash
