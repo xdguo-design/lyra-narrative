@@ -1,4 +1,4 @@
-attempt: 13
+attempt: 14
 chapter: 2
 mode: fast-platform-writer
-reason: agnes-3000-char-rewrite-with-tightened-hard-gates
+reason: two-independent-agnes-segments-with-local-rewrite
