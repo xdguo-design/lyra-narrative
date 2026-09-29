@@ -79,7 +79,7 @@ async def main() -> int:
         role="writer",
         stage="chapter-02-fast-draft",
         mode="continue",
-        content=prior[-3500:],
+        content=prior[-3000:],
         instruction=instruction,
     )
 
