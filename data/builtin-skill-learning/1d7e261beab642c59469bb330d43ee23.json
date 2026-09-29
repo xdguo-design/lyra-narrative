@@ -1,0 +1,17 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "1d7e261beab642c59469bb330d43ee23",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T12:47:53.957568+00:00",
+  "events": [
+    {"reviewer":"human-controller","category":"timeline-continuity","reason":"TIME_DETAIL_DRIFT：第二章再次擅自加入“子时前后”等冻结材料不存在的精确时刻。","suggestion":"只使用昨夜/今早/同一上午等已有时间层级，不补造时辰。","excerpt":"“昨夜，子时前后……”","pattern_signature":"7821b29536da99dac3331e9f"},
+    {"reviewer":"human-controller","category":"measurement-consistency","reason":"MEASUREMENT_UNIT_DRIFT：正文再次写“昨夜入库，粟米，五十斤”，随后用官斗得出“短三斗一升”，仍以斤两与斗升混用支撑同一短缺结论。","suggestion":"秤只写“重量对不上”，不得报斤两；最终短缺只按同口径官斗复量输出“三斗一升”。","excerpt":"“昨夜入库，粟米，五十斤。” / “短三斗一升。”","pattern_signature":"abda1fa0a76aab590a7061f7"},
+    {"reviewer":"human-controller","category":"disclosure-threshold","reason":"DISCLOSURE_THRESHOLD_GAP：刘旺在周虎没有另问“拿没拿好处/为什么肯搬”时主动补出“五文钱”，再次跳过信息阈值。","suggestion":"必须由周虎先独立追问好处，刘旺才允许回答五文；找袋时不得主动补口供。","excerpt":"“孙库吏说……给了五文钱。”","pattern_signature":"bbf99d03def379da86949228"},
+    {"reviewer":"human-controller","category":"canon-drift","reason":"CANON_FACT_DRIFT：孙成本章被凭空安排成一直站在后院阴影里，手提未点油灯，并直接参与对质；冻结第二章功能并未安排孙成本人出场。","suggestion":"第二章孙成只作为刘旺供述中的名字，不安排本人出场、旁观、提灯或对质；孙成的程序反击留到后续章节。","excerpt":"“后院门口，一直站在阴影里观察的孙成，缓缓走了出来。”","pattern_signature":"6f3a950f179eefbed1961531"},
+    {"reviewer":"human-controller","category":"next-chapter-boundary","reason":"NEXT_CHAPTER_LEAK：死讯再次泄露具体发现过程与地点，写成皂役去叫门、马二躺在西库外墙边，提前消耗第三章现场。","suggestion":"第二章死讯只能是“马二死了/找到时已经没气”，之后立即收章，不得交代地点、叫门过程和现场信息。","excerpt":"“皂役去叫门……发现马二躺在西库外墙边。”","pattern_signature":"be29a91fc34ebaf1db13042c"},
+    {"reviewer":"human-controller","category":"character-permission","reason":"CHARACTER_PERMISSION_GAP：陈安直接断言粮食干燥并指控孙成“想掩盖米少的事实”，越过白役权限和当前证据边界。","suggestion":"陈安只能指出可观察事实和不一致，不得给孙成定动机、定掩盖行为或替周虎完成讯问结论。","excerpt":"“你说是受潮，是想掩盖米少了的事实。”","pattern_signature":"67ca88f4371d36afa8065111"},
+    {"reviewer":"human-controller","category":"canon-drift","reason":"CANON_ROLE_DRIFT：正文把马二说成“负责看库的”，与冻结设定中“昨日运粮车夫”身份冲突。","suggestion":"马二身份固定为昨日运粮车夫，不得改成库房值守、看库人或县衙内部人员。","excerpt":"“就是那个……负责看库的。”","pattern_signature":"85945641e9902bf53fc5db62"}
+  ]
+}
