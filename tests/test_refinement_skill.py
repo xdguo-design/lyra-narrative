@@ -344,7 +344,7 @@ def test_formal_reader_gate_enforces_unknown_boundary_labels():
 
 
 def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -539,7 +539,7 @@ def test_full_pipeline_has_texture_and_three_chapter_cadence_gates():
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
     assert BUILTIN_WRITING_SKILL_VERSION == 16
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
 
     for marker in [
         "INVESTIGATION_WORKSHEET_GAP",
@@ -562,7 +562,7 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_pipeline():
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
     assert BUILTIN_WRITING_SKILL_VERSION == 16
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 10
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
 
     combined = (
         f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
@@ -585,3 +585,29 @@ def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
     assert "必须覆盖 C01—C15" in source
     assert "KNOWLEDGE_PROVENANCE_GAP" in source
     assert "UNSEEDED_CALLBACK_GAP" in source
+
+
+def test_reader_v11_enforces_spoken_dialogue_mouth_test_across_readers():
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 11
+    content = BUILTIN_READER_REVIEW_SKILL_CONTENT
+    for marker in [
+        "跨 Reader 口语硬门槛",
+        "逻辑正确 ≠ 口语自然",
+        "说出口测试",
+        "B27 说出口测试",
+        "ORALITY_GAP",
+        "VOICE_OVERPERFORMANCE_GAP",
+        "先记少了多少，别先替它写成丢了多少",
+    ]:
+        assert marker in content
+
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    for marker in [
+        "必须覆盖 B01—B27",
+        "说出口测试",
+        "逻辑正确 ≠ 口语自然",
+        "ORALITY_GAP",
+        "VOICE_OVERPERFORMANCE_GAP",
+        "有道理",
+    ]:
+        assert marker in source
