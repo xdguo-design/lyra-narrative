@@ -140,6 +140,7 @@ def learn_from_open_blocking_findings(
             FROM review_findings rf
             LEFT JOIN review_finding_refs rr ON rr.finding_id=rf.id
             WHERE rf.task_id=? AND rf.status='open' AND rf.severity='blocking'
+              AND rf.category<>'review-execution'
             ORDER BY rf.id
             """,
             (task_id,),
