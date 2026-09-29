@@ -20,7 +20,7 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     ).read_text(encoding="utf-8")
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
-        "NARRATIVE_WRITER_PROFILE: MODELSCOPE",
+        "NARRATIVE_WRITER_PROFILE: SENSENOVA",
         "NARRATIVE_NATURAL_READER_PROFILE: GLM52",
         "NARRATIVE_REASONING_READER_PROFILE: DEEPSEEKV4PRO",
         "NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: GLM52",
@@ -69,3 +69,19 @@ def test_chapter_gate_rejects_truncated_successful_outputs():
         assert marker in source
     assert 'stage="book-architecture"' in source
     assert 'content=""' in source
+
+
+
+def test_writer_route_prunes_slow_providers():
+    source = Path(
+        ".github/workflows/rewrite-v3-chapter-generate.yml"
+    ).read_text(encoding="utf-8")
+    assert "NARRATIVE_WRITER_PROFILE: SENSENOVA" in source
+    writer_line = next(
+        line.strip()
+        for line in source.splitlines()
+        if "NARRATIVE_WRITER_FALLBACK_PROFILES:" in line
+    )
+    assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES:"
+    assert 'NOVEL_AI_TIMEOUT_SECONDS: "60"' in source
+    assert 'NOVEL_AI_HTTP_RETRIES: "0"' in source
