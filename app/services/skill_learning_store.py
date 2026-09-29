@@ -362,3 +362,49 @@ def apply_db_learning_to_conn(conn, builtins) -> dict[str, int]:
         updated[name] = next_version
 
     return updated
+
+
+
+def import_archived_learning_to_conn(conn) -> int:
+    imported = 0
+    for batch in load_learning_batches():
+        batch_id = str(batch.get("batch_id") or "").strip()
+        if not batch_id:
+            continue
+        for raw in batch.get("events", []):
+            if not isinstance(raw, dict):
+                continue
+            event = normalize_event(
+                {
+                    "reviewer": str(raw.get("reviewer") or ""),
+                    "category": str(raw.get("category") or ""),
+                    "reason": str(raw.get("reason") or ""),
+                    "suggestion": str(raw.get("suggestion") or ""),
+                    "excerpt": str(raw.get("excerpt") or ""),
+                }
+            )
+            before = conn.total_changes
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO builtin_skill_learning_events(
+                    batch_id,task_id,project_id,source,reviewer,category,
+                    pattern_signature,reason,suggestion,excerpt,created_at
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    batch_id,
+                    batch.get("task_id"),
+                    batch.get("project_id"),
+                    str(batch.get("source") or "archive-migration"),
+                    event["reviewer"],
+                    event["category"],
+                    str(raw.get("pattern_signature") or event["pattern_signature"]),
+                    event["reason"],
+                    event["suggestion"],
+                    event["excerpt"],
+                    str(batch.get("recorded_at") or ""),
+                ),
+            )
+            if conn.total_changes > before:
+                imported += 1
+    return imported
