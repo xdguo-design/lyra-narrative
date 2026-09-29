@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.services.default_skills import BUILTIN_SKILLS
+from app.services.skill_learning_store import apply_db_learning_to_conn
 from app.services.skill_learning_store import apply_persisted_learning_to_conn
 
 
@@ -284,6 +285,25 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_skill_rejection_events_project
             ON skill_rejection_events(project_id, created_at);
 
+            CREATE TABLE IF NOT EXISTS builtin_skill_learning_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                batch_id TEXT NOT NULL,
+                task_id INTEGER,
+                project_id INTEGER,
+                source TEXT NOT NULL,
+                reviewer TEXT NOT NULL DEFAULT '',
+                category TEXT NOT NULL DEFAULT '',
+                pattern_signature TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                suggestion TEXT NOT NULL DEFAULT '',
+                excerpt TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(batch_id, pattern_signature, reviewer)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_builtin_skill_learning_events_created
+            ON builtin_skill_learning_events(created_at, id);
+
             CREATE TABLE IF NOT EXISTS memories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -434,4 +454,5 @@ def init_db() -> None:
             """
         )
         _ensure_builtin_skills(conn)
+        apply_db_learning_to_conn(conn, BUILTIN_SKILLS)
         _seed_demo(conn)
