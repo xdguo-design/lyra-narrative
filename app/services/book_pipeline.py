@@ -335,7 +335,7 @@ async def _run_frozen_chapter(
         role="writer",
         stage=f"chapter-{chapter_number:02d}-draft",
         mode="continue",
-        content="",
+        content=prior,
         instruction="\n\n".join(
             [
                 f"当前章节：第 {chapter_number} 章《{chapter['title']}》",
@@ -349,6 +349,37 @@ async def _run_frozen_chapter(
         ),
     )
 
+    if not _chapter_text_is_usable(writer.content):
+        print(
+            f"[chapter-text] INVALID task={task_id} stage=writer "
+            f"chars={len(writer.content.strip())}; retrying",
+            flush=True,
+        )
+        writer = await _run_step(
+            task_id=task_id,
+            role="writer-retry",
+            stage=f"chapter-{chapter_number:02d}-draft-retry",
+            mode="continue",
+            content=prior,
+            instruction="\n\n".join(
+                [
+                    f"重新生成第 {chapter_number} 章《{chapter['title']}》完整正文。",
+                    task["goal"],
+                    task["instruction"],
+                    context,
+                    story_state_context,
+                    "上一轮 Writer 只返回标题或空壳正文，属于无效输出。",
+                    "本轮必须直接写出完整章节，不得只输出章名、提纲、说明或占位符。",
+                    "从当前正文的章末场景直接续写；不得复制前文。",
+                    "正文必须包含完整场景、人物动作、对白、冲突推进和章末出口。",
+                    "只输出新章节正文。",
+                ]
+            ),
+        )
+    if not _chapter_text_is_usable(writer.content):
+        raise RuntimeError(
+            "writer returned invalid chapter stub after semantic retry"
+        )
     enriched = await _run_step(
         task_id=task_id,
         role="scene-enricher",
@@ -360,23 +391,41 @@ async def _run_frozen_chapter(
 不改变事件、规则、人物选择和伏笔，仅增强场景承载力：空间、声音、气味、光线、动作、停顿、潜台词、危险逼近和人物之间的压迫感。删掉可以被现场表现替代的解释性段落。只输出完整正文。""",
     )
 
+    enriched_text = enriched.content
+    if not _chapter_text_is_usable(enriched_text):
+        print(
+            f"[chapter-text] INVALID task={task_id} stage=scene-enricher "
+            f"chars={len(enriched_text.strip())}; keeping writer draft",
+            flush=True,
+        )
+        enriched_text = writer.content
     prose = await _run_step(
         task_id=task_id,
         role="prose-editor",
         stage=f"chapter-{chapter_number:02d}-prose",
         mode="polish",
-        content=enriched.content,
+        content=enriched_text,
         instruction=f"""{review_context}
 
 只做语言层编辑，并严格执行本次冻结写作 Skill：改善长短句组合、节奏、意象、对白质感、信息密度和重复。重点清理连续碎短句/单句段落、只靠“不像A、也不像B”成立的空洞描写、第一次出现却没有落地解释的陌生术语、缺乏人物意图的功能性对白，以及高频“不是A，是B”等模型腔结构。优先使用具体、正向、可感知的形象，让情绪通过动作和关系发生。禁止新增/删除关键事件，禁止修改世界规则、人物动机、伏笔位置和结局方向。只输出完整正文。""",
     )
+    prose_text = prose.content
+    if not _chapter_text_is_usable(prose_text):
+        print(
+            f"[chapter-text] INVALID task={task_id} stage=prose-editor "
+            f"chars={len(prose_text.strip())}; keeping enrichment draft",
+            flush=True,
+        )
+        prose_text = enriched_text
     draft, _ = await repair_repetition(
         task_id=task_id,
         chapter_number=chapter_number,
-        draft=prose.content,
+        draft=prose_text,
         prior_manuscript=prior_manuscript,
         story_state_context=story_state_context,
     )
+    if not _chapter_text_is_usable(draft):
+        raise RuntimeError("chapter draft became invalid before review")
     with connect() as conn:
         conn.execute(
             "UPDATE writing_tasks SET draft=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
@@ -400,11 +449,13 @@ async def _run_frozen_chapter(
         instruction="\n\n".join(
             [
                 """根据五个独立 Reviewer 的结构化审核结果修订，并严格执行冻结的“小说精修流程” Skill。REWRITE_BLOCK 必须重建 Reviewer 指定范围；LOCAL_REWRITE 只修改最小必要范围；DELETE 直接删除无效内容；POLISH 只处理语言层。blocking 必须修复，禁止新增规则绕过问题，禁止越过 Reviewer 的修改边界，也不能把冲突改成所有人互相理解。保留事实锚点和未被指出问题的有效部分。只输出完整章节。""",
-                "Reviewer 意见：\n" + "\n\n".join(first_reviews),
+                "Reviewer blocking 摘要：\n" + _blocking_review_digest(task_id),
                 review_context,
             ]
         ),
     )
+    if not _chapter_text_is_usable(revision.content):
+        raise RuntimeError("revision returned invalid chapter text")
     with connect() as conn:
         conn.execute(
             "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
@@ -432,11 +483,13 @@ async def _run_frozen_chapter(
             instruction="\n\n".join(
                 [
                     """第二轮复审仍有 blocking。只处理复审结果为 FAIL 的原问题，沿用原问题的处置级别和修改边界；不得改动已经 PASS 的范围，不得破坏已经通过的世界规则、人物冲突和章节功能。只输出完整章节。""",
-                    "第二轮 Reviewer 意见：\n" + "\n\n".join(second_reviews),
+                    "第二轮 Reviewer blocking 摘要：\n" + _blocking_review_digest(task_id),
                     review_context,
                 ]
             ),
         )
+        if not _chapter_text_is_usable(second_revision.content):
+            raise RuntimeError("second revision returned invalid chapter text")
         final_content = second_revision.content
         with connect() as conn:
             conn.execute(
