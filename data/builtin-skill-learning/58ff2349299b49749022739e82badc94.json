@@ -1,0 +1,50 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "58ff2349299b49749022739e82badc94",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T10:05:00+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "measurement-consistency",
+      "reason": "MEASUREMENT_UNIT_DRIFT：同类错误再次复发。第二轮仍把“一百二十斤→一百一十六斤四两”直接宣布为“短三斗一升”，量纲与差值均不成立。",
+      "suggestion": "升级为生成前硬校验：本章禁止同时用斤两与斗升表达同一短缺量。若需要过秤，只用于发现重量异常；最终短缺必须用昨夜同口径的官斗复量得出“三斗一升”。",
+      "excerpt": "“一百二十斤。现在，一百一十六斤四两。” / “短了三斗一升。”",
+      "pattern_signature": "d9037786e88802c8542b0bec"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "next-chapter-boundary",
+      "reason": "NEXT_CHAPTER_LEAK：同类错误再次复发。第二章结尾仍明确写出马二在“西库外墙边”以及地上躺人，提前消耗第三章现场发现。",
+      "suggestion": "升级为硬边界：第二章只允许消息进入——“马二死了/找到时已经没气”；禁止描写发现地点、尸体姿态、鞋底、周围雨水和现场物证。",
+      "excerpt": "“在西库外墙边上。已经……没气了。” / “中间地上，躺着一个人。”",
+      "pattern_signature": "755f7efc993302874e585fa8"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "canon-drift",
+      "reason": "CANON_FACT_DRIFT：为了制造证据，正文把昨日赈粮袋改写成“上月入库的豆粕袋”，并让赵六随身携带入库折纸，偏离冻结案情与人物权限。",
+      "suggestion": "禁止新造豆粕案、上月账、赵六私带库账等便利证据。核心对象必须始终是昨日赈粮的破口粮袋；账册/秤具只能由周虎或库房程序调取。",
+      "excerpt": "“半袋豆粕” / “上月入库册子” / “赵六从怀里……掏出半张皱纸”",
+      "pattern_signature": "41185832df85ed00872ebfca"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "disclosure-threshold",
+      "reason": "DISCLOSURE_THRESHOLD_GAP：第二轮虽未主动交代五文钱，但在周虎尚未先压实“昨夜推过粮袋”前，刘旺直接承认孙成批准，仍跳过人物卡的分层承认顺序。",
+      "suggestion": "严格按顺序：否认/日常化→车辙鞋印被周虎复核→只承认推过一趟→追问谁叫推才说孙成→另问好处才说五文→最后才交代袋子后来不见。",
+      "excerpt": "“挪到后厨，谁批的？” / “孙……孙库吏说的。”",
+      "pattern_signature": "f66e31feed1fdb462e31bca2"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "timeline-continuity",
+      "reason": "TIME_OF_DAY_DRIFT：第一章明确是早晨，第二轮无过渡突然写到“夜风”，造成同一段调查从白天跳夜。",
+      "suggestion": "第二章保持同一上午时段推进；除非明确写出数小时事件和转场，否则禁止突然出现正午/夜风/点灯等时间跳变。",
+      "excerpt": "“值房里点着灯” / “夜风从夹道吹过来”",
+      "pattern_signature": "853c79aef6d74858ebe5982b"
+    }
+  ]
+}
