@@ -11,6 +11,10 @@ def test_role_buckets_split_writer_natural_reasoning_and_final():
     assert _role_bucket("reader-gap-reviewer") == "reasoning-reader"
     assert _role_bucket("plot-reviewer") == "reasoning-reader"
     assert _role_bucket("final-reviewer") == "final-review"
+    assert _role_bucket("master-reader") == "natural-reader"
+    assert _role_bucket("character-dialogue-reviewer") == "natural-reader"
+    assert _role_bucket("language-rhythm-reviewer") == "natural-reader"
+    assert _role_bucket("continuity-plot-reviewer") == "reasoning-reader"
 
 
 def test_default_role_profiles_are_heterogeneous(monkeypatch):
@@ -31,6 +35,10 @@ def test_default_role_profiles_are_heterogeneous(monkeypatch):
     assert _role_profile_candidates("blind-reader")[0] == "AGNES"
     assert _role_profile_candidates("blind-artifice-reader")[0] == "MODELSCOPE"
     assert _role_profile_candidates("final-reviewer")[0] == "SENSENOVA"
+    assert _role_profile_candidates("master-reader")[0] == "AGNES"
+    assert _role_profile_candidates("continuity-plot-reviewer")[0] == "AGNES"
+    assert _role_profile_candidates("character-dialogue-reviewer")[0] == "AGNES"
+    assert _role_profile_candidates("language-rhythm-reviewer")[0] == "AGNES"
 
 
 def test_role_profile_candidates_deduplicate(monkeypatch):
