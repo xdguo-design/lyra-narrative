@@ -33,7 +33,7 @@ jobs:
 
       NARRATIVE_WRITER_PROFILE: AGNES
       NARRATIVE_WRITER_FALLBACK_PROFILES:
-      NOVEL_AI_MAX_TOKENS: "4200"
+      NOVEL_AI_MAX_TOKENS: "5000"
       NOVEL_AI_TEMPERATURE: "0.30"
       NOVEL_AI_TIMEOUT_SECONDS: "60"
       NOVEL_AI_HTTP_RETRIES: "0"
@@ -57,3 +57,7 @@ jobs:
           path: artifacts/rewrite-v3-chapter-fast-draft
           if-no-files-found: error
           retention-days: 7
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
