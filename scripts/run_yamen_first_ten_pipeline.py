@@ -41,6 +41,31 @@ FREEZE_SOURCES = [
         "source-promise",
         "类型 Promise Matrix",
     ),
+    (
+        "books/yamen-proficiency/rewrite-v3/control/story-bible-v1.md",
+        "source-story-bible",
+        "rewrite-v3 Story Bible",
+    ),
+    (
+        "books/yamen-proficiency/rewrite-v3/control/volume-01-outline-v1.md",
+        "source-volume-outline",
+        "第一卷 1—30 总纲",
+    ),
+    (
+        "books/yamen-proficiency/rewrite-v3/control/foreshadow-registry-v1.md",
+        "source-foreshadow",
+        "伏笔总表",
+    ),
+    (
+        "books/yamen-proficiency/rewrite-v3/control/proficiency-skill-tree-v1.md",
+        "source-proficiency-tree",
+        "熟练度技能树",
+    ),
+    (
+        "books/yamen-proficiency/rewrite-v3/control/conflict-opponent-ladder-v1.md",
+        "source-opponent-ladder",
+        "矛盾与对立面升级图",
+    ),
 ]
 
 GOAL = """从冻结设定重新生成《穿成县衙白役，我把熟练度肝满了》的前 10 章正式流水线候选稿。

@@ -87,6 +87,7 @@ _REASONING_READER_ROLES = {
     "plot-reviewer",
     "character-reviewer",
     "world-science-reviewer",
+    "long-arc-reviewer",
     "reader-gap-reviewer",
     "training-examiner",
 }
@@ -111,6 +112,7 @@ _ROLE_PRIMARY_DEFAULTS = {
     "plot-reviewer": "DEEPSEEKV4PRO",
     "character-reviewer": "GLM52",
     "world-science-reviewer": "MODELSCOPE",
+    "long-arc-reviewer": "DEEPSEEKV4PRO",
     "reader-gap-reviewer": "DEEPSEEKV4PRO",
     "training-examiner": "MODELSCOPE",
 }

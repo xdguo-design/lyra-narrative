@@ -717,6 +717,22 @@ VERDICT: PASS / WATCH / FAIL
             "检查世界规则与科学设定能否由既定假设推导，术语是否前后一致，是否出现为了剧情临时新增规则。硬逻辑矛盾标 blocking。",
         ),
         (
+            "long-arc-reviewer",
+            "long-arc",
+            """你是 Long Arc Reviewer。结合当前任务上下文中的 Story Bible、第一卷总纲、Foreshadow Registry、Proficiency Skill Tree、Conflict & Opponent Ladder 检查长篇漂移。
+
+必须检查：
+1. VOLUME_OUTLINE_DRIFT：本章是否改变了冻结的阶段功能、人物状态目标或阶段结局；
+2. FORESHADOW_EARLY_REVEAL：是否在计划节点前泄露作者端真相；
+3. FORESHADOW_DROPPED：本章应推进的已登记伏笔是否无故消失，或使用“回调”却从未播种；
+4. PROFICIENCY_TIER_LEAP：技能是否无真实练习就出现/升级，或系统越权给答案、知识、身份；
+5. CONFLICT_ENGINE_DRIFT：钱、身份、家庭、职业与案件是否被单一调查线长期吞掉；
+6. OPPONENT_FLATTENING：已冻结对手是否突然变蠢、全盘自白、失去程序/经济/关系优势；
+7. LONG_TERM_STATE_DRIFT：人物得到的权限、信用、债务、关系后果是否与前章和阶段目标连续。
+
+输出必须使用 NARRATIVEOS_REVIEW_V1；仅当偏离会破坏卷级结构、伏笔回收或技能边界时判 blocking。不要因为标题、具体场景写法与总纲不同就机械 FAIL；只要功能等价且不破坏冻结接口可以 PASS。""",
+        ),
+        (
             "style-reviewer",
             "style",
             "检查叙述视角、节奏、句式、对白、氛围、人物外貌/神态塑造、幽默来源、重复表达和说明性语言。重点抓连续碎短句、空洞排除式描写、陌生术语未落地、功能性对白、模型腔，以及前文已表达后又用总结句点题的 AI 式收束。重要人物首次出场只有姓名/职业而没有可记忆特征时也要指出。成片问题按 Skill 判级，不要把结构问题当成 POLISH。",

@@ -35,6 +35,13 @@ PROFICIENCY = Path(
 PROMISE = Path(
     "books/yamen-proficiency/manual-v6-run-001/genre-promise-matrix.md"
 )
+CONTROL_ROOT = Path("books/yamen-proficiency/rewrite-v3/control")
+STORY_BIBLE = CONTROL_ROOT / "story-bible-v1.md"
+VOLUME_OUTLINE = CONTROL_ROOT / "volume-01-outline-v1.md"
+FORESHADOW_REGISTRY = CONTROL_ROOT / "foreshadow-registry-v1.md"
+SKILL_TREE = CONTROL_ROOT / "proficiency-skill-tree-v1.md"
+OPPONENT_LADDER = CONTROL_ROOT / "conflict-opponent-ladder-v1.md"
+
 OUTPUT_DIR = Path(
     os.getenv(
         "NARRATIVE_OUTPUT_DIR",
@@ -60,7 +67,7 @@ INSTRUCTION = """你正在替用户通过平台生成正式小说正文，不是
 3. 周虎不是作者代言人。短、直接、先控现场再拆事实；禁止输出可摘抄的“办案金句/原则句”。
 4. 陈安只说能确认的事实，不把“像”说成“就是”，不代替周虎审讯，不突然变神探。
 5. 赵六不只是笑料；他先看风险和责任，对周虎收声，对同级才贫。
-6. 所有关键对白必须通过 Reader v11 的“说出口测试”：逻辑正确 ≠ 口语自然。过度工整、像作者总结、规章、金句、问卷式一问一答都必须重写。
+6. 所有关键对白必须通过 Reader v12 的“说出口测试”：逻辑正确 ≠ 口语自然。过度工整、像作者总结、规章、金句、问卷式一问一答都必须重写。
 7. 调查过程要有动作、等待、搬动、复核和现场噪声，不能变成“问一句→答一句→马上得到下一条线索”的证据板。
 8. 粮袋找到后必须体现“位置异常 + 重量异常”，但人物只确认当前能确认的东西。
 9. 复秤确认相较昨夜入库记录短三斗一升；不要提前定性是谁偷、怎么偷。
@@ -180,6 +187,11 @@ def seed_context(project_id: int) -> None:
         (PROFICIENCY, "world", "熟练度硬规则"),
         (PROMISE, "promise", "类型承诺"),
         (PLAN, "outline", "rewrite-v3 前十章规划"),
+        (STORY_BIBLE, "story-bible", "rewrite-v3 Story Bible"),
+        (VOLUME_OUTLINE, "volume-outline", "第一卷 1—30 总纲"),
+        (FORESHADOW_REGISTRY, "foreshadow", "伏笔总表"),
+        (SKILL_TREE, "proficiency-tree", "熟练度技能树"),
+        (OPPONENT_LADDER, "opponent-ladder", "矛盾与对立面升级图"),
     ]
     for path, kind, title in sources:
         _persist_memory(
@@ -216,7 +228,8 @@ def export_result(
             "chapter_02_existing_candidate_used": False,
             "plan_used": True,
             "character_cards_used": True,
-            "reader_v11_used": True,
+            "reader_v12_used": True,
+            "long_form_control_pack_used": True,
             "character_voice_review_used": True,
         },
         "runs": [
