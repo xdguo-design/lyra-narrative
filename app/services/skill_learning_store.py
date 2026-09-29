@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import datetime
 import hashlib
 import json
 import os
 import re
 import tempfile
 import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -75,7 +75,7 @@ def persist_learning_batch(
         "task_id": task_id,
         "project_id": project_id,
         "source": _compact(source, 120),
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "recorded_at": datetime.datetime.now(datetime.UTC).isoformat(),
         "events": normalized,
     }
 
