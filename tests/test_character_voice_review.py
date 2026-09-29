@@ -30,22 +30,25 @@ def test_active_character_cards_are_selected_from_current_draft(monkeypatch, tmp
     assert [item["name"] for item in cards] == ["周虎", "陈安", "赵六"]
 
 
-def test_character_voice_review_is_a_blocking_parallel_gate():
+
+def test_character_voice_is_merged_into_character_dialogue_reviewer():
     source = Path("app/services/full_novel_pipeline.py").read_text(
         encoding="utf-8"
     )
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review = source[review_start:review_end]
     for marker in [
-        'role="character-voice-reviewer"',
-        "CHARACTER_VOICE_REVIEW_V1",
-        "每一句对白都必须逐句列出",
+        '"character-dialogue-reviewer"',
+        "一次审核本章所有主要角色",
+        "信息披露阈值",
         "说出口测试",
-        "character_voice_tasks",
-        "await asyncio.gather(*character_voice_tasks)",
-        "bool(character_voice_failures)",
-        "[character-voice:{name}]",
+        "问卷感",
+        "关系记忆",
+        "角色资料如下",
     ]:
-        assert marker in source
-
+        assert marker in review
+    assert "character_voice_tasks" not in review
 
 def test_targeted_chapter_review_seeds_character_cards():
     source = Path("scripts/review_rewrite_v3_chapter.py").read_text(
