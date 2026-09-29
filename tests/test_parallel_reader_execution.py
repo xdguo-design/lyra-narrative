@@ -1,20 +1,28 @@
 from pathlib import Path
 
 
-def test_review_round_runs_reader_groups_in_parallel():
+def test_review_round_runs_exactly_four_merged_roles_in_parallel():
     source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
 
     for marker in [
-        "reader_trace_task = asyncio.create_task",
-        "dialogue_reader_task = asyncio.create_task",
-        "natural_reader_task = asyncio.create_task",
-        "artifice_reader_task = asyncio.create_task",
-        "cadence_reader_task = asyncio.create_task",
-        "specialist_results = await asyncio.gather",
+        '"master-reader"',
+        '"continuity-plot-reviewer"',
+        '"character-dialogue-reviewer"',
+        '"language-rhythm-reviewer"',
+        "packets = await asyncio.gather(",
+        "for packet, (role, category, _instruction) in zip(",
     ]:
         assert marker in source
 
-    assert source.count("await asyncio.gather(") >= 2
+    # Per-character reviewer fan-out is no longer active inside the review round.
+    review_start = source.index("async def _run_review_round(")
+    review_end = source.index("async def run_full_novel_pipeline", review_start)
+    review_source = source[review_start:review_end]
+    assert "character_voice_tasks" not in review_source
+    assert "blind-dialogue-reader" not in review_source
+    assert "blind-natural-reader" not in review_source
+    assert "blind-artifice-reader" not in review_source
+    assert "cadence-character-reader" not in review_source
 
 
 def test_runtime_emits_agent_and_model_progress_logs():
