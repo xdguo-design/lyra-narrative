@@ -60,4 +60,14 @@ jobs:
 
       - name: Persist built-in Skill learning
         if: always()
+        continue-on-error: true
         run: bash scripts/persist_builtin_skill_learning.sh
+
+      - name: Upload built-in Skill learning recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: builtin-skill-learning-recovery
+          path: data/builtin-skill-learning
+          if-no-files-found: warn
+          retention-days: 7
