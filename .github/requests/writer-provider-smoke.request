@@ -1,0 +1,3 @@
+attempt: 1
+profiles: AGNES,DOTS3
+reason: compare-writer-connectivity-latency
