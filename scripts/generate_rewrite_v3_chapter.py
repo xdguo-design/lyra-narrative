@@ -8,7 +8,11 @@ from pathlib import Path
 
 from app.db import connect, init_db
 from app.services.book_pipeline import _create_task, _run_frozen_chapter
-from app.services.full_novel_pipeline import _persist_memory
+from app.services.default_skills import (
+    BUILTIN_REFINEMENT_SKILL_NAME,
+    BUILTIN_WRITING_SKILL_NAME,
+)
+from app.services.rejection_learning import record_rejection_batch
 from app.services.workflow_service import get_task
 
 
@@ -16,6 +20,7 @@ PROJECT_TITLE = "rewrite-v3 chapter 02 platform generation"
 PROJECT_GENRE = "架空历史 / 穿越 / 县衙 / 底层成长"
 CHAPTER_NUMBER = 2
 CHAPTER_TITLE = "谁让你推的车"
+CORE_CHARACTER_NAMES = {"陈安", "赵六", "周虎", "刘旺"}
 
 CHAPTER_ONE = Path(
     "books/yamen-proficiency/rewrite-v3/chapter-01/final-candidate.md"
@@ -23,25 +28,9 @@ CHAPTER_ONE = Path(
 PLAN = Path(
     "books/yamen-proficiency/rewrite-v3/chapters-01-10-plan.md"
 )
-ARCHITECTURE = Path(
-    "books/yamen-proficiency/manual-v6-run-001/architecture.md"
-)
 CHARACTERS = Path(
     "books/yamen-proficiency/manual-v6-run-001/characters.md"
 )
-PROFICIENCY = Path(
-    "books/yamen-proficiency/manual-v6-run-001/proficiency-rules.md"
-)
-PROMISE = Path(
-    "books/yamen-proficiency/manual-v6-run-001/genre-promise-matrix.md"
-)
-CONTROL_ROOT = Path("books/yamen-proficiency/rewrite-v3/control")
-STORY_BIBLE = CONTROL_ROOT / "story-bible-v1.md"
-VOLUME_OUTLINE = CONTROL_ROOT / "volume-01-outline-v1.md"
-FORESHADOW_REGISTRY = CONTROL_ROOT / "foreshadow-registry-v1.md"
-SKILL_TREE = CONTROL_ROOT / "proficiency-skill-tree-v1.md"
-OPPONENT_LADDER = CONTROL_ROOT / "conflict-opponent-ladder-v1.md"
-
 OUTPUT_DIR = Path(
     os.getenv(
         "NARRATIVE_OUTPUT_DIR",
@@ -171,6 +160,8 @@ def create_project() -> tuple[int, int]:
         )
 
         for name, role, profile in _character_sections(character_text):
+            if name not in CORE_CHARACTER_NAMES:
+                continue
             conn.execute(
                 "INSERT INTO characters(project_id,name,role,profile,tags) "
                 "VALUES(?,?,?,?,?)",
@@ -180,26 +171,22 @@ def create_project() -> tuple[int, int]:
     return project_id, int(chapter_two.lastrowid)
 
 
-def seed_context(project_id: int) -> None:
-    sources = [
-        (ARCHITECTURE, "architecture", "冻结故事架构"),
-        (CHARACTERS, "character", "冻结人物卡"),
-        (PROFICIENCY, "world", "熟练度硬规则"),
-        (PROMISE, "promise", "类型承诺"),
-        (PLAN, "outline", "rewrite-v3 前十章规划"),
-        (STORY_BIBLE, "story-bible", "rewrite-v3 Story Bible"),
-        (VOLUME_OUTLINE, "volume-outline", "第一卷 1—30 总纲"),
-        (FORESHADOW_REGISTRY, "foreshadow", "伏笔总表"),
-        (SKILL_TREE, "proficiency-tree", "熟练度技能树"),
-        (OPPONENT_LADDER, "opponent-ladder", "矛盾与对立面升级图"),
-    ]
-    for path, kind, title in sources:
-        _persist_memory(
-            project_id=project_id,
-            task_id=0,
-            kind=kind,
-            title=title,
-            content=path.read_text(encoding="utf-8"),
+def keep_generation_skills_lean(task_id: int) -> None:
+    with connect() as conn:
+        conn.execute(
+            """
+            DELETE FROM writing_task_skills
+            WHERE task_id=?
+              AND skill_id NOT IN (
+                  SELECT id FROM skills
+                  WHERE project_id IS NULL AND name IN (?,?)
+              )
+            """,
+            (
+                task_id,
+                BUILTIN_WRITING_SKILL_NAME,
+                BUILTIN_REFINEMENT_SKILL_NAME,
+            ),
         )
 
 
@@ -229,7 +216,8 @@ def export_result(
             "plan_used": True,
             "character_cards_used": True,
             "reader_v12_used": True,
-            "long_form_control_pack_used": True,
+            "long_form_control_pack_used": False,
+            "lean_generation_context_used": True,
             "character_voice_review_used": True,
         },
         "runs": [
@@ -257,7 +245,6 @@ async def main() -> None:
     provider = configure_provider()
     init_db()
     project_id, chapter_id = create_project()
-    seed_context(project_id)
 
     task_id = _create_task(
         project_id=project_id,
@@ -265,6 +252,28 @@ async def main() -> None:
         goal=GOAL,
         instruction=INSTRUCTION,
     )
+    record_rejection_batch(
+        task_id=task_id,
+        source="HUMAN_REJECT",
+        events=[
+            {
+                "reviewer": "human-approval",
+                "category": "chapter-reset",
+                "reason": (
+                    "第二章整体阅读感被人工打回：不能继续局部修补；"
+                    "已确认的复发风险包括问卷式盘问、作者总结腔、"
+                    "人物对白不像当场会说的话。"
+                ),
+                "suggestion": (
+                    "Writer 从第一章接口重新生成整章；Reader 优先拦截"
+                    " ORALITY_GAP、VOICE_OVERPERFORMANCE_GAP、"
+                    "TURN_TAKING_SYMMETRY_GAP 和 INVESTIGATION_WORKSHEET_GAP。"
+                ),
+                "excerpt": "第二章整体打回，从第一章接口重新生成。",
+            }
+        ],
+    )
+    keep_generation_skills_lean(task_id)
     prior = CHAPTER_ONE.read_text(encoding="utf-8")
 
     try:

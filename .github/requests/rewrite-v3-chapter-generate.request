@@ -1,5 +1,5 @@
-attempt: 1
+attempt: 2
 chapter: 2
 mode: platform-writer
-reason: user-authorized-platform-generation
-source_policy: chapter1+frozen-character-cards+rewrite-v3-plan;exclude-existing-chapter2
+reason: human-reject-chapter-02-regenerate-lean-context
+source_policy: chapter1+4-core-character-cards+chapter2-hard-constraints+current-skills;exclude-existing-chapter2
