@@ -399,7 +399,7 @@ def test_language_rhythm_reviewer_absorbs_natural_first_read_and_style_checks():
         "中文语序、搭配、指代、数量",
         "碎短句过多",
         "场景是否有必要的空间、声音、触感、动作阻力",
-        "作者点题",
+        "点题句",
         "人物语言是否被统一修成一种漂亮",
         "章尾是否自然收束",
     ]:
