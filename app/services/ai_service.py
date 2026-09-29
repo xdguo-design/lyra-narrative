@@ -122,7 +122,7 @@ _ROLE_PRIMARY_DEFAULTS = {
     "master-reader": "AGNES",
     "continuity-plot-reviewer": "AGNES",
     "character-dialogue-reviewer": "AGNES",
-    "language-rhythm-reviewer": "AGNES",
+    "language-rhythm-reviewer": "XINGCHENAGI",
 }
 
 
