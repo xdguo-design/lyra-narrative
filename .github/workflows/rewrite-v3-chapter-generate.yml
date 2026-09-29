@@ -1,0 +1,79 @@
+name: Rewrite v3 Chapter Platform Generate
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/rewrite-v3-chapter-generate.request"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NOVEL_DB_PATH: /tmp/rewrite-v3-chapter-generate.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_DEEPSEEKV4PRO: ${{ vars.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
+
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_DEEPSEEKV4PRO: ${{ secrets.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
+
+      NARRATIVE_WRITER_PROFILE: ATRIA
+      NARRATIVE_WRITER_FALLBACK_PROFILES: SENSENOVA,GLM52
+      NARRATIVE_NATURAL_READER_PROFILE: GLM52
+      NARRATIVE_NATURAL_READER_FALLBACK_PROFILES: MODELSCOPE,SENSENOVA68
+      NARRATIVE_REASONING_READER_PROFILE: DEEPSEEKV4PRO
+      NARRATIVE_REASONING_READER_FALLBACK_PROFILES: MODELSCOPE,GLM52
+      NARRATIVE_FINAL_REVIEW_PROFILE: SENSENOVA
+      NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES: MODELSCOPE,GLM52
+      NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: GLM52
+
+      NARRATIVE_PROVIDER_NAME: ATRIA
+      NARRATIVE_PROVIDER_PROTOCOL: openai-compatible
+      NARRATIVE_PROVIDER_MODEL: Atria-Dawn-Preview
+      NARRATIVE_PROVIDER_BASE_URL: https://api.atria-asi.ai/v1
+      NARRATIVE_PROVIDER_SECRET_NAME: ATRIA
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets.ATRIA }}
+
+      NOVEL_AI_REASONING_EFFORT: high
+      NOVEL_AI_MAX_TOKENS: "6500"
+      NOVEL_AI_TIMEOUT_SECONDS: "240"
+      NOVEL_AI_HTTP_RETRIES: "3"
+      NOVEL_AI_RETRY_BASE_SECONDS: "10"
+      NARRATIVE_OUTPUT_DIR: artifacts/rewrite-v3-chapter-generate
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Generate chapter 02 through NarrativeOS
+        run: PYTHONPATH=. python scripts/generate_rewrite_v3_chapter.py
+
+      - name: Upload platform generation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rewrite-v3-chapter-platform-generate
+          path: artifacts/rewrite-v3-chapter-generate
+          if-no-files-found: error
+          retention-days: 14

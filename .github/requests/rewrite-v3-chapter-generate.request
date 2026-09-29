@@ -1,0 +1,5 @@
+attempt: 1
+chapter: 2
+mode: platform-writer
+reason: user-authorized-platform-generation
+source_policy: chapter1+frozen-character-cards+rewrite-v3-plan;exclude-existing-chapter2
