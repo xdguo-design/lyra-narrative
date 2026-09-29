@@ -209,3 +209,20 @@ def test_writer_skill_summarizes_all_rejection_causes_without_losing_evidence(
     assert "计量算术不成立" in writer
     assert "累计打回 2 次" in writer
     assert "原始原因与原文样本仍完整保存在" in writer
+
+
+
+def test_master_review_path_feeds_complete_rejection_batch():
+    source = Path("app/main.py").read_text(encoding="utf-8")
+    learning = Path("app/services/rejection_learning.py").read_text(encoding="utf-8")
+
+    for marker in [
+        '@app.post("/api/tasks/{task_id}/master-review")',
+        '"master-reader"',
+        'source="complete-review-with-master"',
+        '"awaiting_master_review"',
+        '"awaiting_approval"',
+    ]:
+        assert marker in source
+
+    assert "rf.category<>'review-execution'" in learning
