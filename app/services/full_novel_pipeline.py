@@ -5,7 +5,7 @@ import os
 
 from app.db import connect
 from app.services.default_skills import (
-    reader_skill_content,
+    BUILTIN_READER_REVIEW_SKILL_CONTENT,
     BUILTIN_READER_REVIEW_SKILL_NAME,
 )
 from app.services.rejection_learning import learn_from_open_blocking_findings

@@ -6,7 +6,6 @@ import os
 import re
 import tempfile
 import uuid
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
