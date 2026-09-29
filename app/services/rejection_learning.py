@@ -9,7 +9,8 @@ from app.services.default_skills import (
     BUILTIN_WRITING_SKILL_NAME,
 )
 from app.services.skill_learning_store import (
-    apply_persisted_learning_to_conn,
+    apply_db_learning_to_conn,
+    build_learning_batch,
     persist_learning_batch,
 )
 
@@ -33,7 +34,7 @@ def record_rejection_batch(
             raise ValueError("task not found")
         project_id = int(task["project_id"])
 
-    payload = persist_learning_batch(
+    payload = build_learning_batch(
         task_id=task_id,
         project_id=project_id,
         source=source,
@@ -42,6 +43,26 @@ def record_rejection_batch(
 
     with connect() as conn:
         for event in payload["events"]:
+            conn.execute(
+                """
+                INSERT INTO builtin_skill_learning_events(
+                    batch_id,task_id,project_id,source,reviewer,category,
+                    pattern_signature,reason,suggestion,excerpt
+                ) VALUES(?,?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    payload["batch_id"],
+                    task_id,
+                    project_id,
+                    payload["source"],
+                    event["reviewer"],
+                    event["category"],
+                    event["pattern_signature"],
+                    event["reason"],
+                    event["suggestion"],
+                    event["excerpt"],
+                ),
+            )
             conn.execute(
                 """
                 INSERT INTO skill_rejection_events(
@@ -63,7 +84,7 @@ def record_rejection_batch(
                 ),
             )
 
-        versions = apply_persisted_learning_to_conn(conn, BUILTIN_SKILLS)
+        versions = apply_db_learning_to_conn(conn, BUILTIN_SKILLS)
         for skill_name in (
             BUILTIN_WRITING_SKILL_NAME,
             BUILTIN_READER_REVIEW_SKILL_NAME,
@@ -89,6 +110,14 @@ def record_rejection_batch(
                 """,
                 (task_id, int(skill["id"]), int(skill["current_version"])),
             )
+
+    # Optional audit archive only; DB rows above are the source of truth.
+    persist_learning_batch(
+        task_id=task_id,
+        project_id=project_id,
+        source=source,
+        events=event_list,
+    )
 
     return {
         "recorded": len(payload["events"]),
