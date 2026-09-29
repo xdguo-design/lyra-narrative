@@ -61,7 +61,7 @@ async def request_json(
                     provider=provider,
                     status_code=exc.code,
                 ) from exc
-            except (urllib.error.URLError, TimeoutError) as exc:
+            except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
                 if attempt < retries:
                     time.sleep(min(base_delay * (attempt + 1), 90.0))
                     attempt += 1
