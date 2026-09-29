@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from app.db import connect, init_db
-from app.services.full_novel_pipeline import _run_review_round
+from app.services.full_novel_pipeline import _persist_memory, _run_review_round
 
 
 PROJECT_TITLE = "rewrite-v3 chapter candidate heterogeneous review"
@@ -28,6 +28,35 @@ OUTPUT_DIR = Path(
         "artifacts/rewrite-v3-chapter-review",
     )
 )
+
+
+CONTROL_SOURCES = [
+    (
+        Path("books/yamen-proficiency/rewrite-v3/control/story-bible-v1.md"),
+        "story-bible",
+        "rewrite-v3 Story Bible",
+    ),
+    (
+        Path("books/yamen-proficiency/rewrite-v3/control/volume-01-outline-v1.md"),
+        "volume-outline",
+        "第一卷 1—30 总纲",
+    ),
+    (
+        Path("books/yamen-proficiency/rewrite-v3/control/foreshadow-registry-v1.md"),
+        "foreshadow",
+        "伏笔总表",
+    ),
+    (
+        Path("books/yamen-proficiency/rewrite-v3/control/proficiency-skill-tree-v1.md"),
+        "proficiency-tree",
+        "熟练度技能树",
+    ),
+    (
+        Path("books/yamen-proficiency/rewrite-v3/control/conflict-opponent-ladder-v1.md"),
+        "opponent-ladder",
+        "矛盾与对立面升级图",
+    ),
+]
 
 
 CHARACTER_CARDS = [
@@ -98,6 +127,15 @@ def create_review_task(previous: str, current: str) -> int:
                 (project_id, name, role, profile, tags),
             )
 
+    for control_path, kind, title in CONTROL_SOURCES:
+        _persist_memory(
+            project_id=project_id,
+            task_id=0,
+            kind=kind,
+            title=title,
+            content=control_path.read_text(encoding="utf-8"),
+        )
+
         task = conn.execute(
             "INSERT INTO writing_tasks(project_id,chapter_id,goal,instruction,status) "
             "VALUES(?,?,?,?,?)",
@@ -120,7 +158,28 @@ async def main() -> None:
     current = CHAPTER_TWO.read_text(encoding="utf-8")
     task_id = create_review_task(previous, current)
 
-    context = "【前一章正文，仅供连续性 Reviewer 使用】\n" + previous
+    with connect() as conn:
+        controls = conn.execute(
+            """
+            SELECT kind,title,content
+            FROM memories
+            WHERE project_id=(SELECT project_id FROM writing_tasks WHERE id=?)
+              AND confirmed=1
+            ORDER BY id
+            """,
+            (task_id,),
+        ).fetchall()
+    control_context = "\n\n".join(
+        f"【{row['title']}】\n{row['content']}" for row in controls
+    )
+    context = "\n\n".join(
+        item
+        for item in [
+            "【前一章正文，仅供连续性 Reviewer 使用】\n" + previous,
+            control_context,
+        ]
+        if item
+    )
     outputs, blocking = await _run_review_round(
         task_id=task_id,
         draft=current,

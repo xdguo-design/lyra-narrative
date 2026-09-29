@@ -57,3 +57,20 @@ def test_long_arc_reviewer_blocks_long_form_drift():
     ]:
         assert marker in pipeline
     assert '"long-arc-reviewer": "DEEPSEEKV4PRO"' in ai
+
+
+def test_targeted_reader_review_seeds_long_form_control_pack():
+    source = Path("scripts/review_rewrite_v3_chapter.py").read_text(
+        encoding="utf-8"
+    )
+    assert "CONTROL_SOURCES = [" in source
+    assert "_persist_memory(" in source
+    assert "control_context" in source
+    for marker in [
+        "story-bible-v1.md",
+        "volume-01-outline-v1.md",
+        "foreshadow-registry-v1.md",
+        "proficiency-skill-tree-v1.md",
+        "conflict-opponent-ladder-v1.md",
+    ]:
+        assert marker in source
