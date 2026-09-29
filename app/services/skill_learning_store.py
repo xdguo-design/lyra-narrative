@@ -58,7 +58,7 @@ def normalize_event(event: dict[str, str]) -> dict[str, str]:
     return normalized
 
 
-def persist_learning_batch(
+def build_learning_batch(
     *,
     task_id: int,
     project_id: int,
@@ -68,17 +68,31 @@ def persist_learning_batch(
     normalized = [normalize_event(event) for event in events]
     if not normalized:
         raise ValueError("rejection learning batch must not be empty")
-
-    batch_id = uuid.uuid4().hex
-    payload = {
-        "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V1",
-        "batch_id": batch_id,
+    return {
+        "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+        "batch_id": uuid.uuid4().hex,
         "task_id": task_id,
         "project_id": project_id,
         "source": _compact(source, 120),
         "recorded_at": datetime.datetime.now(datetime.UTC).isoformat(),
         "events": normalized,
     }
+
+
+def persist_learning_batch(
+    *,
+    task_id: int,
+    project_id: int,
+    source: str,
+    events: list[dict[str, str]],
+) -> dict:
+    payload = build_learning_batch(
+        task_id=task_id,
+        project_id=project_id,
+        source=source,
+        events=events,
+    )
+    batch_id = payload["batch_id"]
 
     root = learning_root()
     root.mkdir(parents=True, exist_ok=True)
@@ -89,9 +103,8 @@ def persist_learning_batch(
             json.dump(payload, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
         pathlib.Path(tmp_name).replace(target)
-    except Exception:
+    except (OSError, UnicodeError):
         pathlib.Path(tmp_name).unlink(missing_ok=True)
-        raise
     return payload
 
 
@@ -105,7 +118,10 @@ def load_learning_batches() -> list[dict]:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):
             continue
-        if payload.get("schema") != "NARRATIVE_BUILTIN_SKILL_LEARNING_V1":
+        if payload.get("schema") not in {
+            "NARRATIVE_BUILTIN_SKILL_LEARNING_V1",
+            "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+        }:
             continue
         if not isinstance(payload.get("events"), list):
             continue
@@ -243,4 +259,106 @@ def apply_persisted_learning_to_conn(conn, builtins) -> dict[str, int]:
             (content, effective_version, skill["id"]),
         )
         updated[name] = effective_version
+    return updated
+
+
+
+def load_learning_events_from_conn(conn) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT batch_id,task_id,project_id,source,reviewer,category,
+               pattern_signature,reason,suggestion,excerpt,created_at
+        FROM builtin_skill_learning_events
+        ORDER BY id
+        """
+    ).fetchall()
+    batches: dict[str, dict] = {}
+    for row in rows:
+        batch_id = str(row["batch_id"])
+        batch = batches.setdefault(
+            batch_id,
+            {
+                "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_DB_V1",
+                "batch_id": batch_id,
+                "task_id": row["task_id"],
+                "project_id": row["project_id"],
+                "source": str(row["source"] or ""),
+                "recorded_at": str(row["created_at"] or ""),
+                "events": [],
+            },
+        )
+        batch["events"].append(
+            {
+                "reviewer": str(row["reviewer"] or ""),
+                "category": str(row["category"] or ""),
+                "pattern_signature": str(row["pattern_signature"] or ""),
+                "reason": str(row["reason"] or ""),
+                "suggestion": str(row["suggestion"] or ""),
+                "excerpt": str(row["excerpt"] or ""),
+            }
+        )
+    return list(batches.values())
+
+
+def apply_db_learning_to_conn(conn, builtins) -> dict[str, int]:
+    batches = load_learning_events_from_conn(conn)
+    if not batches:
+        return {}
+
+    builtin_map = {item["name"]: item for item in builtins}
+    batch_count = len({str(item.get("batch_id") or "") for item in batches})
+    updated: dict[str, int] = {}
+
+    for name, target in (
+        (WRITER_SKILL_NAME, "writer"),
+        (READER_SKILL_NAME, "reader"),
+    ):
+        builtin = builtin_map.get(name)
+        if not builtin:
+            continue
+        skill = conn.execute(
+            """
+            SELECT id,current_version,content
+            FROM skills
+            WHERE project_id IS NULL AND name=?
+            ORDER BY id
+            LIMIT 1
+            """,
+            (name,),
+        ).fetchone()
+        if not skill:
+            continue
+
+        overlay = render_learning_overlay(target, batches)
+        desired_content = str(builtin["content"]).rstrip() + "\n\n" + overlay + "\n"
+        if str(skill["content"]) == desired_content:
+            updated[name] = int(skill["current_version"])
+            continue
+
+        next_version = max(
+            int(skill["current_version"]) + 1,
+            int(builtin["version"]) + batch_count,
+        )
+        conn.execute(
+            """
+            INSERT INTO skill_versions(skill_id,version,content,note)
+            VALUES(?,?,?,?)
+            """,
+            (
+                skill["id"],
+                next_version,
+                desired_content,
+                f"auto-upgrade from {batch_count} durable rejection batches",
+            ),
+        )
+        conn.execute(
+            """
+            UPDATE skills
+            SET content=?,current_version=?,enabled=1,updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (desired_content, next_version, skill["id"]),
+        )
+        updated[name] = next_version
+
     return updated
