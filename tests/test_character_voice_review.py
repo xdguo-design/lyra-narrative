@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from app.db import connect, init_db
 from app.services.full_novel_pipeline import _active_character_cards
 
@@ -29,10 +31,9 @@ def test_active_character_cards_are_selected_from_current_draft(monkeypatch, tmp
 
 
 def test_character_voice_review_is_a_blocking_parallel_gate():
-    source = open(
-        "app/services/full_novel_pipeline.py",
-        encoding="utf-8",
-    ).read()
+    source = Path("app/services/full_novel_pipeline.py").read_text(
+        encoding="utf-8"
+    )
     for marker in [
         'role="character-voice-reviewer"',
         "CHARACTER_VOICE_REVIEW_V1",
@@ -47,10 +48,9 @@ def test_character_voice_review_is_a_blocking_parallel_gate():
 
 
 def test_targeted_chapter_review_seeds_character_cards():
-    source = open(
-        "scripts/review_rewrite_v3_chapter.py",
-        encoding="utf-8",
-    ).read()
+    source = Path("scripts/review_rewrite_v3_chapter.py").read_text(
+        encoding="utf-8"
+    )
     for name in ["陈安", "赵六", "周虎", "刘旺"]:
         assert f'"{name}"' in source
     assert "INSERT INTO characters" in source
