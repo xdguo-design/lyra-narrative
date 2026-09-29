@@ -4,18 +4,18 @@ import datetime
 import hashlib
 import json
 import os
+import pathlib
 import re
 import tempfile
 import uuid
-from pathlib import Path
 
 
 WRITER_SKILL_NAME = "中文小说自然叙事"
 READER_SKILL_NAME = "小说读者校验流程"
 
 
-def learning_root() -> Path:
-    return Path(
+def learning_root() -> pathlib.Path:
+    return pathlib.Path(
         os.getenv(
             "NARRATIVE_BUILTIN_SKILL_LEARNING_DIR",
             "data/builtin-skill-learning",
@@ -87,9 +87,9 @@ def persist_learning_batch(
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False, indent=2)
             handle.write("\n")
-        Path(tmp_name).replace(target)
+        pathlib.Path(tmp_name).replace(target)
     except Exception:
-        Path(tmp_name).unlink(missing_ok=True)
+        pathlib.Path(tmp_name).unlink(missing_ok=True)
         raise
     return payload
 

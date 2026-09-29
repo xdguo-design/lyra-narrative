@@ -64,7 +64,24 @@ def _task_reader_skill_content(task_id: int) -> str:
             """,
             (task_id, BUILTIN_READER_REVIEW_SKILL_NAME),
         ).fetchone()
-    return str(row["content"]) if row else BUILTIN_READER_REVIEW_SKILL_CONTENT
+        if row:
+            return str(row["content"])
+
+        latest = conn.execute(
+            """
+            SELECT content
+            FROM skills
+            WHERE project_id IS NULL AND name=? AND enabled=1
+            ORDER BY current_version DESC,id
+            LIMIT 1
+            """,
+            (BUILTIN_READER_REVIEW_SKILL_NAME,),
+        ).fetchone()
+    return (
+        str(latest["content"])
+        if latest
+        else BUILTIN_READER_REVIEW_SKILL_CONTENT
+    )
 
 
 def _active_character_cards(
