@@ -1,0 +1,58 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "4aaf0f72c23345a890bff01f0959673c",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-29T10:01:21.174972+00:00",
+  "events": [
+    {
+      "reviewer": "human-controller",
+      "category": "disclosure-threshold",
+      "reason": "DISCLOSURE_THRESHOLD_GAP：刘旺在同一段里主动交代“孙成指使、五文钱、蓝麻线粮袋”，越过人物卡的分阶段信息暴露阈值；人物为了推进剧情一次吐全。",
+      "suggestion": "刘旺必须先正常化/回避；物证被周虎复核后只承认推过一趟；再追责才说孙成；五文钱必须单独追问后才承认。禁止一次性交代完整时间线。",
+      "excerpt": "“孙成确实来后厨这边找过我……付了我五文钱……车上确实有只补过的袋子……”",
+      "pattern_signature": "f66e31feed1fdb462e31bca2"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "canon-drift",
+      "reason": "CANON_FACT_DRIFT：正文把孙成写成“东库点货”，并临时发明“刘班头”，与冻结设定“孙成为西库库吏、周虎为皂班班头”冲突。",
+      "suggestion": "生成前逐项核对冻结人物卡和地点职责；不得为了对白方便改库别、改身份或临时造负责人。",
+      "excerpt": "“孙成是东库那边点货的” / “得找管西库的刘班头或者周虎去问”",
+      "pattern_signature": "41185832df85ed00872ebfca"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "investigation-naturalness",
+      "reason": "INVESTIGATION_WORKSHEET_GAP：调查仍以连续提问、立刻回答、马上获得下一条线索推进，现场动作只是装饰；陈安开场即围绕车泥连续盘问。",
+      "suggestion": "把证据推进拆进等待、搬柴、检查轮轴、周虎复核、人员进出和误导噪声；陈安一次只问一个能验证的小问题，不能问一句就得到一块拼图。",
+      "excerpt": "“车上的泥，今早什么时候沾上的？” / “后头那条路，昨儿下没下雨？”",
+      "pattern_signature": "1eb3920f12f2f42cc1a44b76"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "measurement-consistency",
+      "reason": "MEASUREMENT_UNIT_DRIFT：同一证据链用“一百二十斤”作为昨夜入库量、又直接用“三斗一升”作为短缺量，未建立换算口径；并凭空判断“三斗一升刚好够两个脚夫一晚上搬”。",
+      "suggestion": "复秤与昨夜记录必须使用同一套可比较口径，或在正文明确秤量/斗量如何核对；不得从数量直接脑补搬运人数和时间。",
+      "excerpt": "“足量的一百二十斤……少了三斗一升” / “刚好够两个脚夫一晚上搬出来的”",
+      "pattern_signature": "d9037786e88802c8542b0bec"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "next-chapter-boundary",
+      "reason": "FORESHADOW_EARLY_REVEAL / NEXT_CHAPTER_LEAK：第二章把马二尸体具体写成挂在西库外墙木架上，破坏第三章“湿巷、干鞋底、尸体路线异常”的冻结高潮接口。",
+      "suggestion": "第二章章末只收到“马二死了”的消息或被叫去现场，不描写尸体具体位置、姿态、鞋底或死因；第三章保留首次现场发现。",
+      "excerpt": "“他的尸体挂在西库外墙的木架上，像是一条晒干的鱼。”",
+      "pattern_signature": "755f7efc993302874e585fa8"
+    },
+    {
+      "reviewer": "human-controller",
+      "category": "character-voice",
+      "reason": "ORALITY_GAP / CHARACTER_FUNCTIONALIZATION：赵六突然承担案情讲解和背景补充，像作者借角色说明设定，不符合其先看风险、对同级贫嘴但不主动全抖信息的语言阈值。",
+      "suggestion": "赵六只说他此刻有理由知道、且愿意冒风险说的那一小点；更多通过动作、收声、提醒责任表现，不替作者解释案件。",
+      "excerpt": "“孙成是东库那边点货的……最近几回搬粮，都带着个跟班……”",
+      "pattern_signature": "6fb97d37dd3c541e49cbe909"
+    }
+  ]
+}
