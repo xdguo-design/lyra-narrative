@@ -479,17 +479,30 @@ def latency_report(
                 """,
                 (chapter_number, pipeline_version, scenario),
             ).fetchall()
-            values = [int(row["core_pipeline_ms"]) for row in rows]
+            metric_names = [
+                "core_pipeline_ms",
+                "writer_ms",
+                "length_repair_ms",
+                "review_initial_wall_ms",
+                "review_retry_wall_ms",
+                "finalize_ms",
+            ]
+            metrics: dict[str, Any] = {}
+            for metric_name in metric_names:
+                values = [int(row[metric_name]) for row in rows]
+                metrics[metric_name] = {
+                    "p50_ms": _percentile(values, 50),
+                    "p95_ms": _percentile(values, 95),
+                    "max_ms": max(values, default=0),
+                }
             report[scenario] = {
-                "n": len(values),
-                "p50_ms": _percentile(values, 50),
-                "p95_ms": _percentile(values, 95),
-                "max_ms": max(values, default=0),
+                "n": len(rows),
                 "p95_status": (
                     "data_insufficient"
-                    if len(values) < 20
-                    else "provisional" if len(values) < 100 else "stable"
+                    if len(rows) < 20
+                    else "provisional" if len(rows) < 100 else "stable"
                 ),
+                "metrics": metrics,
             }
     return {
         "chapter_number": chapter_number,

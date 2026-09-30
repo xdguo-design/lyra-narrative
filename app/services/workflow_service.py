@@ -211,14 +211,16 @@ def _finish_run(run_id: int, result: AssistResult) -> None:
 
 def _fail_run(run_id: int, exc: Exception) -> None:
     provider = str(getattr(exc, "provider", "") or "")
+    model = str(getattr(exc, "model", "") or "")
+    error = f"{type(exc).__name__}: {exc}"[:2000]
     with connect() as conn:
         conn.execute(
             """
             UPDATE agent_runs
-            SET status='failed',provider=?,error=?
+            SET status='failed',provider=?,model=?,error=?
             WHERE id=?
             """,
-            (provider, str(exc)[:2000], run_id),
+            (provider, model, error, run_id),
         )
 
 
@@ -484,7 +486,8 @@ def get_task(task_id: int) -> dict | None:
             ]
             metric = conn.execute(
                 """
-                SELECT prompt_version,duration_ms
+                SELECT prompt_version,duration_ms,started_at_ms,finished_at_ms,
+                       input_chars,output_chars,context_tier
                 FROM agent_run_metrics
                 WHERE run_id=?
                 """,

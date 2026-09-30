@@ -421,6 +421,7 @@ async def assist(
                 model=response.model,
             )
         except ProviderError as exc:
+            exc.model = model
             last_error = exc
             elapsed_ms = max(
                 0,

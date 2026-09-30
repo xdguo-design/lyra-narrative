@@ -453,8 +453,8 @@ async def main() -> int:
     length_repair_triggered = not 2700 <= draft_chars_initial <= 3400
     length_gate_started_at_ms = epoch_ms()
     before_distance = _length_distance(text)
-    text = await _repair_length_if_needed(task_id, text)
     length_gate_finished_at_ms = epoch_ms()
+    text = await _repair_length_if_needed(task_id, text)
     record_local_event(
         pipeline_run_id=pipeline_run_id,
         stage="length-gate",
