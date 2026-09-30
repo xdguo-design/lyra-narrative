@@ -33,6 +33,13 @@ def _system_prompt(mode: str) -> str:
             "你是小说文字编辑。保留事实、人物关系和情节含义，改善节奏、句式、画面与可读性，只输出润色后的正文。"
             + prose_rules
         ),
+        "expand": (
+            "你是长篇小说扩写编辑。输入正文可能只是过短骨架；必须在不新增事实、不改变事件顺序的前提下，"
+            "把现有正文扩写到用户明确要求的长度区间。不得原样返回、不得摘要、不得提前收束；"
+            "优先补足现场动作、空间移动、人物犹豫、感官细节和既有线索之间的自然过渡。"
+            "只输出扩写后的完整正文。"
+            + prose_rules
+        ),
         "check": (
             "你是小说一致性审稿人。检查人物行为、时间线、称谓、地点、道具和因果是否冲突；"
             "同时识别碎句堆叠、空洞否定式描写、未落地术语和缺少人物意图的功能性对白，输出精炼的问题清单与修改建议。"
@@ -43,7 +50,7 @@ def _system_prompt(mode: str) -> str:
 
 def _demo(mode: str, content: str, instruction: str = "") -> AssistResult:
     tail = (content or "").strip().splitlines()[-1:] or [""]
-    if mode == "polish":
+    if mode in {"polish", "expand"}:
         text = content or "演示模式未连接真实模型；当前没有可润色正文。"
     elif mode == "check":
         if "NARRATIVEOS_REVIEW_V1" in instruction:

@@ -229,7 +229,7 @@ def _part3_instruction(skill: str, prior_tail: str) -> str:
 4. 复量结束后必须逐字出现一次：“短三斗一升。”
 5. 周虎只确认分量短了、袋子位置变了；不定性谁偷、怎么偷，不猜孙成动机。
 6. 粮袋与记录分开收好留查；可写“封存”，不得出现“封条、油布包裹、严令拆阅”等新增程序细节。
-7. 最后才有人进院，只报一句：“马二死了。”
+7. 最后才有人进院，只报一句：“马二死了。”；只有正文已经达到至少 2700 个中文字符时，才允许进入这一步。
 8. “马二死了。”必须是全章最后一句，后面绝不再写任何反应、地点、尸体信息或时间锚点。
 
 只输出正文。"""
@@ -237,8 +237,9 @@ def _part3_instruction(skill: str, prior_tail: str) -> str:
 
 def _full_chapter_instruction(skill: str) -> str:
     return _shared(skill) + """
-【整章一次生成｜目标 2850—3250 个中文字符】
+【整章一次生成｜硬长度 2850—3250 个中文字符】
 从第一章末尾刘旺抱柴、陈安说“问你件事”、刘旺答“嗯”直接接。整章一次写完，不拆段输出，但必须严格保持下面三阶段顺序。
+硬长度要求：正文少于 2700 个中文字符时不得结束生成，也不得提前写章末死讯；请在内部自行检查长度，不输出计数。若剧情节点已经写完但长度不足，只能用既有现场动作、空间阻力、人物迟疑、观察与自然过渡补足，绝不能新增事实。
 
 阶段一｜口供：
 1. 刘旺先回避，只说泔水车谁都能推。
@@ -302,15 +303,26 @@ async def _repair_length_if_needed(task_id: int, text: str) -> str:
     if 2700 <= len(text) <= 3400:
         return text
 
-    target = "2850—3150" if len(text) < 2700 else "3000—3300"
+    is_short = len(text) < 2700
+    target = "2850—3150" if is_short else "3000—3300"
+    required_growth = max(0, 2850 - len(text))
+    mode = "expand" if is_short else "polish"
+    repair_action = (
+        f"当前正文只有 {len(text)} 个字符，是过短骨架，不是成稿。"
+        f"必须至少净增加约 {required_growth} 个字符，并把完整正文扩写到 {target} 个中文字符。"
+        "不得原样返回，不得只做措辞润色，不得提前结束。"
+        if is_short
+        else f"当前正文过长，请在保留全部冻结事实的前提下压缩到 {target} 个中文字符。"
+    )
     result = await _run_step(
         task_id=task_id,
         role="writer-retry",
         stage="chapter-02-length-repair",
-        mode="polish",
+        mode=mode,
         content=text,
-        instruction=f"""请完整重写当前第二章正文，控制在 {target} 个中文字符。
-只允许补足现场动作、空间阻力、人物犹豫和已有线索之间的自然过渡，不得新增事实、人物、物证、精确时间、地点或解释性证据。
+        instruction=f"""{repair_action}
+输出前请在内部检查长度；不要输出字符统计、说明或修改理由。
+只允许补足或压缩现场动作、空间阻力、人物犹豫和已有线索之间的自然过渡，不得新增事实、人物、物证、精确时间、地点或解释性证据。
 
 硬约束：
 - 保持既有剧情顺序与冻结事实不变。
@@ -320,6 +332,7 @@ async def _repair_length_if_needed(task_id: int, text: str) -> str:
 - 先明确“重量对不上”，再取昨夜同口径官斗记录复量，最后只得出“短三斗一升”。
 - 不把短缺直接定性为偷窃。
 - 不出现皮重、封条、精确时辰、作者元分析。
+- 若原文过短，在正文达到至少 2700 个中文字符之前不得写“马二死了。”；必须先把前三阶段完整展开。
 - 最后一句必须且只能是：“马二死了。”
 - 只输出完整修订后的正文，不要解释。
 """,
