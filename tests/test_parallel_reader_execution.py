@@ -107,7 +107,7 @@ def test_chapter02_pipeline_metrics_are_structured_for_p50_p95():
         assert marker in db_source
 
     for marker in [
-        'PIPELINE_VERSION = "chapter-fast-local-retry-v4"',
+        'PIPELINE_VERSION = "chapter-fast-local-retry-v5"',
         '"normal"',
         '"single_reviewer_retry"',
         '"length_repair"',
@@ -212,5 +212,49 @@ def test_short_patch_assembly_replaces_post_weight_segment_and_keeps_one_hook():
     assert "新增找袋现场。" in repaired
     assert "旧的跑偏段落" not in repaired
     assert "短三斗一升" in repaired
+    assert repaired.count("马二死了。") == 1
+    assert repaired.endswith("马二死了。")
+
+
+
+def test_short_patch_repair_uses_two_rounds_and_three_insertions():
+    source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    workflow = Path(".github/workflows/rewrite-v3-chapter-fast.yml").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "async def _repair_short_draft_round",
+        "for round_no in range(1, 3):",
+        'role="writer-search-patch"',
+        'role="writer-measurement-patch"',
+        'role="writer-transition-patch"',
+        '_insert_before_first(text, "重量对不上", search_patch)',
+        '_insert_before_first(repaired, "短三斗一升", measurement_patch)',
+        '_insert_before_last(repaired, "马二死了。", transition_patch)',
+    ]:
+        assert marker in source
+    assert "NARRATIVE_ROLE_WRITER_TRANSITION_PATCH_PROFILE: AGNES" in workflow
+
+
+def test_three_patch_assembly_preserves_exact_hook_and_inserts_all_segments():
+    from scripts.generate_rewrite_v3_chapter_fast import (
+        _assemble_short_draft_patches,
+    )
+
+    original = (
+        "口供。\n\n重量对不上。\n\n复量后说：短三斗一升。"
+        "\n\n马二死了。"
+    )
+    repaired = _assemble_short_draft_patches(
+        original,
+        "找袋现场扩写。",
+        "官斗复量过程扩写。",
+        "收好粮袋与记录，院里脚步一停。",
+    )
+    assert "找袋现场扩写。" in repaired
+    assert "官斗复量过程扩写。" in repaired
+    assert "院里脚步一停。" in repaired
     assert repaired.count("马二死了。") == 1
     assert repaired.endswith("马二死了。")

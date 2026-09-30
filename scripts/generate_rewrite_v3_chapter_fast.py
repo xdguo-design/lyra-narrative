@@ -299,111 +299,104 @@ def _accept_length_repair(original: str, repaired: str) -> bool:
     return bool(repaired) and _length_distance(repaired) < _length_distance(original)
 
 
-def _short_patch_targets(text: str) -> tuple[int, int]:
-    weight_at = text.find("重量对不上")
-    death_at = text.rfind("马二死了。")
-    if weight_at < 0 or death_at <= weight_at:
-        deficit = max(900, 2900 - len(text))
-        return min(700, max(450, deficit // 3)), min(
-            1400,
-            max(800, deficit),
-        )
-
-    weight_end = weight_at + len("重量对不上")
-    if weight_end < len(text) and text[weight_end] in "。！？":
-        weight_end += 1
-    middle_len = max(0, death_at - weight_end)
-    base_after_replace = len(text) - middle_len
-    needed = max(1100, 2900 - base_after_replace)
-    search_target = min(700, max(500, needed // 3))
-    measurement_target = min(
-        1400,
-        max(850, needed - search_target + 150),
+def _short_patch_targets(text: str) -> tuple[int, int, int]:
+    deficit = max(0, 2850 - len(text))
+    # Providers consistently under-shoot requested Chinese-character ranges.
+    # Ask for roughly 1.8x the remaining deficit, split across three safe anchors.
+    requested_total = min(1900, max(900, int(deficit * 1.8)))
+    search_target = max(300, int(requested_total * 0.34))
+    measurement_target = max(350, int(requested_total * 0.40))
+    transition_target = max(
+        220,
+        requested_total - search_target - measurement_target,
     )
-    return search_target, measurement_target
+    return search_target, measurement_target, transition_target
+
+
+def _insert_before_first(text: str, marker: str, patch: str) -> str:
+    at = text.find(marker)
+    if at < 0 or not patch.strip():
+        return text
+    return (
+        text[:at].rstrip()
+        + "\n\n"
+        + patch.strip()
+        + "\n\n"
+        + text[at:].lstrip()
+    ).strip()
+
+
+def _insert_before_last(text: str, marker: str, patch: str) -> str:
+    at = text.rfind(marker)
+    if at < 0 or not patch.strip():
+        return text
+    return (
+        text[:at].rstrip()
+        + "\n\n"
+        + patch.strip()
+        + "\n\n"
+        + text[at:].lstrip()
+    ).strip()
 
 
 def _assemble_short_draft_patches(
     text: str,
     search_patch: str,
     measurement_patch: str,
+    transition_patch: str,
 ) -> str:
-    weight_marker = "重量对不上"
-    death_marker = "马二死了。"
-    weight_at = text.find(weight_marker)
-    death_at = text.rfind(death_marker)
-    if weight_at < 0 or death_at <= weight_at:
+    required = ("重量对不上", "短三斗一升", "马二死了。")
+    if not all(marker in text for marker in required):
         return text
 
-    weight_para_start = text.rfind("\n\n", 0, weight_at)
-    weight_para_start = 0 if weight_para_start < 0 else weight_para_start + 2
+    repaired = _insert_before_first(text, "重量对不上", search_patch)
+    repaired = _insert_before_first(repaired, "短三斗一升", measurement_patch)
+    repaired = _insert_before_last(repaired, "马二死了。", transition_patch)
 
-    with_search = (
-        text[:weight_para_start].rstrip()
-        + "\n\n"
-        + search_patch.strip()
-        + "\n\n"
-        + text[weight_para_start:]
-    )
-
-    weight_at = with_search.find(weight_marker)
-    death_at = with_search.rfind(death_marker)
-    if weight_at < 0 or death_at <= weight_at:
+    if repaired.count("马二死了。") != 1 or not repaired.endswith("马二死了。"):
         return text
-
-    weight_end = weight_at + len(weight_marker)
-    if weight_end < len(with_search) and with_search[weight_end] in "。！？":
-        weight_end += 1
-
-    return (
-        with_search[:weight_end].rstrip()
-        + "\n\n"
-        + measurement_patch.strip()
-        + "\n\n"
-        + death_marker
-    ).strip()
+    return repaired
 
 
-async def _repair_short_draft_with_patches(task_id: int, text: str) -> str:
-    if "重量对不上" not in text or "马二死了。" not in text:
-        print(
-            "[length-repair] PATCH_UNSAFE_MISSING_ANCHOR "
-            f"chars={len(text)}",
-            flush=True,
-        )
-        return text
+async def _repair_short_draft_round(
+    task_id: int,
+    text: str,
+    round_no: int,
+) -> str:
+    search_target, measurement_target, transition_target = _short_patch_targets(text)
 
-    search_target, measurement_target = _short_patch_targets(text)
-    search_min = max(400, search_target - 80)
-    search_max = search_target + 100
-    measurement_min = max(700, measurement_target - 100)
-    measurement_max = measurement_target + 120
+    def band(target: int, floor: int) -> tuple[int, int]:
+        return max(floor, target - 80), target + 120
 
-    search_instruction = f"""只补写一个可插入当前第二章的【找袋与上秤前现场片段】，目标 {search_min}—{search_max} 个中文字符。
+    search_min, search_max = band(search_target, 260)
+    measurement_min, measurement_max = band(measurement_target, 300)
+    transition_min, transition_max = band(transition_target, 180)
+
+    search_instruction = f"""只补写一个可插入当前第二章的【找袋现场扩写片段】，目标 {search_min}—{search_max} 个中文字符。
 插入位置：正文第一次出现“重量对不上”之前。
-只补刘旺交代袋子在后厨侧门之后，到众人沿既有窄车辙/木棚/蓝麻线复查、找到昨日破口粮袋、刘旺确认这不是昨夜原放置位置、准备上秤之间的现场过程。
-不得重复当前正文已经写出的对白和动作；不得写“重量对不上”、官斗、具体短缺、马二或死讯。
+只补刘旺交代“后厨侧门”以后，到众人沿既有窄车辙/木棚/蓝麻线复查、找到昨日破口粮袋、刘旺确认位置不对、准备上秤之间的现场动作、空间阻力和人物反应。
+不得重复当前正文已有句子；不得写“重量对不上”、官斗、短缺数字、马二或死讯。
 禁止新增拖痕、切痕、重新缝线、绳子、封条、新人物、新地点、精确时间、数量、伤病或解释性证据。
-只输出新增片段，不要标题、说明、前后文。"""
+只输出新增片段。"""
 
-    measurement_instruction = f"""只补写一个可替换当前第二章【“重量对不上”之后到最后一句“马二死了。”之前】的片段，目标 {measurement_min}—{measurement_max} 个中文字符。
-固定顺序必须完整：
-1. 先从“重量对不上”自然承接；
-2. 这时才取昨夜入库记录，记录只写昨夜同口径官斗登记的斗数；
-3. 自然带出一次“昨日运粮车夫马二”的身份，但不得写他去了哪里、失踪、死因、尸体或任何下一章地点信息；
-4. 取昨夜同口径官斗复量，不逐斗报数；
-5. 复量结束必须逐字出现且只出现一次：“短三斗一升。”
-6. 只确认分量短了、袋子位置变了，不定性谁偷、怎么偷，不猜孙成动机；
-7. 粮袋与记录分开收好留查，可写“封存”，不得出现封条、草绳、油布等新增物证；
-8. 片段最后只留出有人进院报告的自然入口，不得写“马二死了”或任何死讯内容。
-不得新增人物、物证、精确时间、地点、记录内容、伤病或解释性证据。
-只输出替换片段，不要标题、说明、前后文。"""
+    measurement_instruction = f"""只补写一个可插入当前第二章的【称重到官斗复量扩写片段】，目标 {measurement_min}—{measurement_max} 个中文字符。
+插入位置：正文“重量对不上”之后、“短三斗一升”之前。
+只补：发现重量异常后的现场反应、这时才去取昨夜入库记录、记录只写同口径官斗登记斗数、自然带出“昨日运粮车夫马二”身份、取同口径官斗准备复量与复量过程。
+不得写出“短三斗一升”本句，不得提前写死讯，不得新增斤两、皮重、封条、新人物、新地点、精确时间、死因、尸体或解释性证据。
+只输出新增片段。"""
 
-    search_result, measurement_result = await asyncio.gather(
+    transition_instruction = f"""只补写一个可插入当前第二章的【复量结果到死讯前过渡片段】，目标 {transition_min}—{transition_max} 个中文字符。
+插入位置：正文最后一句“马二死了。”之前。
+当前正文已经保留“短三斗一升”；这里只补周虎等人确认分量短了、袋子位置变了，粮袋与记录分开收好留查，以及现场短暂收束与有人进院报告前的自然动作。
+不得重复“短三斗一升”，不得写“马二死了”或任何死讯内容；不得定性谁偷、怎么偷，不猜孙成动机。
+禁止新增封条、油布、新人物、新地点、精确时间、伤口、尸体、死因或下一章信息。
+只输出新增片段。"""
+
+    search_result, measurement_result, transition_result = await asyncio.gather(
         _run_step(
             task_id=task_id,
             role="writer-search-patch",
-            stage="chapter-02-length-repair-search",
+            stage=f"chapter-02-length-repair-search-r{round_no}",
             mode="patch",
             content=text,
             instruction=search_instruction,
@@ -411,31 +404,61 @@ async def _repair_short_draft_with_patches(task_id: int, text: str) -> str:
         _run_step(
             task_id=task_id,
             role="writer-measurement-patch",
-            stage="chapter-02-length-repair-measurement",
+            stage=f"chapter-02-length-repair-measurement-r{round_no}",
             mode="patch",
             content=text,
             instruction=measurement_instruction,
+        ),
+        _run_step(
+            task_id=task_id,
+            role="writer-transition-patch",
+            stage=f"chapter-02-length-repair-transition-r{round_no}",
+            mode="patch",
+            content=text,
+            instruction=transition_instruction,
         ),
     )
     repaired = _assemble_short_draft_patches(
         text,
         search_result.content,
         measurement_result.content,
+        transition_result.content,
     )
     if not _accept_length_repair(text, repaired):
         print(
-            f"[length-repair] PATCH_REJECT_NO_IMPROVEMENT original_chars={len(text)} "
-            f"repaired_chars={len(repaired)}",
+            f"[length-repair] PATCH_ROUND_REJECT round={round_no} "
+            f"original_chars={len(text)} repaired_chars={len(repaired)}",
             flush=True,
         )
         return text
     print(
-        f"[length-repair] PATCH_ACCEPT_LOCAL_ONLY original_chars={len(text)} "
-        f"repaired_chars={len(repaired)} "
+        f"[length-repair] PATCH_ROUND_ACCEPT round={round_no} "
+        f"original_chars={len(text)} repaired_chars={len(repaired)} "
         f"remaining_distance={_length_distance(repaired)}",
         flush=True,
     )
     return repaired
+
+
+async def _repair_short_draft_with_patches(task_id: int, text: str) -> str:
+    required = ("重量对不上", "短三斗一升", "马二死了。")
+    if not all(marker in text for marker in required):
+        print(
+            "[length-repair] PATCH_UNSAFE_MISSING_ANCHOR "
+            f"chars={len(text)}",
+            flush=True,
+        )
+        return text
+
+    current = text
+    for round_no in range(1, 3):
+        if len(current) >= 2700:
+            break
+        repaired = await _repair_short_draft_round(task_id, current, round_no)
+        if repaired == current:
+            break
+        current = repaired
+    return current
 
 
 async def _repair_length_if_needed(task_id: int, text: str) -> str:
