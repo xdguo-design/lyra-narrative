@@ -19,6 +19,8 @@ const state = {
   aiText: "",
   aiMode: null,
   saveTimer: null,
+  taskPollTimer: null,
+  taskPollBusy: false,
   search: "",
 };
 
@@ -588,6 +590,131 @@ function workflowStatusLabel(status) {
   return labels[status] || status || "未知";
 }
 
+function runStatusLabel(status) {
+  const labels = {
+    pending: "等待",
+    queued: "排队",
+    running: "运行中",
+    completed: "完成",
+    success: "完成",
+    failed: "失败",
+    error: "失败",
+  };
+  return labels[status] || status || "未知";
+}
+
+function roleLabel(role) {
+  const labels = {
+    writer: "Writer · 正文生成",
+    planner: "Planner · 结构规划",
+    "continuity-plot-reviewer": "GLM 深审 · 连续性 / 剧情 / 证据链",
+    "character-dialogue-reviewer": "人物对白审核",
+    "language-rhythm-reviewer": "语言节奏审核",
+    "master-reader": "Master Reviewer",
+    "revision-agent": "Revision · 修订",
+    "scene-enricher": "场景增强",
+    "prose-editor": "文字编辑",
+  };
+  return labels[role] || role || "未命名 Agent";
+}
+
+function formatDurationMs(value) {
+  const ms = Number(value);
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`;
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.round((ms % 60000) / 1000);
+  return `${minutes}m ${seconds}s`;
+}
+
+function renderLiveTaskProgress(task) {
+  const runs = task.runs || [];
+  const completed = runs.filter((run) => ["completed", "success"].includes(run.status)).length;
+  const running = runs.filter((run) => run.status === "running").length;
+  const failed = runs.filter((run) => ["failed", "error"].includes(run.status)).length;
+  const terminal = ["awaiting_approval", "reviewed", "approved", "rejected"].includes(task.status);
+  const percent = terminal ? 100 : runs.length ? Math.round((completed / runs.length) * 100) : 0;
+
+  const rows = runs.length
+    ? runs.map((run) => {
+        const metric = run.metrics || {};
+        const duration = formatDurationMs(metric.duration_ms ?? run.duration_ms);
+        const model = [run.provider, run.model].filter(Boolean).join(" / ");
+        const error = run.error ? `<div class="progress-error">${escapeHtml(run.error)}</div>` : "";
+        return `
+          <div class="progress-run status-${escapeHtml(run.status)}">
+            <span class="progress-dot" aria-hidden="true"></span>
+            <div class="progress-run-main">
+              <strong>${escapeHtml(roleLabel(run.role))}</strong>
+              <small>${escapeHtml(run.stage || "workflow")} · ${escapeHtml(runStatusLabel(run.status))}</small>
+              ${model ? `<small>实际模型：${escapeHtml(model)}</small>` : ""}
+              ${error}
+            </div>
+            <span class="progress-time">${escapeHtml(duration)}</span>
+          </div>`;
+      }).join("")
+    : `<div class="progress-empty">${task.status === "running" ? "正在准备 Writer / Reviewer…" : "尚未启动 Agent"}</div>`;
+
+  return `
+    <div class="task-progress" data-task-progress="${task.id}">
+      <div class="task-progress-head">
+        <div>
+          <span class="live-indicator ${task.status === "running" ? "is-live" : ""}"></span>
+          <strong>${task.status === "running" ? "实时进度" : "执行进度"}</strong>
+        </div>
+        <span>${completed} 完成 · ${running} 运行 · ${failed} 失败</span>
+      </div>
+      <div class="progress-track" aria-label="任务进度">
+        <span style="width:${Math.max(0, Math.min(100, percent))}%"></span>
+      </div>
+      <div class="progress-runs">${rows}</div>
+      ${task.status === "running" ? '<p class="progress-refresh-note">自动刷新中 · 约每 1.2 秒更新</p>' : ""}
+    </div>`;
+}
+
+function stopTaskPolling() {
+  if (state.taskPollTimer) {
+    clearTimeout(state.taskPollTimer);
+    state.taskPollTimer = null;
+  }
+  state.taskPollBusy = false;
+}
+
+function startTaskPolling(taskId) {
+  stopTaskPolling();
+
+  const tick = async () => {
+    if (state.selectedTaskId !== taskId || !$("#taskDialog").open) {
+      stopTaskPolling();
+      return;
+    }
+    if (state.taskPollBusy) {
+      state.taskPollTimer = setTimeout(tick, 1200);
+      return;
+    }
+
+    state.taskPollBusy = true;
+    try {
+      const task = await api(`/api/tasks/${taskId}`);
+      renderTaskDialog(task);
+      if (task.status !== "running") {
+        stopTaskPolling();
+        await loadTasks();
+        return;
+      }
+    } catch {
+      // Keep polling; a transient read error should not hide task progress.
+    } finally {
+      state.taskPollBusy = false;
+    }
+
+    state.taskPollTimer = setTimeout(tick, 1200);
+  };
+
+  state.taskPollTimer = setTimeout(tick, 350);
+}
+
 async function loadTasks() {
   if (!state.projectId) return;
   state.tasks = await api(`/api/projects/${state.projectId}/tasks`);
@@ -678,14 +805,28 @@ async function createWritingTask() {
 
 async function runWorkflowTask(taskId) {
   try {
-    toast(`任务 #${taskId} 正在运行`);
-    const task = await api(`/api/tasks/${taskId}/run`, { method: "POST" });
+    state.selectedTaskId = taskId;
+    const initial = await api(`/api/tasks/${taskId}`);
+    renderTaskDialog({ ...initial, status: "running" });
+    if (!$("#taskDialog").open) $("#taskDialog").showModal();
+
+    toast(`任务 #${taskId} 已启动，可实时查看进度`);
+    const runPromise = api(`/api/tasks/${taskId}/run`, { method: "POST" });
+    startTaskPolling(taskId);
+
+    const task = await runPromise;
+    stopTaskPolling();
+    renderTaskDialog(task);
     await loadTasks();
-    if (task.status === "awaiting_approval" || task.status === "reviewed") {
-      await openTask(taskId);
-    }
   } catch (error) {
+    stopTaskPolling();
     await loadTasks();
+    try {
+      const task = await api(`/api/tasks/${taskId}`);
+      renderTaskDialog(task);
+    } catch {
+      // Keep the original execution error as the primary user-facing message.
+    }
     toast(error.message);
   }
 }
@@ -708,6 +849,10 @@ function renderTaskDialog(task) {
               .join("<br>")
           : "本任务未选择 Skill"}
       </p>
+    </section>
+    <section class="task-section">
+      <span class="eyebrow">Live Workflow</span>
+      ${renderLiveTaskProgress(task)}
     </section>
     <section class="task-section">
       <span class="eyebrow">Writer Draft</span>
@@ -764,6 +909,7 @@ async function openTask(taskId) {
     state.selectedTaskId = taskId;
     renderTaskDialog(task);
     $("#taskDialog").showModal();
+    if (task.status === "running") startTaskPolling(taskId);
   } catch (error) {
     toast(error.message);
   }
@@ -1521,6 +1667,7 @@ function bind() {
   $("#approveTaskBtn").onclick = () => decideTask("approved");
   $("#rejectTaskBtn").onclick = () => decideTask("rejected");
   $("#closeTaskBtn").onclick = () => $("#taskDialog").close();
+  $("#taskDialog").addEventListener("close", stopTaskPolling);
 
   $("#addCharacterBtn").onclick = createCharacter;
   $("#addWorldBtn").onclick = createWorldNote;

@@ -124,3 +124,20 @@ def test_workbench_theme_autosave_and_mobile_navigation(live_server: str) -> Non
         assert mobile_errors == []
 
         browser.close()
+
+
+def test_workbench_exposes_live_task_progress_ui() -> None:
+    source = Path("app/static/app.js").read_text(encoding="utf-8")
+    styles = Path("app/static/styles.css").read_text(encoding="utf-8")
+
+    for marker in [
+        "renderLiveTaskProgress",
+        "startTaskPolling",
+        "自动刷新中 · 约每 1.2 秒更新",
+        "实际模型：",
+        "GLM 深审 · 连续性 / 剧情 / 证据链",
+    ]:
+        assert marker in source
+
+    for marker in [".task-progress", ".progress-run", ".live-indicator.is-live"]:
+        assert marker in styles

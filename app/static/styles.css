@@ -1659,3 +1659,161 @@ select.mini-input.single-line {
   font-size: 8px;
   overflow-wrap: anywhere;
 }
+
+
+/* Live task progress */
+.task-progress {
+  margin-top: 7px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.task-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.task-progress-head > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.task-progress-head strong {
+  color: var(--text);
+  font-size: 10px;
+}
+
+.live-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.live-indicator.is-live {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  animation: livePulse 1.35s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  50% { opacity: 0.45; }
+}
+
+.progress-track {
+  display: block;
+  height: 4px;
+  margin: 9px 0 10px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--line) 76%, transparent);
+}
+
+.progress-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.28s ease;
+}
+
+.progress-runs {
+  display: grid;
+  gap: 6px;
+}
+
+.progress-run {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+}
+
+.progress-run:first-child {
+  border-top: 0;
+}
+
+.progress-dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+
+.progress-run.status-running .progress-dot {
+  background: var(--accent);
+  animation: livePulse 1.35s ease-in-out infinite;
+}
+
+.progress-run.status-completed .progress-dot,
+.progress-run.status-success .progress-dot {
+  background: var(--success);
+}
+
+.progress-run.status-failed .progress-dot,
+.progress-run.status-error .progress-dot {
+  background: var(--danger);
+}
+
+.progress-run-main {
+  min-width: 0;
+}
+
+.progress-run-main strong,
+.progress-run-main small {
+  display: block;
+}
+
+.progress-run-main strong {
+  color: var(--text-soft);
+  font-size: 10px;
+}
+
+.progress-run-main small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-time {
+  color: var(--muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.progress-error {
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.progress-empty,
+.progress-refresh-note {
+  color: var(--faint);
+  font-size: 9px;
+}
+
+.progress-refresh-note {
+  margin: 8px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-indicator.is-live,
+  .progress-run.status-running .progress-dot {
+    animation: none;
+  }
+}
