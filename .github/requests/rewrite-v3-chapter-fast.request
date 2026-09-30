@@ -1,4 +1,4 @@
-attempt: 19
+attempt: 20
 chapter: 2
-mode: four-reviewer-flow
-reason: agnes-writer-glm53-continuity-agnes-character-xingchenagi-siliconflow-language-master-chatgpt
+mode: benchmark-routed-generation
+reason: agnes-writer-modelscope-continuity-agnes-character-dots3-language-master-chatgpt
