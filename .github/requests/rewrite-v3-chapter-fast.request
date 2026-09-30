@@ -1,4 +1,4 @@
-attempt: 30
+attempt: 31
 chapter: 2
-mode: one-shot-writer-two-round-three-patch-instrumented-v5
-reason: validate-two-round-search-measurement-transition-local-expansion-without-whole-rewrite
+mode: one-shot-writer-flexible-anchor-two-round-three-patch-v6
+reason: validate-local-expansion-when-weight-or-shortage-anchor-is-missing
