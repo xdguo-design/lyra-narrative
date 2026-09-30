@@ -522,9 +522,14 @@ async def _run_review_round(
             skill_context = reader_skill_content[-3500:]
             extra_context = ""
 
+        execution_role = (
+            "continuity-reviewer"
+            if round_no > 1 and role == "continuity-plot-reviewer"
+            else role
+        )
         return await _run_step(
             task_id=task_id,
-            role=role,
+            role=execution_role,
             stage=f"review-r{round_no}",
             mode="check",
             content=draft,

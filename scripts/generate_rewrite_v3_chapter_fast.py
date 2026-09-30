@@ -227,6 +227,44 @@ def _part3_instruction(skill: str, prior_tail: str) -> str:
 只输出正文。"""
 
 
+def _full_chapter_instruction(skill: str) -> str:
+    return _shared(skill) + """
+【整章一次生成｜目标 2850—3250 个中文字符】
+从第一章末尾刘旺抱柴、陈安说“问你件事”、刘旺答“嗯”直接接。整章一次写完，不拆段输出，但必须严格保持下面三阶段顺序。
+
+阶段一｜口供：
+1. 刘旺先回避，只说泔水车谁都能推。
+2. 陈安只能指出右轮更深/更磨、墙根有缺角左脚印、车辙像这辆车等可见异常，只能说“像”。
+3. 赵六去叫周虎；周虎亲自看车轮、车辙、刘旺左脚鞋后跟后再问。
+4. 刘旺先只承认昨夜推过一趟；周虎另起一问“谁叫你推的？”后，刘旺才说“孙成”。
+5. 周虎追问后，刘旺先回避，再在“白替他跑这一趟？”的压力下才说“五文”。
+6. 刘旺最后交代袋子放在“后厨侧门”，后来不见了。孙成本章本人不出场，也不得补动机。
+
+阶段二｜找袋并称重：
+1. 留住刘旺并由皂役看着。
+2. 陈安、赵六、周虎沿既有窄车辙、木棚、蓝麻线复查。
+3. 在木棚后旧木板堆旁找到昨日破口粮袋，只使用既有破口/蓝线特征。
+4. 刘旺只确认这不是他昨夜放袋子的地方。
+5. 上秤只得到一句明确结论：“重量对不上。”此处不报斤两，不提前写官斗或具体短缺。
+
+阶段三｜记录、官斗复量与死讯：
+1. 到这时才取昨夜入库记录；记录只写同口径官斗登记的斗数。
+2. 自然带出“昨日运粮车夫马二”的身份，不暗示死亡。
+3. 用昨夜同口径官斗复量，不逐斗报数。
+4. 复量后必须逐字出现一次：“短三斗一升。”
+5. 只确认分量短了、袋子位置变了，不定性谁偷、怎么偷，不猜孙成动机。
+6. 粮袋与记录分开收好留查，可写“封存”，不得发明封条等程序细节。
+7. 最后才有人进院，只报一句：“马二死了。”
+8. “马二死了。”必须是全章最后一句，后面绝不再写任何反应、地点、尸体信息或时间锚点。
+
+写作要求：
+- 三阶段之间用自然动作与空间移动过渡，不要写成三份报告。
+- 对白短、有人物压力和身体反应，避免整齐问答。
+- 不得新增冻结事实之外的人物、物证、精确时辰、地点、记录、伤病或解释性证据。
+- 只输出完整第二章正文，不要标题、提纲、说明。
+"""
+
+
 async def _run_writer(task_id: int, stage: str, content: str, instruction: str):
     return await _run_step(
         task_id=task_id,
@@ -372,37 +410,14 @@ async def main() -> int:
     prior = CHAPTER_ONE.read_text(encoding="utf-8")
     skill = _writer_skill_excerpt(task_id)
 
-    part1_result = await _run_writer(
+    draft_result = await _run_writer(
         task_id,
-        "chapter-02-fast-part1",
+        "chapter-02-fast-draft",
         prior[-2600:],
-        _part1_instruction(skill),
+        _full_chapter_instruction(skill),
     )
-    part1 = part1_result.content.strip()
-
-    part2_result = await _run_writer(
-        task_id,
-        "chapter-02-fast-part2",
-        part1[-1700:],
-        _part2_instruction(skill, part1[-1500:]),
-    )
-    part2 = part2_result.content.strip()
-
-    part3_result = await _run_writer(
-        task_id,
-        "chapter-02-fast-part3",
-        part2[-1600:],
-        _part3_instruction(skill, part2[-1400:]),
-    )
-    part3 = part3_result.content.strip()
-
-    text = (
-        part1.rstrip()
-        + "\n\n"
-        + part2.strip()
-        + "\n\n"
-        + part3.lstrip()
-    ).strip()
+    text = draft_result.content.strip()
+    text = await _repair_length_if_needed(task_id, text)
 
     # Important policy: deterministic gates collect findings but NEVER reject early.
     hard_errors = _hard_gate_errors(text)

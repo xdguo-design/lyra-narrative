@@ -378,7 +378,7 @@ async def assist(
                         float(
                             os.getenv(
                                 "NARRATIVE_GLM53_REVIEW_TIMEOUT_SECONDS",
-                                "240",
+                                "660",
                             )
                         )
                         if is_glm53_deep_review
