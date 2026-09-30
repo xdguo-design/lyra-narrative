@@ -484,7 +484,7 @@ async def _run_frozen_chapter(
             (task_id,),
         )
 
-    second_reviews, second_blocking = await _run_review_round(
+    _, second_blocking = await _run_review_round(
         task_id=task_id,
         draft=revision.content,
         context=review_context,

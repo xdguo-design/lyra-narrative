@@ -389,7 +389,7 @@ async def _run_review_round(
     auto_learn: bool = True,
     retry_failed_reviewers: int = 0,
 ) -> tuple[list[str], bool]:
-    """Run three automated reviewers; retry only failed reviewer roles when requested."""
+    """Run three automated reviewers; external ChatGPT controller remains master-reader; retry only failed roles."""
     with connect() as conn:
         row = conn.execute(
             """
