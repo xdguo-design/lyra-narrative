@@ -1,6 +1,214 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+function buildAppFormField(field, index) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "app-form-field";
+
+  const input = document.createElement(
+    field.type === "textarea"
+      ? "textarea"
+      : field.type === "select" || field.type === "multiselect"
+        ? "select"
+        : "input",
+  );
+  const inputId = `appFormField${index}`;
+  const errorId = `${inputId}Error`;
+  input.id = inputId;
+  input.name = field.name;
+
+  if (input instanceof HTMLInputElement) {
+    input.type = field.type === "checkbox" ? "checkbox" : field.type || "text";
+    if (field.type === "checkbox") input.checked = Boolean(field.defaultValue);
+    else if (field.defaultValue != null) input.value = String(field.defaultValue);
+  } else if (input instanceof HTMLTextAreaElement) {
+    if (field.defaultValue != null) input.value = String(field.defaultValue);
+    if (field.rows) input.rows = field.rows;
+  } else {
+    input.multiple = field.type === "multiselect";
+    for (const optionData of field.options || []) {
+      const option = document.createElement("option");
+      const optionValue = typeof optionData === "string" ? optionData : optionData.value;
+      option.value = String(optionValue);
+      option.textContent = String(
+        typeof optionData === "string" ? optionData : optionData.label,
+      );
+      input.appendChild(option);
+    }
+    if (input.multiple && Array.isArray(field.defaultValue)) {
+      for (const option of input.options) {
+        option.selected = field.defaultValue.map(String).includes(option.value);
+      }
+    } else if (field.defaultValue != null) {
+      input.value = String(field.defaultValue);
+    }
+  }
+
+  if (field.required) input.required = true;
+  if (field.maxLength && "maxLength" in input) input.maxLength = field.maxLength;
+  if (field.placeholder) input.placeholder = field.placeholder;
+  if (field.description) input.setAttribute("aria-describedby", `${inputId}Help ${errorId}`);
+  else input.setAttribute("aria-describedby", errorId);
+
+  const label = document.createElement("label");
+  label.htmlFor = inputId;
+  label.textContent = field.label;
+  const error = document.createElement("span");
+  error.id = errorId;
+  error.className = "app-form-field-error";
+  error.hidden = true;
+
+  if (field.type === "checkbox") {
+    wrapper.classList.add("app-form-checkbox");
+    const labelContent = document.createElement("span");
+    labelContent.appendChild(label);
+    if (field.description) {
+      const help = document.createElement("small");
+      help.id = `${inputId}Help`;
+      help.textContent = field.description;
+      labelContent.appendChild(help);
+    }
+    wrapper.append(input, labelContent, error);
+  } else {
+    wrapper.append(label, input);
+    if (field.description) {
+      const help = document.createElement("small");
+      help.id = `${inputId}Help`;
+      help.textContent = field.description;
+      wrapper.appendChild(help);
+    }
+    wrapper.appendChild(error);
+  }
+
+  return { field, input, wrapper, error };
+}
+
+function requestForm({ title, description = "", fields, submitLabel = "保存" }) {
+  const dialog = $("#appFormDialog");
+  const form = $("#appForm");
+  const fieldContainer = $("#appFormFields");
+  const errorSummary = $("#appFormError");
+  const submitButton = $("#appFormSubmitBtn");
+  const returnFocus = document.activeElement;
+  const controls = fields.map(buildAppFormField);
+
+  $("#appFormTitle").textContent = title;
+  $("#appFormDescription").textContent = description;
+  $("#appFormDescription").hidden = !description;
+  submitButton.textContent = submitLabel;
+  errorSummary.hidden = true;
+  errorSummary.textContent = "";
+  fieldContainer.replaceChildren(...controls.map(({ wrapper }) => wrapper));
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (dialog.open) dialog.close();
+      if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+        returnFocus.focus();
+      }
+      resolve(result);
+    };
+
+    $("#appFormCancelBtn").onclick = () => finish(null);
+    $("#appFormCloseBtn").onclick = () => finish(null);
+    dialog.oncancel = (event) => {
+      event.preventDefault();
+      finish(null);
+    };
+    form.onsubmit = (event) => {
+      event.preventDefault();
+      errorSummary.hidden = true;
+      errorSummary.textContent = "";
+
+      const invalid = controls.find(({ input }) => !input.checkValidity());
+      for (const { input, error } of controls) {
+        error.hidden = true;
+        input.removeAttribute("aria-invalid");
+      }
+      if (invalid) {
+        const message = invalid.input.validity.valueMissing
+          ? "此字段为必填项。"
+          : "请检查输入内容。";
+        invalid.error.textContent = message;
+        invalid.error.hidden = false;
+        invalid.input.setAttribute("aria-invalid", "true");
+        errorSummary.textContent = message;
+        errorSummary.hidden = false;
+        invalid.input.focus();
+        return;
+      }
+
+      const values = {};
+      for (const { field, input } of controls) {
+        if (field.type === "checkbox") values[field.name] = input.checked;
+        else if (field.type === "multiselect") {
+          values[field.name] = [...input.selectedOptions].map((option) => option.value);
+        } else values[field.name] = input.value;
+      }
+      finish(values);
+    };
+
+    dialog.showModal();
+    requestAnimationFrame(() => {
+      const firstControl = controls.find(({ input }) => !input.disabled)?.input;
+      (firstControl || submitButton).focus();
+    });
+  });
+}
+
+function requestConfirm({
+  title,
+  description,
+  confirmLabel = "确认",
+  danger = false,
+  showCancel = true,
+}) {
+  const dialog = $("#appConfirmDialog");
+  const confirmButton = $("#appConfirmSubmitBtn");
+  const cancelButton = $("#appConfirmCancelBtn");
+  const returnFocus = document.activeElement;
+  $("#appConfirmTitle").textContent = title;
+  $("#appConfirmDescription").textContent = description;
+  confirmButton.textContent = confirmLabel;
+  confirmButton.classList.toggle("danger-confirm", danger);
+  cancelButton.hidden = !showCancel;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (confirmed) => {
+      if (settled) return;
+      settled = true;
+      if (dialog.open) dialog.close();
+      if (returnFocus instanceof HTMLElement && returnFocus.isConnected) {
+        returnFocus.focus();
+      }
+      resolve(confirmed);
+    };
+
+    cancelButton.onclick = () => finish(false);
+    $("#appConfirmCloseBtn").onclick = () => finish(false);
+    confirmButton.onclick = () => finish(true);
+    dialog.oncancel = (event) => {
+      event.preventDefault();
+      finish(false);
+    };
+    dialog.showModal();
+    requestAnimationFrame(() => confirmButton.focus());
+  });
+}
+
+async function requestNotice({ title, description }) {
+  await requestConfirm({
+    title,
+    description,
+    confirmLabel: "知道了",
+    showCancel: false,
+  });
+}
+
 const state = {
   projects: [],
   projectId: null,
@@ -21,8 +229,10 @@ const state = {
   saveTimer: null,
   taskPollTimer: null,
   taskPollBusy: false,
+  taskDetails: new Map(),
   search: "",
   workspaceContext: null,
+  workspace: "workflow",
 };
 
 
@@ -253,6 +463,7 @@ function clearWorkspace() {
   $("#skillList").innerHTML = '<div class="no-results">还没有技能</div>';
   $("#contentRepoStatus").textContent = "未绑定";
   updateStats();
+  updateChapterContext();
 }
 
 function renderProjectSummary() {
@@ -406,6 +617,8 @@ async function loadChapter(id) {
     : "尚未保存";
 
   updateStats();
+  updateChapterContext();
+  renderWorkflowBoard();
   renderChapters();
   setSaving(false);
   if (window.matchMedia("(max-width: 720px)").matches) {
@@ -422,10 +635,27 @@ function clearChapterEditor() {
   $("#chapterStatus").textContent = "—";
   $("#chapterUpdated").textContent = "尚未保存";
   updateStats();
+  updateChapterContext();
+  renderWorkflowBoard();
 }
 
 function updateStats() {
   $("#charCount").textContent = formatNumber(countText($("#editor").value));
+  updateChapterContext();
+}
+
+function updateChapterContext() {
+  const chapter = state.chapter;
+  $("#contextChapterTitle").textContent = chapter?.title || "选择章节";
+  $("#contextChapterStatus").textContent = chapter ? statusLabel(chapter.status) : "—";
+  $("#contextChapterPosition").textContent = state.chapterId
+    ? $("#chapterPosition").textContent
+    : "—";
+  $("#contextChapterWords").textContent = formatNumber(countText($("#editor").value));
+  $("#contextTaskCount").textContent = String(
+    state.tasks.filter((task) => task.chapter_id === state.chapterId).length,
+  );
+  $("#workflowChapterTitle").textContent = chapter?.title || "选择一个章节";
 }
 
 function scheduleSave() {
@@ -485,19 +715,25 @@ async function refreshChapterList() {
 }
 
 async function createProject() {
-  const title = prompt("作品名称");
-  if (!title?.trim()) return;
-
-  const genre = prompt("作品类型（可选）", "悬疑") || "";
-  const description = prompt("作品简介（可选）", "") || "";
+  const values = await requestForm({
+    title: "新建作品",
+    description: "填写作品名称，类型和简介可以之后再修改。",
+    submitLabel: "创建作品",
+    fields: [
+      { name: "title", label: "作品名称", required: true, maxLength: 120 },
+      { name: "genre", label: "作品类型", defaultValue: "悬疑" },
+      { name: "description", label: "作品简介", type: "textarea" },
+    ],
+  });
+  if (!values) return;
 
   try {
     const project = await api("/api/projects", {
       method: "POST",
       body: JSON.stringify({
-        title: title.trim(),
-        genre: genre.trim(),
-        description: description.trim(),
+        title: values.title.trim(),
+        genre: values.genre.trim(),
+        description: values.description.trim(),
       }),
     });
     await loadProjects(project.id);
@@ -511,11 +747,12 @@ async function deleteCurrentProject() {
   const project = currentProject();
   if (!project) return;
 
-  if (
-    !confirm(
-      `确定删除《${project.title}》吗？\n\n作品下的章节、版本、人物和世界观都会一起删除，此操作不可撤销。`,
-    )
-  ) {
+  if (!(await requestConfirm({
+    title: "删除作品",
+    description: `确定删除《${project.title}》吗？作品下的章节、版本、人物和世界观都会一起删除，此操作不可撤销。`,
+    confirmLabel: "删除作品",
+    danger: true,
+  }))) {
     return;
   }
 
@@ -539,13 +776,20 @@ async function createChapter() {
   }
 
   const defaultTitle = `第${state.chapters.length + 1}章`;
-  const title = prompt("章节标题", defaultTitle);
-  if (!title?.trim()) return;
+  const values = await requestForm({
+    title: "新建章节",
+    description: "为当前作品添加一个章节。",
+    submitLabel: "创建章节",
+    fields: [
+      { name: "title", label: "章节标题", defaultValue: defaultTitle, required: true, maxLength: 160 },
+    ],
+  });
+  if (!values) return;
 
   try {
     const chapter = await api(`/api/projects/${state.projectId}/chapters`, {
       method: "POST",
-      body: JSON.stringify({ title: title.trim() }),
+      body: JSON.stringify({ title: values.title.trim() }),
     });
     await refreshChapterList();
     await refreshProjectSummary();
@@ -559,7 +803,12 @@ async function createChapter() {
 async function deleteCurrentChapter() {
   if (!state.chapterId || !state.chapter) return;
 
-  if (!confirm(`确定删除“${state.chapter.title}”吗？该章节的版本历史也会一起删除。`)) {
+  if (!(await requestConfirm({
+    title: "删除章节",
+    description: `确定删除“${state.chapter.title}”吗？该章节的版本历史也会一起删除。`,
+    confirmLabel: "删除章节",
+    danger: true,
+  }))) {
     return;
   }
 
@@ -632,6 +881,9 @@ async function runAi(mode) {
     if (data.demo) {
       toast("当前使用 AI 演示模式");
     }
+    if (state.aiText) {
+      $("#aiResult").scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
   } catch (error) {
     $("#aiResult").textContent = error.message;
     $("#aiModelInfo").textContent = "请求失败";
@@ -655,7 +907,11 @@ function appendAiResult() {
 async function replaceWithAiResult() {
   if (!state.aiText || state.aiMode === "check") return;
 
-  if (!confirm("确定用 AI 结果替换当前正文吗？当前正文会先保存到版本历史。")) {
+  if (!(await requestConfirm({
+    title: "替换章节正文",
+    description: "确定用 AI 结果替换当前正文吗？当前正文会先保存到版本历史。",
+    confirmLabel: "替换正文",
+  }))) {
     return;
   }
 
@@ -795,6 +1051,12 @@ function startTaskPolling(taskId) {
     state.taskPollBusy = true;
     try {
       const task = await api(`/api/tasks/${taskId}`);
+      state.taskDetails.set(task.id, task);
+      const summaryIndex = state.tasks.findIndex((item) => item.id === task.id);
+      if (summaryIndex >= 0) {
+        state.tasks[summaryIndex] = { ...state.tasks[summaryIndex], ...task };
+      }
+      renderWorkflowBoard();
       renderTaskDialog(task);
       if (task.status !== "running") {
         stopTaskPolling();
@@ -816,12 +1078,29 @@ function startTaskPolling(taskId) {
 async function loadTasks() {
   if (!state.projectId) return;
   state.tasks = await api(`/api/projects/${state.projectId}/tasks`);
+  const projectId = state.projectId;
+  state.taskDetails = new Map();
+  await Promise.all(state.tasks.map(async (task) => {
+    try {
+      const detail = await api(`/api/tasks/${task.id}`);
+      if (state.projectId === projectId) state.taskDetails.set(task.id, detail);
+    } catch {
+      // A task can be removed while the board is loading; keep its list entry usable.
+    }
+  }));
   $("#taskCount").textContent = String(state.tasks.length);
+  $("#workflowTaskCount").textContent = `${state.tasks.filter(
+    (task) => task.chapter_id === state.chapterId,
+  ).length} 个任务`;
+  $("#contextTaskCount").textContent = String(
+    state.tasks.filter((task) => task.chapter_id === state.chapterId).length,
+  );
   const container = $("#taskList");
   container.innerHTML = "";
 
   if (!state.tasks.length) {
     container.innerHTML = '<div class="no-results">还没有创作任务</div>';
+    renderWorkflowBoard();
     return;
   }
 
@@ -849,6 +1128,77 @@ async function loadTasks() {
     if (reviewButton) reviewButton.onclick = () => openTask(task.id);
     container.appendChild(card);
   }
+  renderWorkflowBoard();
+}
+
+function renderWorkflowBoard() {
+  const container = $("#workflowBoard");
+  const chapterTasks = state.tasks.filter(
+    (task) => Number(task.chapter_id) === Number(state.chapterId),
+  );
+  $("#workflowTaskCount").textContent = `${chapterTasks.length} 个任务`;
+
+  if (!state.chapterId) {
+    container.innerHTML = '<div class="workflow-empty">先选择一个章节，查看对应任务流。</div>';
+    return;
+  }
+  if (!chapterTasks.length) {
+    container.innerHTML = `
+      <div class="workflow-chapter-node">
+        <span class="workflow-node-code">CHAPTER</span>
+        <strong>${escapeHtml(state.chapter?.title || "当前章节")}</strong>
+        <small>${statusLabel(state.chapter?.status)} · 尚无关联任务</small>
+      </div>
+      <div class="workflow-empty">此章节还没有创作任务。创建任务后，真实的 Writer、Reviewer 和 Revision 运行记录会显示在这里。</div>`;
+    return;
+  }
+
+  const lanes = chapterTasks.map((task) => {
+    const detail = state.taskDetails.get(task.id);
+    const runs = detail?.runs || [];
+    const canRun = ["pending", "failed", "reviewed", "rejected"].includes(task.status);
+    const canReview = task.status === "awaiting_approval";
+    const runNodes = runs.length
+      ? runs.map((run) => `
+        <article class="workflow-run-node status-${escapeHtml(run.status)}" data-run-node data-status="${escapeHtml(run.status)}">
+          <span class="workflow-node-code">${escapeHtml(run.stage || run.role || "Agent")}</span>
+          <strong>${escapeHtml(roleLabel(run.role))}</strong>
+          <small>${escapeHtml(runStatusLabel(run.status))}${run.model ? ` · ${escapeHtml(run.model)}` : ""}</small>
+          ${run.error ? `<span class="workflow-run-error">${escapeHtml(run.error)}</span>` : ""}
+        </article>`).join("")
+      : `<div class="workflow-run-empty">${task.status === "running" ? "正在准备 Agent 运行记录…" : "尚未启动 Agent"}</div>`;
+    return `
+      <section class="workflow-task-lane">
+        <article class="workflow-task-node status-${escapeHtml(task.status)}" data-task-node>
+          <span class="workflow-node-code">TASK #${task.id}</span>
+          <strong>${escapeHtml(task.goal)}</strong>
+          <span class="status-badge status-${escapeHtml(task.status)}">${workflowStatusLabel(task.status)}</span>
+          <div class="workflow-node-actions">
+            <button class="ghost compact" data-action="detail">详情</button>
+            ${canRun ? '<button class="primary compact" data-action="run">运行</button>' : ""}
+            ${canReview ? '<button class="primary compact" data-action="review">审阅确认</button>' : ""}
+          </div>
+        </article>
+        <div class="workflow-run-chain" aria-label="任务 Agent 运行记录">${runNodes}</div>
+      </section>`;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="workflow-chapter-node">
+      <span class="workflow-node-code">CHAPTER · ${escapeHtml($("#chapterPosition").textContent)}</span>
+      <strong>${escapeHtml(state.chapter?.title || "当前章节")}</strong>
+      <small>${statusLabel(state.chapter?.status)} · ${chapterTasks.length} 个关联任务</small>
+    </div>
+    <div class="workflow-task-lanes">${lanes}</div>`;
+
+  $$("[data-task-node]").forEach((node, index) => {
+    const task = chapterTasks[index];
+    node.querySelector('[data-action="detail"]').onclick = () => openTask(task.id);
+    const runButton = node.querySelector('[data-action="run"]');
+    if (runButton) runButton.onclick = () => runWorkflowTask(task.id);
+    const reviewButton = node.querySelector('[data-action="review"]');
+    if (reviewButton) reviewButton.onclick = () => openTask(task.id);
+  });
 }
 
 async function createWritingTask() {
@@ -858,39 +1208,49 @@ async function createWritingTask() {
   }
   await flushPendingSave();
 
-  const goal = prompt("这次创作任务要完成什么？", "继续推进当前章节");
-  if (!goal?.trim()) return;
-  const instruction = prompt(
-    "补充要求（可选）",
-    "保持当前叙述视角，不新增无关人物。",
-  ) || "";
-
   const enabledSkills = state.skills.filter((skill) => Boolean(skill.enabled));
-  let skillIds = [];
-  if (enabledSkills.length) {
-    const skillHelp = enabledSkills
-      .map((skill) => `${skill.id} = ${skill.name} v${skill.current_version}`)
-      .join("\n");
-    const rawSkillIds = prompt(
-      `选择本次冻结使用的 Skill ID（逗号分隔；留空表示不用）：\n\n${skillHelp}`,
-      enabledSkills.map((skill) => skill.id).join(","),
-    );
-    if (rawSkillIds === null) return;
-    skillIds = rawSkillIds.trim()
-      ? rawSkillIds
-          .split(/[,，]/)
-          .map((value) => Number(value.trim()))
-          .filter((value) => Number.isInteger(value))
-      : [];
-  }
+  const values = await requestForm({
+    title: "新建写作任务",
+    description: "明确本次要完成的创作目标，并选择任务要冻结使用的 Skills。",
+    submitLabel: "创建任务",
+    fields: [
+      {
+        name: "goal",
+        label: "任务目标",
+        type: "textarea",
+        defaultValue: "继续推进当前章节",
+        required: true,
+        maxLength: 500,
+      },
+      {
+        name: "instruction",
+        label: "补充要求",
+        type: "textarea",
+        defaultValue: "保持当前叙述视角，不新增无关人物。",
+      },
+      {
+        name: "skill_ids",
+        label: "本次使用的 Skills",
+        type: "multiselect",
+        description: "按住 Ctrl 或 Command 可选择多项；取消选择表示不用 Skills。",
+        options: enabledSkills.map((skill) => ({
+          value: skill.id,
+          label: `${skill.name} v${skill.current_version}`,
+        })),
+        defaultValue: enabledSkills.map((skill) => skill.id),
+      },
+    ],
+  });
+  if (!values) return;
+  const skillIds = values.skill_ids.map(Number).filter(Number.isInteger);
 
   try {
     const task = await api(`/api/projects/${state.projectId}/tasks`, {
       method: "POST",
       body: JSON.stringify({
         chapter_id: state.chapterId,
-        goal: goal.trim(),
-        instruction: instruction.trim(),
+        goal: values.goal.trim(),
+        instruction: values.instruction.trim(),
         skill_ids: skillIds,
       }),
     });
@@ -1015,12 +1375,28 @@ async function openTask(taskId) {
 
 async function decideTask(decision) {
   if (!state.selectedTaskId) return;
-  const note = prompt(decision === "approved" ? "确认备注（可选）" : "退回原因（可选）", "") || "";
+  const isApproval = decision === "approved";
+  const values = await requestForm({
+    title: isApproval ? "确认写入章节" : "退回写作任务",
+    description: isApproval
+      ? "确认后，修订稿将写入当前章节并生成新版本。"
+      : "填写退回原因；当前章节正文会保持不变。",
+    submitLabel: isApproval ? "确认写入章节" : "退回任务",
+    fields: [
+      {
+        name: "note",
+        label: isApproval ? "确认备注" : "退回原因",
+        type: "textarea",
+        required: !isApproval,
+      },
+    ],
+  });
+  if (!values) return;
 
   try {
     const task = await api(`/api/tasks/${state.selectedTaskId}/approval`, {
       method: "POST",
-      body: JSON.stringify({ decision, note }),
+      body: JSON.stringify({ decision, note: values.note.trim() }),
     });
     $("#taskDialog").close();
     await Promise.all([loadTasks(), refreshChapterList(), refreshProjectSummary(), loadContentStatus()]);
@@ -1099,21 +1475,32 @@ async function loadMemories() {
 
 async function createMemory() {
   if (!state.projectId) return;
-  const title = prompt("记忆标题");
-  if (!title?.trim()) return;
-  const kind = prompt("类型", "fact") || "fact";
-  const content = prompt("记忆内容");
-  if (!content?.trim()) return;
-  const confirmed = confirm("是否立即确认这条记忆？\n\n确认后会进入 Writer / Reviewer 上下文。");
+  const values = await requestForm({
+    title: "新建作品记忆",
+    description: "未勾选确认的记忆会作为候选，不进入 Writer / Reviewer 上下文。",
+    submitLabel: "创建记忆",
+    fields: [
+      { name: "title", label: "记忆标题", required: true, maxLength: 160 },
+      { name: "kind", label: "类型", defaultValue: "fact" },
+      { name: "content", label: "记忆内容", type: "textarea", required: true },
+      {
+        name: "confirmed",
+        label: "立即确认这条记忆",
+        type: "checkbox",
+        description: "确认后会进入 Writer / Reviewer 上下文。",
+      },
+    ],
+  });
+  if (!values) return;
 
   try {
     await api(`/api/projects/${state.projectId}/memories`, {
       method: "POST",
       body: JSON.stringify({
-        title: title.trim(),
-        kind: kind.trim() || "fact",
-        content: content.trim(),
-        confirmed,
+        title: values.title.trim(),
+        kind: values.kind.trim() || "fact",
+        content: values.content.trim(),
+        confirmed: values.confirmed,
       }),
     });
     await loadMemories();
@@ -1143,19 +1530,26 @@ async function restoreMemoryVersion(memory) {
       toast("没有可恢复版本");
       return;
     }
-    const summary = versions
-      .map((item) => `v${item.version} · ${item.note || "版本"} · ${item.content.slice(0, 28)}`)
-      .join("\n");
-    const selected = prompt(
-      `选择要恢复的版本号：\n\n${summary}`,
-      String(versions[0].version),
-    );
-    if (!selected?.trim()) return;
-    const version = Number(selected);
-    if (!Number.isInteger(version)) {
-      toast("版本号无效");
-      return;
-    }
+    const values = await requestForm({
+      title: "恢复记忆版本",
+      description: `选择要恢复的“${memory.title}”版本。恢复会创建一个新版本。`,
+      submitLabel: "恢复版本",
+      fields: [
+        {
+          name: "version",
+          label: "历史版本",
+          type: "select",
+          required: true,
+          defaultValue: String(versions[0].version),
+          options: versions.map((item) => ({
+            value: item.version,
+            label: `v${item.version} · ${item.note || "版本"} · ${item.content.slice(0, 28)}`,
+          })),
+        },
+      ],
+    });
+    if (!values) return;
+    const version = Number(values.version);
     await api(`/api/memories/${memory.id}/versions/${version}/restore`, {
       method: "POST",
     });
@@ -1207,19 +1601,25 @@ async function loadSkills() {
 
 async function createSkill() {
   if (!state.projectId) return;
-  const name = prompt("技能名称");
-  if (!name?.trim()) return;
-  const purpose = prompt("技能用途（可选）", "") || "";
-  const content = prompt("技能正文 / 执行规则");
-  if (!content?.trim()) return;
+  const values = await requestForm({
+    title: "新建写作 Skill",
+    description: "Skill 会保存在当前作品中，并可在创建写作任务时选择。",
+    submitLabel: "创建 Skill",
+    fields: [
+      { name: "name", label: "技能名称", required: true, maxLength: 120 },
+      { name: "purpose", label: "技能用途" },
+      { name: "content", label: "技能正文 / 执行规则", type: "textarea", required: true },
+    ],
+  });
+  if (!values) return;
 
   try {
     await api(`/api/projects/${state.projectId}/skills`, {
       method: "POST",
       body: JSON.stringify({
-        name: name.trim(),
-        purpose: purpose.trim(),
-        content: content.trim(),
+        name: values.name.trim(),
+        purpose: values.purpose.trim(),
+        content: values.content.trim(),
       }),
     });
     await loadSkills();
@@ -1243,14 +1643,22 @@ async function setSkillEnabled(skill, enabled) {
 }
 
 async function publishSkillVersion(skill) {
-  const next = prompt(`发布 ${skill.name} 的新版本`, skill.content || "");
-  if (!next?.trim() || next.trim() === skill.content) return;
-  const note = prompt("版本说明（可选）", "") || "";
+  const values = await requestForm({
+    title: `发布 ${skill.name} 的新版本`,
+    description: "修改技能正文后发布为新版本。",
+    submitLabel: "发布版本",
+    fields: [
+      { name: "content", label: "技能正文 / 执行规则", type: "textarea", defaultValue: skill.content || "", required: true },
+      { name: "note", label: "版本说明" },
+    ],
+  });
+  if (!values) return;
+  if (!values.content.trim() || values.content.trim() === skill.content) return;
 
   try {
     await api(`/api/skills/${skill.id}/versions`, {
       method: "POST",
-      body: JSON.stringify({ content: next.trim(), note: note.trim() }),
+      body: JSON.stringify({ content: values.content.trim(), note: values.note.trim() }),
     });
     await loadSkills();
     toast("技能新版本已发布");
@@ -1266,19 +1674,26 @@ async function restoreSkillVersion(skill) {
       toast("没有可恢复版本");
       return;
     }
-    const summary = versions
-      .map((item) => `v${item.version} · ${item.note || "版本"} · ${item.content.slice(0, 28)}`)
-      .join("\n");
-    const selected = prompt(
-      `选择要恢复的版本号：\n\n${summary}`,
-      String(versions[0].version),
-    );
-    if (!selected?.trim()) return;
-    const version = Number(selected);
-    if (!Number.isInteger(version)) {
-      toast("版本号无效");
-      return;
-    }
+    const values = await requestForm({
+      title: `恢复 ${skill.name} 的版本`,
+      description: "选择要恢复的历史版本；恢复会发布一个新版本。",
+      submitLabel: "恢复版本",
+      fields: [
+        {
+          name: "version",
+          label: "历史版本",
+          type: "select",
+          required: true,
+          defaultValue: String(versions[0].version),
+          options: versions.map((item) => ({
+            value: item.version,
+            label: `v${item.version} · ${item.note || "版本"} · ${item.content.slice(0, 28)}`,
+          })),
+        },
+      ],
+    });
+    if (!values) return;
+    const version = Number(values.version);
     await api(`/api/skills/${skill.id}/versions/${version}/restore`, {
       method: "POST",
     });
@@ -1309,13 +1724,20 @@ async function loadContentStatus() {
 async function linkContentRepository() {
   if (!state.projectId) return;
   const current = state.contentStatus?.slug || "";
-  const slug = prompt("作品库目录 slug", current || "slow-world");
-  if (!slug?.trim()) return;
+  const values = await requestForm({
+    title: "绑定作品内容库",
+    description: "输入内容库目录 slug；作品库路径由本地环境配置决定。",
+    submitLabel: "保存绑定",
+    fields: [
+      { name: "slug", label: "作品库目录 slug", defaultValue: current || "slow-world", required: true },
+    ],
+  });
+  if (!values) return;
 
   try {
     await api(`/api/projects/${state.projectId}/content`, {
       method: "PUT",
-      body: JSON.stringify({ slug: slug.trim() }),
+      body: JSON.stringify({ slug: values.slug.trim() }),
     });
     await loadContentStatus();
     toast("作品内容库已绑定");
@@ -1337,11 +1759,12 @@ async function preflightContentRepository() {
       toast("内容库预检通过");
     } else {
       element.textContent = `${result.slug || "未绑定"} · 预检未通过`;
-      alert(
-        ["内容库预检未通过：", "", ...(result.issues || [])]
+      await requestNotice({
+        title: "内容库预检未通过",
+        description: ["请检查以下问题：", "", ...(result.issues || [])]
           .filter(Boolean)
           .join("\n"),
-      );
+      });
     }
   } catch (error) {
     toast(error.message);
@@ -1356,11 +1779,12 @@ async function importContentRepository() {
       `/api/projects/${state.projectId}/content/preflight`,
     );
     if (!preflight.ready) {
-      alert(
-        ["暂不能导入内容库：", "", ...(preflight.issues || [])]
+      await requestNotice({
+        title: "暂不能导入内容库",
+        description: ["请先解决以下问题：", "", ...(preflight.issues || [])]
           .filter(Boolean)
           .join("\n"),
-      );
+      });
       return;
     }
 
@@ -1414,13 +1838,20 @@ async function loadCharacters() {
 async function createCharacter() {
   if (!state.projectId) return;
 
-  const name = prompt("人物名");
-  if (!name?.trim()) return;
+  const values = await requestForm({
+    title: "新建人物卡",
+    description: "填写人物名称，定位、简介和标签都可以之后再完善。",
+    submitLabel: "创建人物卡",
+    fields: [
+      { name: "name", label: "人物名", required: true, maxLength: 120 },
+      { name: "role", label: "角色定位", defaultValue: "主角" },
+      { name: "profile", label: "人物简介", type: "textarea" },
+      { name: "tags", label: "标签", description: "用逗号分隔。" },
+    ],
+  });
+  if (!values) return;
 
-  const role = prompt("角色定位（可选）", "主角") || "";
-  const profile = prompt("人物简介（可选）", "") || "";
-  const rawTags = prompt("标签（用逗号分隔，可选）", "") || "";
-  const tags = rawTags
+  const tags = values.tags
     .split(/[,，]/)
     .map((tag) => tag.trim())
     .filter(Boolean);
@@ -1429,9 +1860,9 @@ async function createCharacter() {
     await api(`/api/projects/${state.projectId}/characters`, {
       method: "POST",
       body: JSON.stringify({
-        name: name.trim(),
-        role: role.trim(),
-        profile: profile.trim(),
+        name: values.name.trim(),
+        role: values.role.trim(),
+        profile: values.profile.trim(),
         tags,
       }),
     });
@@ -1473,19 +1904,25 @@ async function loadWorld() {
 async function createWorldNote() {
   if (!state.projectId) return;
 
-  const title = prompt("设定名称");
-  if (!title?.trim()) return;
-
-  const category = prompt("分类", "地点") || "设定";
-  const content = prompt("设定内容", "") || "";
+  const values = await requestForm({
+    title: "新建世界设定",
+    description: "添加地点、规则或其他对当前作品有效的设定。",
+    submitLabel: "创建设定",
+    fields: [
+      { name: "title", label: "设定名称", required: true, maxLength: 160 },
+      { name: "category", label: "分类", defaultValue: "地点" },
+      { name: "content", label: "设定内容", type: "textarea" },
+    ],
+  });
+  if (!values) return;
 
   try {
     await api(`/api/projects/${state.projectId}/world`, {
       method: "POST",
       body: JSON.stringify({
-        title: title.trim(),
-        category: category.trim() || "设定",
-        content: content.trim(),
+        title: values.title.trim(),
+        category: values.category.trim() || "设定",
+        content: values.content.trim(),
       }),
     });
     await loadWorld();
@@ -1523,7 +1960,11 @@ async function showHistory() {
     `;
 
     row.querySelector("button").onclick = async () => {
-      if (!confirm("恢复这个版本？当前内容仍会保留在版本历史中。")) return;
+      if (!(await requestConfirm({
+        title: "恢复章节版本",
+        description: `恢复“${version.note || "历史版本"}”吗？当前内容仍会保留在版本历史中。`,
+        confirmLabel: "恢复版本",
+      }))) return;
 
       const chapter = await api(
         `/api/chapters/${state.chapterId}/versions/${version.id}/restore`,
@@ -1710,7 +2151,12 @@ async function setDefaultProvider(provider) {
 }
 
 async function deleteProvider(provider) {
-  if (!confirm("确定删除 Provider“" + provider.name + "”吗？")) return;
+  if (!(await requestConfirm({
+    title: "删除 Provider",
+    description: `确定删除 Provider“${provider.name}”吗？`,
+    confirmLabel: "删除 Provider",
+    danger: true,
+  }))) return;
   try {
     await api("/api/providers/" + provider.id, { method: "DELETE" });
     if (state.editingProviderId === provider.id) resetProviderEditor();
@@ -1721,11 +2167,39 @@ async function deleteProvider(provider) {
   }
 }
 
-function switchTab(button) {
-  $$(".tab").forEach((tab) => tab.classList.toggle("active", tab === button));
-  $$(".tab-pane").forEach((pane) =>
-    pane.classList.toggle("active", pane.id === `tab-${button.dataset.tab}`),
-  );
+function setWorkspace(workspace) {
+  const workspaceTabs = {
+    workflow: "tasks",
+    reviews: "tasks",
+    editor: "ai",
+    memory: "memory",
+    skills: "skills",
+    characters: "characters",
+    world: "world",
+    providers: "providers",
+  };
+  if (!workspaceTabs[workspace]) return;
+
+  state.workspace = workspace;
+  document.body.dataset.workspace = workspace;
+  $$("[data-workspace-nav]").forEach((button) => {
+    const active = button.dataset.workspaceNav === workspace;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  $$(".tab-pane").forEach((pane) => {
+    pane.classList.toggle("active", pane.id === `tab-${workspaceTabs[workspace]}`);
+  });
+  if (workspace === "providers") loadProviders().catch((error) => toast(error.message));
+  if (workspace === "characters") loadCharacters().catch((error) => toast(error.message));
+  if (workspace === "world") loadWorld().catch((error) => toast(error.message));
+  if (workspace === "memory") loadMemories().catch((error) => toast(error.message));
+  if (workspace === "skills") loadSkills().catch((error) => toast(error.message));
+  if (workspace === "workflow" || workspace === "reviews") {
+    loadTasks().catch((error) => toast(error.message));
+  }
+  if (window.matchMedia("(max-width: 720px)").matches) closeMobileNav();
 }
 
 function bind() {
@@ -1752,8 +2226,8 @@ function bind() {
   $("#insertAiBtn").onclick = appendAiResult;
   $("#replaceAiBtn").onclick = replaceWithAiResult;
 
-  $$(".tab").forEach((button) => {
-    button.onclick = () => switchTab(button);
+  $$("[data-workspace-nav]").forEach((button) => {
+    button.onclick = () => setWorkspace(button.dataset.workspaceNav);
   });
 
   $("#newTaskBtn").onclick = createWritingTask;

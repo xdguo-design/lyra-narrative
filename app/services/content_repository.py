@@ -172,7 +172,7 @@ def preflight_content_repository(project_id: int) -> dict:
         sources.append(
             {
                 "kind": kind,
-                "path": str(path.relative_to(root)),
+                "path": path.relative_to(root).as_posix(),
                 "bytes": path.stat().st_size,
             }
         )

@@ -7,7 +7,7 @@
   <title>NarrativeOS · 长篇小说创作工作台</title>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body>
+<body data-workspace="workflow">
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-area">
@@ -45,6 +45,17 @@
 
     <main class="workspace">
       <aside class="sidebar panel">
+        <nav class="workbench-nav" aria-label="工作区导航">
+          <div class="nav-label">工作区</div>
+          <button class="workspace-nav-item active" type="button" data-workspace-nav="workflow" aria-current="page">▧ <span>章节任务流线</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="editor">✎ <span>AI 编辑</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="reviews">☷ <span>多角度评审</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="characters">♙ <span>角色知识库</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="world">▣ <span>小说资料库</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="skills">✧ <span>技法知识库</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="providers">⚙ <span>模型与技能</span></button>
+          <button class="workspace-nav-item" type="button" data-workspace-nav="memory">◉ <span>项目记忆</span></button>
+        </nav>
         <div class="sidebar-scroll">
           <section class="sidebar-section">
             <div class="section-label">作品</div>
@@ -91,6 +102,7 @@
         </div>
       </aside>
 
+      <section class="main-content">
       <section class="editor-wrap panel">
         <div class="editor-toolbar">
           <div class="editor-heading">
@@ -153,7 +165,7 @@
           <button class="tab" data-tab="providers">模型 <span id="providerCount" class="tab-count">0</span></button>
         </div>
 
-        <section id="tab-ai" class="tab-pane active">
+        <section id="tab-ai" class="tab-pane">
           <div class="assist-intro">
             <strong>针对当前章节操作</strong>
             <p>AI 不会直接改写原稿。结果会先出现在预览区，由你决定是否应用。</p>
@@ -181,35 +193,26 @@
             placeholder="例如：保持第三人称、加强悬疑感、不要增加新人物……"
           ></textarea>
 
-          <div class="result-head">
-            <div>
-              <span class="eyebrow">AI 输出</span>
-              <strong id="aiResultTitle">等待任务</strong>
-            </div>
-            <span id="aiModelInfo" class="model-info">未连接真实模型</span>
-          </div>
-
-          <div id="aiResult" class="ai-result">
-            <div class="empty-state">
-              <div class="empty-icon">✧</div>
-              <strong>还没有生成内容</strong>
-              <p>选择“续写 / 润色 / 一致性检查”开始。</p>
-            </div>
-          </div>
-
-          <div class="result-actions">
-            <button id="replaceAiBtn" class="ghost full" disabled>用结果替换正文</button>
-            <button id="insertAiBtn" class="primary full" disabled>追加到正文末尾</button>
-          </div>
         </section>
 
-        <section id="tab-tasks" class="tab-pane">
+        <section id="tab-tasks" class="tab-pane active">
           <div class="side-section-head">
             <div>
-              <span class="eyebrow">Writer · Reviewer · Revision</span>
-              <strong>创作任务</strong>
+              <span class="eyebrow">CHAPTER WORKFLOW</span>
+              <strong>章节任务流线</strong>
             </div>
             <button id="newTaskBtn" class="compact primary">＋ 任务</button>
+          </div>
+          <div id="workflowHeader" class="workflow-header">
+            <div><span class="eyebrow">当前章节目标</span><strong id="workflowChapterTitle">选择一个章节</strong></div>
+            <span id="workflowTaskCount" class="workflow-count">0 个任务</span>
+          </div>
+          <div id="workflowBoard" class="workflow-board" aria-live="polite"></div>
+          <div id="workflowLegend" class="workflow-legend" aria-label="任务状态图例">
+            <span><i class="legend-dot completed"></i>完成</span>
+            <span><i class="legend-dot running"></i>运行中</span>
+            <span><i class="legend-dot pending"></i>待运行 / 待确认</span>
+            <span><i class="legend-dot failed"></i>失败</span>
           </div>
           <div class="workflow-note">
             <strong>正文保护</strong>
@@ -226,7 +229,10 @@
               <button id="linkContentRepoBtn" class="ghost compact">绑定</button>
             </div>
           </div>
-          <div id="taskList" class="card-list"></div>
+          <details class="workflow-list-details">
+            <summary>项目全部任务</summary>
+            <div id="taskList" class="card-list"></div>
+          </details>
         </section>
 
         <section id="tab-memory" class="tab-pane">
@@ -333,8 +339,76 @@
           <div id="providerList" class="card-list"></div>
         </section>
       </aside>
+      </section>
+
+      <aside id="chapterContext" class="chapter-context panel" aria-label="章节信息与 AI 输出">
+        <section class="chapter-context-card">
+          <span class="eyebrow">章节信息</span>
+          <h2 id="contextChapterTitle">选择章节</h2>
+          <dl class="chapter-context-stats">
+            <div><dt>状态</dt><dd id="contextChapterStatus">—</dd></div>
+            <div><dt>章节</dt><dd id="contextChapterPosition">—</dd></div>
+            <div><dt>字数</dt><dd id="contextChapterWords">0</dd></div>
+            <div><dt>任务数</dt><dd id="contextTaskCount">0</dd></div>
+          </dl>
+        </section>
+        <section class="chapter-output-card">
+          <div class="result-head">
+            <div>
+              <span class="eyebrow">AI 输出</span>
+              <strong id="aiResultTitle">等待任务</strong>
+            </div>
+            <span id="aiModelInfo" class="model-info">未连接真实模型</span>
+          </div>
+          <div id="aiResult" class="ai-result">
+            <div class="empty-state">
+              <div class="empty-icon">✧</div>
+              <strong>还没有生成内容</strong>
+              <p>进入 AI 编辑并选择续写、润色或一致性检查。</p>
+            </div>
+          </div>
+          <div class="result-actions">
+            <button id="replaceAiBtn" class="ghost full" disabled>用结果替换正文</button>
+            <button id="insertAiBtn" class="primary full" disabled>追加到正文末尾</button>
+          </div>
+        </section>
+      </aside>
     </main>
   </div>
+
+  <dialog id="appFormDialog" class="dialog app-form-dialog" aria-labelledby="appFormTitle" aria-describedby="appFormDescription">
+    <div class="dialog-head">
+      <div>
+        <span class="eyebrow">NarrativeOS</span>
+        <h2 id="appFormTitle">编辑信息</h2>
+      </div>
+      <button id="appFormCloseBtn" class="dialog-close" type="button" aria-label="取消并关闭">×</button>
+    </div>
+    <p id="appFormDescription" class="dialog-help"></p>
+    <form id="appForm" novalidate>
+      <div id="appFormFields" class="app-form-fields"></div>
+      <p id="appFormError" class="app-form-error" role="alert" hidden></p>
+      <div class="task-dialog-actions">
+        <button id="appFormCancelBtn" class="ghost" type="button">取消</button>
+        <button id="appFormSubmitBtn" class="primary" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="appConfirmDialog" class="dialog app-confirm-dialog" aria-labelledby="appConfirmTitle" aria-describedby="appConfirmDescription">
+    <div class="dialog-head">
+      <div>
+        <span class="eyebrow">NarrativeOS</span>
+        <h2 id="appConfirmTitle">确认操作</h2>
+      </div>
+      <button id="appConfirmCloseBtn" class="dialog-close" type="button" aria-label="取消并关闭">×</button>
+    </div>
+    <p id="appConfirmDescription" class="app-confirm-message"></p>
+    <div class="task-dialog-actions">
+      <button id="appConfirmCancelBtn" class="ghost" type="button">取消</button>
+      <button id="appConfirmSubmitBtn" class="primary" type="button">确认</button>
+    </div>
+  </dialog>
 
   <dialog id="taskDialog" class="dialog task-dialog">
     <div class="dialog-head">
