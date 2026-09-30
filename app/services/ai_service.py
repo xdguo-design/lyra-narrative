@@ -288,6 +288,22 @@ async def assist(
 
     last_error: Exception | None = None
     profiles = _runtime_profiles(role)
+    reviewer_route = _role_bucket(role) in {
+        "natural-reader",
+        "reasoning-reader",
+        "final-review",
+    }
+    attempt_env = (
+        "NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"
+        if reviewer_route
+        else "NARRATIVE_WRITER_MAX_ROUTE_ATTEMPTS"
+    )
+    try:
+        max_route_attempts = max(1, int(os.getenv(attempt_env, "2")))
+    except ValueError:
+        max_route_attempts = 2
+    profiles = profiles[:max_route_attempts]
+
     input_chars = len(user_prompt)
     context_tier = (
         "short" if input_chars <= 6000
@@ -358,13 +374,28 @@ async def assist(
                     base_url=base_url,
                     api_key_env=api_key_env,
                     default_model=model,
-                    timeout_seconds=max(
-                        float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")),
-                        900.0 if is_glm53_deep_review else 0.0,
+                    timeout_seconds=(
+                        float(
+                            os.getenv(
+                                "NARRATIVE_GLM53_REVIEW_TIMEOUT_SECONDS",
+                                "240",
+                            )
+                        )
+                        if is_glm53_deep_review
+                        else float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180"))
                     ),
                 )
             )
-            effective_max_tokens = 48000 if is_glm53_deep_review else max_tokens
+            effective_max_tokens = (
+                int(
+                    os.getenv(
+                        "NARRATIVE_GLM53_REVIEW_MAX_TOKENS",
+                        "12000",
+                    )
+                )
+                if is_glm53_deep_review
+                else max_tokens
+            )
             response = await provider.chat(
                 ChatRequest(
                     system=_system_prompt(mode),

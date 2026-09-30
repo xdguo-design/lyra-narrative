@@ -496,34 +496,10 @@ async def _run_frozen_chapter(
     final_content = revision.content
     final_blocking = second_blocking
     if second_blocking:
-        second_revision = await _run_step(
-            task_id=task_id,
-            role="revision-agent",
-            stage=f"chapter-{chapter_number:02d}-revision-r2",
-            mode="polish",
-            content=revision.content,
-            instruction="\n\n".join(
-                [
-                    """第二轮复审仍有 blocking。只处理复审结果为 FAIL 的原问题，沿用原问题的处置级别和修改边界；不得改动已经 PASS 的范围，不得破坏已经通过的世界规则、人物冲突和章节功能。只输出完整章节。""",
-                    "第二轮 Reviewer blocking 摘要：\n" + _blocking_review_digest(task_id),
-                    review_context,
-                ]
-            ),
-        )
-        if not _chapter_text_is_usable(second_revision.content):
-            raise RuntimeError("second revision returned invalid chapter text")
-        final_content = second_revision.content
-        with connect() as conn:
-            conn.execute(
-                "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
-                (task_id,),
-            )
-        _, final_blocking = await _run_review_round(
-            task_id=task_id,
-            draft=final_content,
-            context=review_context,
-            round_no=3,
-            prior_outputs=second_reviews,
+        print(
+            f"[review-budget] STOP_AFTER_R2 task={task_id} "
+            f"chapter={chapter_number} remaining blocking findings require master/human review",
+            flush=True,
         )
 
     final_repetition = repetition_report(final_content, prior_manuscript)

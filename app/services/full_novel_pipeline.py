@@ -950,44 +950,13 @@ async def run_full_novel_pipeline(task_id: int) -> dict:
             second_blocking = True
 
         final_content = revision.content
+        final_blocking = second_blocking
         if second_blocking:
-            second_revision = await _run_step(
-                task_id=task_id,
-                role="revision-agent",
-                stage="revision-r2",
-                mode="polish",
-                content=revision.content,
-                instruction="\n\n".join(
-                    [
-                        """第二轮复审仍有 blocking。仅处理复审结果为 FAIL 的原问题，并按原问题标识与处置级别执行；REWRITE_BLOCK 才允许重建对应范围，LOCAL_REWRITE 必须保持最小修改。不得重构已经 PASS 的部分，不得越过 Reviewer 给出的修改边界。若 blocking 包含 revision-integrity，必须先恢复原 Narrative Function Contract，再消除 Seam 重复/重置；不能只把新句子写顺。只输出完整正文。""",
-                        "第二轮 Reviewer 意见：\n" + "\n\n".join(second_outputs),
-                        context,
-                    ]
-                ),
+            print(
+                f"[review-budget] STOP_AFTER_R2 task={task_id} "
+                "remaining blocking findings require master/human review",
+                flush=True,
             )
-            final_content = second_revision.content
-            with connect() as conn:
-                conn.execute(
-                    "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
-                    (task_id,),
-                )
-            _integrity_output_2, integrity_failed_2 = await _run_revision_integrity_gate(
-                task_id=task_id,
-                before=draft,
-                after=final_content,
-                context=context,
-                round_no=2,
-            )
-            _, final_blocking = await _run_review_round(
-                task_id=task_id,
-                draft=final_content,
-                context=context,
-                round_no=3,
-                prior_outputs=second_outputs,
-            )
-            final_blocking = final_blocking or integrity_failed_2
-        else:
-            final_blocking = False
 
         with connect() as conn:
             conn.execute(
