@@ -1,4 +1,4 @@
-attempt: 3
+attempt: 4
 model: glm-5.3-flash
-mode: official-adapter-workload-reasoning-r3
-reason: clear-thinking-chat-low-writing-high-continuity
+mode: official-adapter-workload-reasoning-r4
+reason: enforce-3000-char-writer-gate-after-official-adapter-pass
