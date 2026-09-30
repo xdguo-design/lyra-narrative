@@ -41,7 +41,7 @@ class StreamingHttpTests(unittest.IsolatedAsyncioTestCase):
             },
         ]
         lines = [
-            f"data: {json.dumps(item, ensure_ascii=False)}\n".encode("utf-8")
+            f"data: {json.dumps(item, ensure_ascii=False)}\n".encode()
             for item in chunks
         ]
         lines.append(b"data: [DONE]\n")
