@@ -146,3 +146,17 @@ def test_review_skill_is_compressed_into_three_automated_plus_external_master():
     assert '"master-reader"' not in review_source
     assert "一次审核本章所有主要角色" in review_source
 
+
+
+def test_fast_chapter_exports_blind_controller_reader_packet():
+    source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "master-reader-packet.md",
+        "BLIND REVIEW",
+        "external-controller-blind-reader",
+        '"master_reader_sees_automated_reviews": False',
+        "不得读取 review-report.json",
+    ]:
+        assert marker in source

@@ -257,6 +257,42 @@ def _insert_hard_gate_findings(task_id: int, errors: list[str], chars: int) -> N
             )
 
 
+def _master_reader_packet(prior: str, draft: str) -> str:
+    prior_tail = prior[-1800:].strip()
+    return f"""# Controller Master Reader Packet
+
+> BLIND REVIEW: 在完成本文件审核前，不得读取 review-report.json 或其他 Reviewer 输出。
+
+## 角色
+
+你现在不是主控/编辑，而是一名第一次读到这一章的独立读者。只从读者体验判断，不替作者解释，不补设定，不参考其他模型意见。
+
+重点检查：
+1. 第一遍是否读得懂，哪里会停、疑惑、出戏；
+2. 人物说话是否像真人，是否问什么答什么、为剧情主动交代；
+3. 线索是否由动作和现场自然出现，而不是作者解释；
+4. 节奏是否拖、赶、重复或突然跳步；
+5. 章末钩子是否有效；
+6. 若问题会阻断成稿，标 P0/P1；可局部改善标 P2。
+
+输出固定为：
+VERDICT: PASS 或 REWRITE
+P0: ...
+P1: ...
+P2: ...
+READER_TRACE: 按阅读顺序写最明显的卡点
+HOOK: 对章末钩子的判断
+
+## 前章尾段
+
+{prior_tail}
+
+## 待审第二章
+
+{draft}
+"""
+
+
 def _review_summary(task_id: int) -> list[dict]:
     with connect() as conn:
         rows = conn.execute(
@@ -359,6 +395,10 @@ async def main() -> int:
         "# 第二章 谁让你推的车\n\n" + text + "\n",
         encoding="utf-8",
     )
+    (OUTPUT_DIR / "master-reader-packet.md").write_text(
+        _master_reader_packet(prior, text),
+        encoding="utf-8",
+    )
     (OUTPUT_DIR / "review-report.json").write_text(
         json.dumps(
             {
@@ -397,6 +437,9 @@ async def main() -> int:
         "automated_reviewer_count": len(review_outputs),
         "automated_blocking": has_automated_blocking,
         "master_review_pending": True,
+        "master_reader_mode": "external-controller-blind-reader",
+        "master_reader_packet": "master-reader-packet.md",
+        "master_reader_sees_automated_reviews": False,
         "all_reviews_completed_before_reject": False,
         "learning_batch_id": learning.get("batch_id"),
         "status": status,
