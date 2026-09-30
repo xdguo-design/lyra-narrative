@@ -1,4 +1,4 @@
-attempt: 1
+attempt: 2
 model: glm-5.3-flash
 mode: official-adapter-three-stage
-reason: short-response-3000-char-writing-whole-chapter-continuity-review
+reason: preserve-official-max-reasoning-and-increase-completion-budget-for-long-tasks
