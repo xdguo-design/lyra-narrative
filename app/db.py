@@ -108,6 +108,20 @@ def _ensure_builtin_skills(conn: sqlite3.Connection) -> None:
             )
 
 
+def _ensure_column(
+    conn: sqlite3.Connection,
+    table: str,
+    column: str,
+    definition: str,
+) -> None:
+    existing = {
+        str(row["name"])
+        for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+    }
+    if column not in existing:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
 def _seed_demo(conn: sqlite3.Connection) -> None:
     if os.getenv("NOVEL_SEED_DEMO", "1") in {"0", "false", "False"}:
         return
@@ -418,8 +432,91 @@ def init_db() -> None:
                 run_id INTEGER PRIMARY KEY REFERENCES agent_runs(id) ON DELETE CASCADE,
                 prompt_version TEXT NOT NULL DEFAULT '',
                 duration_ms INTEGER NOT NULL DEFAULT 0,
+                started_at_ms INTEGER NOT NULL DEFAULT 0,
+                finished_at_ms INTEGER NOT NULL DEFAULT 0,
+                input_chars INTEGER NOT NULL DEFAULT 0,
+                output_chars INTEGER NOT NULL DEFAULT 0,
+                context_tier TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS chapter_pipeline_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_key TEXT NOT NULL UNIQUE,
+                task_id INTEGER NOT NULL REFERENCES writing_tasks(id) ON DELETE CASCADE,
+                chapter_id INTEGER REFERENCES chapters(id) ON DELETE SET NULL,
+                chapter_number INTEGER NOT NULL,
+                pipeline_version TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'running',
+                scenario TEXT NOT NULL DEFAULT '',
+                started_at_ms INTEGER NOT NULL,
+                automated_finished_at_ms INTEGER NOT NULL DEFAULT 0,
+                master_finished_at_ms INTEGER NOT NULL DEFAULT 0,
+                core_pipeline_ms INTEGER NOT NULL DEFAULT 0,
+                master_wait_ms INTEGER NOT NULL DEFAULT 0,
+                e2e_ms INTEGER NOT NULL DEFAULT 0,
+                writer_ms INTEGER NOT NULL DEFAULT 0,
+                length_repair_triggered INTEGER NOT NULL DEFAULT 0,
+                length_repair_ms INTEGER NOT NULL DEFAULT 0,
+                review_initial_wall_ms INTEGER NOT NULL DEFAULT 0,
+                review_total_wall_ms INTEGER NOT NULL DEFAULT 0,
+                review_compute_ms INTEGER NOT NULL DEFAULT 0,
+                initial_failed_reviewer_count INTEGER NOT NULL DEFAULT 0,
+                review_retry_count INTEGER NOT NULL DEFAULT 0,
+                review_retry_wall_ms INTEGER NOT NULL DEFAULT 0,
+                review_retry_compute_ms INTEGER NOT NULL DEFAULT 0,
+                retry_recovered_count INTEGER NOT NULL DEFAULT 0,
+                retry_failed_count INTEGER NOT NULL DEFAULT 0,
+                finalize_ms INTEGER NOT NULL DEFAULT 0,
+                draft_chars_initial INTEGER NOT NULL DEFAULT 0,
+                draft_chars_final INTEGER NOT NULL DEFAULT 0,
+                blocking_count INTEGER NOT NULL DEFAULT 0,
+                hard_gate_count INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_chapter_pipeline_runs_stats
+            ON chapter_pipeline_runs(
+                chapter_number,pipeline_version,scenario,automated_finished_at_ms
+            );
+
+            CREATE TABLE IF NOT EXISTS chapter_pipeline_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pipeline_run_id INTEGER NOT NULL
+                    REFERENCES chapter_pipeline_runs(id) ON DELETE CASCADE,
+                source_run_id INTEGER REFERENCES agent_runs(id) ON DELETE SET NULL,
+                stage TEXT NOT NULL,
+                source_stage TEXT NOT NULL DEFAULT '',
+                role TEXT NOT NULL DEFAULT '',
+                category TEXT NOT NULL DEFAULT '',
+                attempt INTEGER NOT NULL DEFAULT 1,
+                retry_of_event_id INTEGER
+                    REFERENCES chapter_pipeline_events(id) ON DELETE SET NULL,
+                status TEXT NOT NULL,
+                started_at_ms INTEGER NOT NULL DEFAULT 0,
+                finished_at_ms INTEGER NOT NULL DEFAULT 0,
+                duration_ms INTEGER NOT NULL DEFAULT 0,
+                provider TEXT NOT NULL DEFAULT '',
+                model TEXT NOT NULL DEFAULT '',
+                input_chars INTEGER NOT NULL DEFAULT 0,
+                output_chars INTEGER NOT NULL DEFAULT 0,
+                context_tier TEXT NOT NULL DEFAULT '',
+                chars_before INTEGER,
+                chars_after INTEGER,
+                length_distance_before INTEGER,
+                length_distance_after INTEGER,
+                error_type TEXT NOT NULL DEFAULT '',
+                error_code TEXT NOT NULL DEFAULT '',
+                error_message TEXT NOT NULL DEFAULT '',
+                trigger_reason TEXT NOT NULL DEFAULT '',
+                metadata_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(pipeline_run_id, source_run_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_chapter_pipeline_events_run
+            ON chapter_pipeline_events(pipeline_run_id,stage,role,attempt);
 
             CREATE TABLE IF NOT EXISTS provider_profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -454,6 +551,14 @@ def init_db() -> None:
             ON story_state_snapshots(project_id, chapter_number DESC, id DESC);
             """
         )
+        for column, definition in [
+            ("started_at_ms", "INTEGER NOT NULL DEFAULT 0"),
+            ("finished_at_ms", "INTEGER NOT NULL DEFAULT 0"),
+            ("input_chars", "INTEGER NOT NULL DEFAULT 0"),
+            ("output_chars", "INTEGER NOT NULL DEFAULT 0"),
+            ("context_tier", "TEXT NOT NULL DEFAULT ''"),
+        ]:
+            _ensure_column(conn, "agent_run_metrics", column, definition)
         _ensure_builtin_skills(conn)
         import_archived_learning_to_conn(conn)
         apply_db_learning_to_conn(conn, BUILTIN_SKILLS)

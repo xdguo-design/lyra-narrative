@@ -210,24 +210,68 @@ def _finish_run(run_id: int, result: AssistResult) -> None:
 
 
 def _fail_run(run_id: int, exc: Exception) -> None:
-    with connect() as conn:
-        conn.execute(
-            "UPDATE agent_runs SET status='failed',error=? WHERE id=?",
-            (str(exc)[:2000], run_id),
-        )
-
-
-def _record_run_metric(run_id: int, prompt_version: str, duration_ms: int) -> None:
+    provider = str(getattr(exc, "provider", "") or "")
     with connect() as conn:
         conn.execute(
             """
-            INSERT INTO agent_run_metrics(run_id,prompt_version,duration_ms)
-            VALUES(?,?,?)
+            UPDATE agent_runs
+            SET status='failed',provider=?,error=?
+            WHERE id=?
+            """,
+            (provider, str(exc)[:2000], run_id),
+        )
+
+
+def _prompt_size(content: str, instruction: str) -> tuple[int, str]:
+    user_prompt = f"当前正文：\n{content[-12000:]}"
+    if instruction.strip():
+        user_prompt += f"\n\n额外要求：\n{instruction.strip()}"
+    input_chars = len(user_prompt)
+    context_tier = (
+        "short" if input_chars <= 6000
+        else "medium" if input_chars <= 14000
+        else "long"
+    )
+    return input_chars, context_tier
+
+
+def _record_run_metric(
+    run_id: int,
+    prompt_version: str,
+    duration_ms: int,
+    *,
+    started_at_ms: int,
+    finished_at_ms: int,
+    input_chars: int,
+    output_chars: int,
+    context_tier: str,
+) -> None:
+    with connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO agent_run_metrics(
+                run_id,prompt_version,duration_ms,started_at_ms,finished_at_ms,
+                input_chars,output_chars,context_tier
+            ) VALUES(?,?,?,?,?,?,?,?)
             ON CONFLICT(run_id) DO UPDATE SET
                 prompt_version=excluded.prompt_version,
-                duration_ms=excluded.duration_ms
+                duration_ms=excluded.duration_ms,
+                started_at_ms=excluded.started_at_ms,
+                finished_at_ms=excluded.finished_at_ms,
+                input_chars=excluded.input_chars,
+                output_chars=excluded.output_chars,
+                context_tier=excluded.context_tier
             """,
-            (run_id, prompt_version, duration_ms),
+            (
+                run_id,
+                prompt_version,
+                duration_ms,
+                started_at_ms,
+                finished_at_ms,
+                input_chars,
+                output_chars,
+                context_tier,
+            ),
         )
 
 
@@ -242,10 +286,13 @@ async def _run_step(
 ) -> AssistResult:
     run_id = _create_run(task_id, role, stage, content)
     started = time.perf_counter()
+    started_at_ms = int(time.time() * 1000)
+    input_chars, context_tier = _prompt_size(content, instruction)
     prompt_version = f"{stage}-v1"
     print(
         f"[agent-step] START task={task_id} run={run_id} "
-        f"role={role} stage={stage}",
+        f"role={role} stage={stage} input_chars={input_chars} "
+        f"context_tier={context_tier}",
         flush=True,
     )
     try:
@@ -257,22 +304,48 @@ async def _run_step(
         )
     except Exception as exc:
         duration_ms = max(0, int((time.perf_counter() - started) * 1000))
-        _record_run_metric(run_id, prompt_version, duration_ms)
+        finished_at_ms = int(time.time() * 1000)
+        _record_run_metric(
+            run_id,
+            prompt_version,
+            duration_ms,
+            started_at_ms=started_at_ms,
+            finished_at_ms=finished_at_ms,
+            input_chars=input_chars,
+            output_chars=0,
+            context_tier=context_tier,
+        )
         _fail_run(run_id, exc)
+        error_code = str(getattr(exc, "status_code", "") or "")
         print(
             f"[agent-step] FAIL task={task_id} run={run_id} "
             f"role={role} stage={stage} elapsed_ms={duration_ms} "
-            f"error={type(exc).__name__}",
+            f"input_chars={input_chars} output_chars=0 "
+            f"context_tier={context_tier} error={type(exc).__name__} "
+            f"error_code={error_code or '-'}",
             flush=True,
         )
         raise
     duration_ms = max(0, int((time.perf_counter() - started) * 1000))
-    _record_run_metric(run_id, prompt_version, duration_ms)
+    finished_at_ms = int(time.time() * 1000)
+    output_chars = len(result.content or "")
+    _record_run_metric(
+        run_id,
+        prompt_version,
+        duration_ms,
+        started_at_ms=started_at_ms,
+        finished_at_ms=finished_at_ms,
+        input_chars=input_chars,
+        output_chars=output_chars,
+        context_tier=context_tier,
+    )
     _finish_run(run_id, result)
     print(
         f"[agent-step] DONE task={task_id} run={run_id} "
         f"role={role} stage={stage} provider={result.provider} "
-        f"model={result.model} elapsed_ms={duration_ms}",
+        f"model={result.model} elapsed_ms={duration_ms} "
+        f"input_chars={input_chars} output_chars={output_chars} "
+        f"context_tier={context_tier}",
         flush=True,
     )
     return result

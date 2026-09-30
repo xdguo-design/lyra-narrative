@@ -3,12 +3,21 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from pathlib import Path
 
 from app.db import connect, init_db
 from app.services.book_pipeline import _chapter_text_is_usable, _create_task
 from app.services.default_skills import BUILTIN_WRITING_SKILL_NAME
 from app.services.full_novel_pipeline import _run_review_round
+from app.services.pipeline_metrics import (
+    PIPELINE_VERSION,
+    epoch_ms,
+    finish_pipeline_run,
+    record_local_event,
+    start_pipeline_run,
+    sync_agent_run_events,
+)
 from app.services.workflow_service import _run_step, _task_context
 from scripts.generate_rewrite_v3_chapter import (
     CHAPTER_ONE,
@@ -423,6 +432,13 @@ async def main() -> int:
         ),
     )
     keep_generation_skills_lean(task_id)
+    pipeline = start_pipeline_run(
+        task_id=task_id,
+        chapter_id=chapter_id,
+        chapter_number=2,
+        pipeline_version=PIPELINE_VERSION,
+    )
+    pipeline_run_id = int(pipeline["pipeline_run_id"])
 
     prior = CHAPTER_ONE.read_text(encoding="utf-8")
     skill = _writer_skill_excerpt(task_id)
@@ -434,7 +450,31 @@ async def main() -> int:
         _full_chapter_instruction(skill),
     )
     text = draft_result.content.strip()
+    draft_chars_initial = len(text)
+    length_repair_triggered = not 2700 <= draft_chars_initial <= 3400
+    length_gate_started_at_ms = epoch_ms()
+    before_distance = _length_distance(text)
     text = await _repair_length_if_needed(task_id, text)
+    length_gate_finished_at_ms = epoch_ms()
+    record_local_event(
+        pipeline_run_id=pipeline_run_id,
+        stage="length-gate",
+        status="triggered" if length_repair_triggered else "pass",
+        started_at_ms=length_gate_started_at_ms,
+        finished_at_ms=length_gate_finished_at_ms,
+        chars_before=draft_chars_initial,
+        chars_after=len(text),
+        length_distance_before=before_distance,
+        length_distance_after=_length_distance(text),
+        trigger_reason=(
+            "outside_2700_3400" if length_repair_triggered else "within_2700_3400"
+        ),
+        metadata={
+            "repair_accepted": len(text) != draft_chars_initial,
+            "target_min": 2700,
+            "target_max": 3400,
+        },
+    )
 
     # Important policy: deterministic gates collect findings but NEVER reject early.
     hard_errors = _hard_gate_errors(text)
@@ -450,6 +490,7 @@ async def main() -> int:
 
     # Run the complete NarrativeOS review round first. auto_learn=False is critical:
     # Skill learning happens only after every reviewer has finished.
+    review_group_started_at_ms = epoch_ms()
     review_outputs, has_review_blocking = await _run_review_round(
         task_id=task_id,
         draft=text,
@@ -457,6 +498,15 @@ async def main() -> int:
         round_no=1,
         auto_learn=False,
         retry_failed_reviewers=1,
+    )
+    review_group_finished_at_ms = epoch_ms()
+    record_local_event(
+        pipeline_run_id=pipeline_run_id,
+        stage="review-group",
+        status="completed",
+        started_at_ms=review_group_started_at_ms,
+        finished_at_ms=review_group_finished_at_ms,
+        trigger_reason="three_reviewers_parallel_with_targeted_retry",
     )
 
     # Add deterministic findings only after all AI reviewers have completed.
@@ -481,6 +531,7 @@ async def main() -> int:
     # combined findings be accepted or rejected as one batch.
     learning = {"recorded": 0, "batch_id": None, "skill_versions": {}}
     status = "awaiting_master_review"
+    finalize_started_at_ms = epoch_ms()
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "chapter-02-fast-candidate.md").write_text(
@@ -521,8 +572,34 @@ async def main() -> int:
         1 for row in runs if str(row["stage"] or "") == "chapter-02-length-repair"
     )
 
+    sync_agent_run_events(
+        pipeline_run_id=pipeline_run_id,
+        task_id=task_id,
+    )
+    finalize_finished_at_ms = epoch_ms()
+    finalize_ms = max(0, finalize_finished_at_ms - finalize_started_at_ms)
+    record_local_event(
+        pipeline_run_id=pipeline_run_id,
+        stage="finalize",
+        status="completed",
+        started_at_ms=finalize_started_at_ms,
+        finished_at_ms=finalize_finished_at_ms,
+    )
+    pipeline_metrics = finish_pipeline_run(
+        pipeline_run_id=pipeline_run_id,
+        length_repair_triggered=length_repair_triggered,
+        finalize_ms=finalize_ms,
+        draft_chars_initial=draft_chars_initial,
+        draft_chars_final=len(text),
+        blocking_count=sum(
+            1 for item in findings if str(item.get("severity")) == "blocking"
+        ),
+        hard_gate_count=len(hard_errors),
+    )
+
     manifest = {
         "task_id": task_id,
+        "pipeline_metrics": pipeline_metrics,
         "chars": len(text),
         "target_chars": 3000,
         "usable": usable,

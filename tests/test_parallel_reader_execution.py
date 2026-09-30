@@ -85,3 +85,60 @@ def test_length_repair_can_shorten_overlong_draft_and_expand_short_draft():
     assert _accept_length_repair("x" * 2600, "x" * 2800)
     assert not _accept_length_repair("x" * 2600, "x" * 2500)
     assert not _accept_length_repair("x" * 3500, "x" * 3600)
+
+
+
+def test_chapter02_pipeline_metrics_are_structured_for_p50_p95():
+    db_source = Path("app/db.py").read_text(encoding="utf-8")
+    metrics_source = Path("app/services/pipeline_metrics.py").read_text(
+        encoding="utf-8"
+    )
+    fast_source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+
+    for marker in [
+        "CREATE TABLE IF NOT EXISTS chapter_pipeline_runs",
+        "CREATE TABLE IF NOT EXISTS chapter_pipeline_events",
+        "started_at_ms INTEGER NOT NULL DEFAULT 0",
+        "input_chars INTEGER NOT NULL DEFAULT 0",
+        "context_tier TEXT NOT NULL DEFAULT ''",
+    ]:
+        assert marker in db_source
+
+    for marker in [
+        'PIPELINE_VERSION = "chapter-fast-local-retry-v1"',
+        '"normal"',
+        '"single_reviewer_retry"',
+        '"length_repair"',
+        "review_initial_wall_ms",
+        "review_retry_wall_ms",
+        "p50_ms",
+        "p95_ms",
+        "p95_status",
+        "[pipeline-metric]",
+    ]:
+        assert marker in metrics_source
+
+    for marker in [
+        "start_pipeline_run(",
+        'stage="length-gate"',
+        'stage="review-group"',
+        "sync_agent_run_events(",
+        "finish_pipeline_run(",
+        '"pipeline_metrics": pipeline_metrics',
+    ]:
+        assert marker in fast_source
+
+
+def test_agent_run_metrics_capture_failure_latency_and_prompt_shape():
+    source = Path("app/services/workflow_service.py").read_text(encoding="utf-8")
+    for marker in [
+        "started_at_ms = int(time.time() * 1000)",
+        "input_chars, context_tier = _prompt_size(content, instruction)",
+        "output_chars=0",
+        "finished_at_ms=finished_at_ms",
+        "context_tier=context_tier",
+        "error_code=",
+    ]:
+        assert marker in source
