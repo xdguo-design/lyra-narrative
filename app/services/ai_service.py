@@ -120,7 +120,7 @@ _ROLE_PRIMARY_DEFAULTS = {
     "reader-gap-reviewer": "MODELSCOPE",
     "training-examiner": "MODELSCOPE",
     "master-reader": "AGNES",
-    "continuity-plot-reviewer": "MODELSCOPE",
+    "continuity-plot-reviewer": "GLM53FLASH",
     "character-dialogue-reviewer": "AGNES",
     "language-rhythm-reviewer": "DOTS3",
 }
@@ -315,7 +315,16 @@ async def assist(
             continue
 
         extra: dict[str, str] = {}
-        if model.lower().startswith(("gpt-5", "gpt-6")):
+        is_glm53_deep_review = (
+            role.strip().lower() == "continuity-plot-reviewer"
+            and model.strip().lower() in {"glm-5.3-flash", "glm-5.3-flashx"}
+        )
+        if is_glm53_deep_review:
+            # GLM-5.3-Flash deep review: official adapter handles
+            # temperature/top_p/thinking/stream; this role selects the
+            # supported high reasoning tier and enough output budget.
+            extra["reasoning_effort"] = "high"
+        elif model.lower().startswith(("gpt-5", "gpt-6")):
             extra["reasoning_effort"] = configured_reasoning_effort or "medium"
         elif (
             configured_reasoning_effort
@@ -349,17 +358,19 @@ async def assist(
                     base_url=base_url,
                     api_key_env=api_key_env,
                     default_model=model,
-                    timeout_seconds=float(
-                        os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")
+                    timeout_seconds=max(
+                        float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180")),
+                        900.0 if is_glm53_deep_review else 0.0,
                     ),
                 )
             )
+            effective_max_tokens = 48000 if is_glm53_deep_review else max_tokens
             response = await provider.chat(
                 ChatRequest(
                     system=_system_prompt(mode),
                     messages=[ChatMessage(role="user", content=user_prompt)],
                     temperature=temperature,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     extra=extra,
                 )
             )

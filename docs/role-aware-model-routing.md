@@ -20,7 +20,7 @@
 - plot-reviewer: MODELSCOPE
 - character-reviewer: AGNES
 - reader-gap-reviewer: MODELSCOPE
-- continuity-plot-reviewer: MODELSCOPE
+- continuity-plot-reviewer: GLM53FLASH
 - character-dialogue-reviewer: AGNES
 - language-rhythm-reviewer: DOTS3
 

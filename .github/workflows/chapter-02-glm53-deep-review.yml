@@ -1,0 +1,40 @@
+name: Chapter 02 GLM53 Deep Review
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/chapter-02-glm53-deep-review.request"
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NOVEL_SEED_DEMO: "0"
+      NOVEL_AI_HTTP_RETRIES: "0"
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM53FLASH: ${{ secrets.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+      - name: Run GLM-5.3-Flash chapter 02 deep review
+        run: PYTHONPATH=. python scripts/review_chapter2_glm53_deep.py
+      - name: Upload deep review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chapter-02-glm53-deep-review
+          path: artifacts/chapter-02-glm53-deep-review
+          if-no-files-found: error
+          retention-days: 14
