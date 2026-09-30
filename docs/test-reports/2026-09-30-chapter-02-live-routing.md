@@ -80,3 +80,19 @@ Do not equate “model quality” with “context capacity”. Route by:
 4. then prose/review quality.
 
 The pipeline now emits `input_chars` and `context_tier=short|medium|long` before provider calls and budgets reviewer support context by role.
+
+
+### Run 36661383153 / attempt 25
+
+Three-scene generation was introduced to reduce per-call constraint load.
+
+- AGNES scene 1 writer: 9626 input chars / medium — 7.669s, success.
+- AGNES scene 2 writer: 8260 input chars / medium — 22.520s, success.
+- AGNES scene 3 writer: 8362 input chars / medium — 10.109s, success.
+- AGNES continuity/plot: 15990 input chars / long — 63.478s, success.
+- AGNES character/dialogue: 15445 input chars / long — 8.571s, success.
+- AGNES language/rhythm: 6566 input chars / medium — 28.363s, success.
+- Candidate: 2251 chars; only deterministic hard-gate failure was length.
+- Provider routing was stable in this run; remaining blockers are now primarily **writer instruction adherence / scene logic / target length**, not provider availability.
+
+Operational conclusion: for this chapter, AGNES is the verified long-context review model. Model diversity should come from context-appropriate specialist tasks and the external controller blind reader, not by forcing short-context profiles into long review prompts.
