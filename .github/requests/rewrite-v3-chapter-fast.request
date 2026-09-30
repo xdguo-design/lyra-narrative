@@ -1,4 +1,4 @@
-attempt: 25
+attempt: 26
 chapter: 2
-mode: three-scene-context-aware-generation
-reason: confession-search-measurement-three-part-generation-with-controller-master-reader
+mode: one-shot-writer-local-retry-instrumented
+reason: validate-normal-length-repair-and-targeted-reviewer-retry-latency
