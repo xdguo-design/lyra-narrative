@@ -158,7 +158,7 @@ async def main() -> int:
     writer["quality_gate"] = (
         bool(writer.get("ok"))
         and 2600 <= int(writer.get("chinese_chars") or 0) <= 3500
-        and writer_text.rstrip().endswith("马二死了。")
+        and bool(re.search(r"马二死了。[”\"]?\\s*$", writer_text))
     )
     (OUT_DIR / "writer-3000.md").write_text(writer_text, encoding="utf-8")
 
