@@ -16,10 +16,12 @@ PROFILES = (
     "DEEPSEEKV4PRO",
     "DOTS3",
     "GLM52",
+    "GLM53FLASH",
     "KIMIK3",
     "MODELSCOPE",
     "SENSENOVA",
     "SENSENOVA68",
+    "XINGCHENAGI",
 )
 
 WRITER_PROMPT = """请写一段 900—1400 个中文字符的历史悬疑小说正文。
@@ -41,6 +43,14 @@ REVIEW_PROMPT = f"""你是中文小说审稿人。请审下面这段正文，找
 {REVIEW_TEXT}"""
 
 BAD_WRITER_MARKERS = ("手电筒", "手机", "水泥地", "tighter", "APP", "微信")
+
+REVIEW_SIGNAL_GROUPS = {
+    "era_mismatch": ("时代", "现代", "手电筒", "手机", "水泥地"),
+    "tool_character": ("工具", "门房", "机械", "回答"),
+    "conclusion_jump": ("跳跃", "武断", "过早", "证据不足", "结论"),
+    "questionnaire_dialogue": ("问卷", "盘问", "连续", "对白", "十几个问题"),
+    "author_summary": ("作者总结", "总结", "幕后主使", "所以"),
+}
 
 
 def _provider(profile_name: str, timeout_seconds: float):
@@ -117,6 +127,18 @@ def _writer_metrics(text: str) -> dict:
     }
 
 
+def _review_metrics(text: str) -> dict:
+    hits = {
+        name: any(marker in text for marker in markers)
+        for name, markers in REVIEW_SIGNAL_GROUPS.items()
+    }
+    coverage = sum(1 for value in hits.values() if value)
+    return {
+        "issue_signal_hits": hits,
+        "issue_signal_coverage": coverage,
+    }
+
+
 async def run_profile(profile_name: str, out_dir: Path) -> dict:
     smoke = await _call(
         profile_name,
@@ -149,16 +171,61 @@ async def run_profile(profile_name: str, out_dir: Path) -> dict:
         timeout_seconds=55.0,
     )
     review_text = reviewer.pop("text", "")
+    review_metrics = _review_metrics(review_text) if review_text else {}
     if review_text:
         (out_dir / f"{profile_name.lower()}-review.md").write_text(review_text, encoding="utf-8")
 
     writer_ok = bool(writer.get("ok")) and bool(writer_metrics.get("length_ok")) and bool(writer_metrics.get("complete_tail")) and not writer_metrics.get("bad_markers")
-    review_ok = bool(reviewer.get("ok")) and len(review_text) >= 120
+    review_ok = (
+        bool(reviewer.get("ok"))
+        and len(review_text) >= 120
+        and int(review_metrics.get("issue_signal_coverage", 0)) >= 4
+    )
+    calls_ok = sum(
+        1
+        for item in (smoke, writer, reviewer)
+        if bool(item.get("ok"))
+    )
+    usable = calls_ok == 3 and (writer_ok or review_ok)
+    preferred = (
+        calls_ok == 3
+        and writer_ok
+        and review_ok
+        and int(writer.get("elapsed_ms") or 999999) <= 60000
+        and int(reviewer.get("elapsed_ms") or 999999) <= 45000
+    )
+    if not bool(smoke.get("ok")):
+        classification = "UNUSABLE"
+    elif preferred:
+        classification = "PREFERRED"
+    elif usable:
+        classification = "USABLE"
+    else:
+        classification = "DEGRADED"
+
+    role_candidates = []
+    if writer_ok:
+        role_candidates.append("writer")
+    if review_ok:
+        role_candidates.append("reviewer")
+    if writer_ok and int(writer.get("elapsed_ms") or 999999) <= 45000:
+        role_candidates.append("fast-writer")
+    if review_ok and int(reviewer.get("elapsed_ms") or 999999) <= 30000:
+        role_candidates.append("fast-reviewer")
+
     result = {
         "profile": profile_name,
+        "classification": classification,
+        "calls_ok": calls_ok,
+        "role_candidates": role_candidates,
         "smoke": smoke,
         "writer": {**writer, **writer_metrics, "quality_gate": writer_ok},
-        "review": {**reviewer, "chars": len(review_text), "quality_gate": review_ok},
+        "review": {
+            **reviewer,
+            **review_metrics,
+            "chars": len(review_text),
+            "quality_gate": review_ok,
+        },
     }
     print(json.dumps(result, ensure_ascii=False), flush=True)
     return result
