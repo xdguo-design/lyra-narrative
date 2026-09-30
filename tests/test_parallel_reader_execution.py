@@ -143,8 +143,6 @@ def test_agent_run_metrics_capture_failure_latency_and_prompt_shape():
     ]:
         assert marker in source
 
-
-
 def test_chapter02_short_draft_uses_dedicated_expand_repair():
     ai_source = Path("app/services/ai_service.py").read_text(encoding="utf-8")
     fast_source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
