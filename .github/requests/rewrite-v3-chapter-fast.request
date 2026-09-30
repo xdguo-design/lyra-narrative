@@ -1,4 +1,4 @@
-attempt: 27
+attempt: 28
 chapter: 2
-mode: one-shot-writer-expand-repair-instrumented
-reason: validate-hard-minimum-length-and-expand-repair-v2
+mode: one-shot-writer-expand-repair-instrumented-v3
+reason: validate-writer-retry-10000-token-budget-and-diagnostic-artifact
