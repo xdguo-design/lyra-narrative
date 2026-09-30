@@ -120,9 +120,9 @@ _ROLE_PRIMARY_DEFAULTS = {
     "reader-gap-reviewer": "MODELSCOPE",
     "training-examiner": "MODELSCOPE",
     "master-reader": "AGNES",
-    "continuity-plot-reviewer": "GLM53FLASH",
+    "continuity-plot-reviewer": "MODELSCOPE",
     "character-dialogue-reviewer": "AGNES",
-    "language-rhythm-reviewer": "XINGCHENAGI",
+    "language-rhythm-reviewer": "DOTS3",
 }
 
 
@@ -147,25 +147,25 @@ def _role_profile_candidates(role: str) -> list[str]:
             "NARRATIVE_WRITER_PROFILE",
             "AGNES",
             "NARRATIVE_WRITER_FALLBACK_PROFILES",
-            "SENSENOVA",
+            "DOTS3,SENSENOVA68,ATRIA",
         ),
         "natural-reader": (
             "NARRATIVE_NATURAL_READER_PROFILE",
             "AGNES",
             "NARRATIVE_NATURAL_READER_FALLBACK_PROFILES",
-            "SENSENOVA,MODELSCOPE",
+            "DOTS3,SENSENOVA68,ATRIA",
         ),
         "reasoning-reader": (
             "NARRATIVE_REASONING_READER_PROFILE",
             "MODELSCOPE",
             "NARRATIVE_REASONING_READER_FALLBACK_PROFILES",
-            "AGNES,SENSENOVA",
+            "GLM52,DOTS3,AGNES",
         ),
         "final-review": (
             "NARRATIVE_FINAL_REVIEW_PROFILE",
-            "SENSENOVA",
+            "SENSENOVA68",
             "NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES",
-            "AGNES,MODELSCOPE",
+            "DOTS3,ATRIA,AGNES",
         ),
     }
     primary_env, bucket_default, fallback_env, fallback_default = settings[bucket]
