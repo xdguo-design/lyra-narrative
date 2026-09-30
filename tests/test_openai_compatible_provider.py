@@ -105,6 +105,91 @@ class OpenAICompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
                 ChatRequest(messages=[ChatMessage(role="user", content="test")])
             )
 
+    async def test_glm53flash_uses_official_streaming_defaults(self):
+        provider = OpenAICompatibleProvider(
+            ProviderConfig(
+                name="GLM53FLASH",
+                kind="openai-compatible",
+                base_url="https://open.bigmodel.cn/api/paas/v4",
+                default_model="glm-5.3-flash",
+            )
+        )
+        response_json = {
+            "model": "glm-5.3-flash",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": "正常"},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"total_tokens": 20},
+        }
+        stream = AsyncMock(return_value=response_json)
+        normal = AsyncMock(return_value=response_json)
+        with patch(
+            "app.ai.providers.openai_compatible.request_sse_json",
+            new=stream,
+        ), patch(
+            "app.ai.providers.openai_compatible.request_json",
+            new=normal,
+        ):
+            result = await provider.chat(
+                ChatRequest(
+                    messages=[ChatMessage(role="user", content="test")],
+                    temperature=0.2,
+                    max_tokens=4096,
+                )
+            )
+
+        self.assertEqual(result.content, "正常")
+        self.assertEqual(stream.await_count, 1)
+        self.assertEqual(normal.await_count, 0)
+        payload = stream.await_args.kwargs["payload"]
+        self.assertEqual(payload["temperature"], 1.0)
+        self.assertEqual(payload["top_p"], 0.95)
+        self.assertEqual(payload["reasoning_effort"], "max")
+        self.assertEqual(
+            payload["thinking"],
+            {"type": "enabled", "clear_thinking": False},
+        )
+        self.assertIs(payload["stream"], True)
+        self.assertIs(payload["tool_stream"], True)
+        self.assertEqual(payload["max_tokens"], 4096)
+
+    async def test_glm53flash_allows_explicit_overrides(self):
+        provider = OpenAICompatibleProvider(
+            ProviderConfig(
+                name="GLM53FLASH",
+                kind="openai-compatible",
+                base_url="https://open.bigmodel.cn/api/paas/v4",
+                default_model="glm-5.3-flash",
+            )
+        )
+        response_json = {
+            "model": "glm-5.3-flash",
+            "choices": [
+                {
+                    "message": {"role": "assistant", "content": "正常"},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+        stream = AsyncMock(return_value=response_json)
+        with patch(
+            "app.ai.providers.openai_compatible.request_sse_json",
+            new=stream,
+        ):
+            await provider.chat(
+                ChatRequest(
+                    messages=[ChatMessage(role="user", content="test")],
+                    extra={"reasoning_effort": "high", "top_p": 0.9},
+                )
+            )
+
+        payload = stream.await_args.kwargs["payload"]
+        self.assertEqual(payload["reasoning_effort"], "high")
+        self.assertEqual(payload["top_p"], 0.9)
+
 
 if __name__ == "__main__":
     unittest.main()

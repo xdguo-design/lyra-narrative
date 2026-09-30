@@ -3,7 +3,12 @@ from __future__ import annotations
 import os
 
 from .base import BaseProvider, ChatRequest, ChatResponse, ProviderError
-from .http import request_json
+from .http import request_json, request_sse_json
+
+
+def _is_glm53_flash(model: str) -> bool:
+    normalized = model.strip().lower()
+    return normalized in {"glm-5.3-flash", "glm-5.3-flashx"}
 
 
 class OpenAICompatibleProvider(BaseProvider):
@@ -51,12 +56,31 @@ class OpenAICompatibleProvider(BaseProvider):
             messages.append({"role": "system", "content": request.system})
         messages.extend({"role": item.role, "content": item.content} for item in request.messages)
 
-        payload = {
-            "model": model,
-            "messages": messages,
-            "temperature": request.temperature,
-            **request.extra,
-        }
+        extra = dict(request.extra)
+        if _is_glm53_flash(model):
+            # Z.ai official GLM-5.3-Flash recommendations/defaults.
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": 1.0,
+                "top_p": 0.95,
+                "reasoning_effort": "max",
+                "thinking": {
+                    "type": "enabled",
+                    "clear_thinking": False,
+                },
+                "stream": True,
+                "tool_stream": True,
+                **extra,
+            }
+        else:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "temperature": request.temperature,
+                **extra,
+            }
+
         if request.max_tokens is not None:
             is_openai_reasoning_model = model.lower().startswith(
                 ("gpt-5", "gpt-6", "o1", "o3", "o4")
@@ -66,7 +90,8 @@ class OpenAICompatibleProvider(BaseProvider):
             )
             payload[token_key] = request.max_tokens
 
-        data = await request_json(
+        request_fn = request_sse_json if payload.get("stream") is True else request_json
+        data = await request_fn(
             provider=self.name,
             url=f"{self._base_url()}/chat/completions",
             method="POST",
