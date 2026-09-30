@@ -80,14 +80,35 @@ async def _call(profile_name: str, *, system: str, prompt: str, max_tokens: int,
     if provider is None:
         return {"ok": False, "status": "missing_secret", "model": profile.get("default_model")}
 
+    model_name = str(profile.get("default_model") or "")
+    model_lower = model_name.lower()
+    temperature = 1.0 if model_lower.startswith("kimi-k3") else 0.55
+
+    reasoning_heavy = any(
+        marker in model_lower
+        for marker in ("glm-5", "deepseek-v4", "sensenova", "atria")
+    )
+    effective_max_tokens = max_tokens
+    effective_timeout = timeout_seconds
+    if reasoning_heavy:
+        if max_tokens <= 64:
+            effective_max_tokens = max(max_tokens, 4096)
+        elif max_tokens <= 1000:
+            effective_max_tokens = max(max_tokens, 4096)
+        else:
+            effective_max_tokens = max(max_tokens, 8000)
+        effective_timeout = max(timeout_seconds, 120.0)
+
+    provider.config.timeout_seconds = effective_timeout
+
     started = time.perf_counter()
     try:
         response = await provider.chat(
             ChatRequest(
                 system=system,
                 messages=[ChatMessage(role="user", content=prompt)],
-                temperature=0.55,
-                max_tokens=max_tokens,
+                temperature=temperature,
+                max_tokens=effective_max_tokens,
             )
         )
     except Exception as exc:
@@ -98,6 +119,8 @@ async def _call(profile_name: str, *, system: str, prompt: str, max_tokens: int,
             "elapsed_ms": int((time.perf_counter() - started) * 1000),
             "error_type": type(exc).__name__,
             "error": str(exc)[:800],
+            "request_temperature": temperature,
+            "request_max_tokens": effective_max_tokens,
         }
 
     text = response.content.strip()
@@ -108,6 +131,8 @@ async def _call(profile_name: str, *, system: str, prompt: str, max_tokens: int,
         "model": response.model,
         "elapsed_ms": int((time.perf_counter() - started) * 1000),
         "finish_reason": response.finish_reason,
+        "request_temperature": temperature,
+        "request_max_tokens": effective_max_tokens,
         "text": text,
     }
 
