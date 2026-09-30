@@ -374,11 +374,12 @@ async def assist(
                 int((time.perf_counter() - attempt_started) * 1000),
             )
             outcome = "FALLBACK" if attempt < len(profiles) else "FAIL"
+            error_reason = str(exc).replace("\n", " ").replace("\r", " ")[:240]
             print(
                 f"[model-route] {outcome} role={role or 'unassigned'} "
                 f"attempt={attempt}/{len(profiles)} provider={provider_name} "
                 f"model={model} elapsed_ms={elapsed_ms} "
-                f"error={type(exc).__name__}",
+                f"error={type(exc).__name__} reason={error_reason}",
                 flush=True,
             )
 

@@ -74,6 +74,8 @@ def _hard_gate_errors(text: str) -> list[str]:
         "问得很有技巧": "author-meta-commentary",
         "视觉事实": "author-meta-commentary",
         "成分一样": "evidence-overreach",
+        "谁给的报酬": "disclosure-threshold-gap",
+        "入库总称": "measurement-unit-drift",
     }
     for marker, error in forbidden.items():
         if marker in text:
@@ -90,11 +92,13 @@ def _hard_gate_errors(text: str) -> list[str]:
         "官斗": "missing-official-dou",
         "短三斗一升": "missing-shortage",
         "马二": "missing-ma-er",
-        "没气": "missing-death-message",
     }
     for marker, error in required.items():
         if marker not in text:
             errors.append(error)
+
+    if "马二死了" not in text and "已经没气" not in text and "没气了" not in text:
+        errors.append("missing-death-message")
 
     if text.count("短三斗一升") != 1:
         errors.append("shortage-count")
@@ -145,7 +149,7 @@ def _shared(skill: str) -> str:
 
 def _part1_instruction(skill: str) -> str:
     return _shared(skill) + """
-【只写前半章，目标约 1450 字】
+【只写前半章，目标 1550—1700 个中文字符】
 从第一章末尾刘旺抱柴、陈安说“问你件事”、刘旺答“嗯”直接接。
 这一段只完成刘旺分层口供，到“袋子后来不见了”为止；不要找出粮袋，不要过秤，不要官斗，不要马二死讯。
 
@@ -155,7 +159,7 @@ def _part1_instruction(skill: str) -> str:
 3. 周虎到场先看车轮、车辙、刘旺左脚鞋印和路线；
 4. 刘旺只承认昨夜推过一趟；
 5. 周虎不把答案递到嘴边，要从“为何替人挪粮”继续施压，刘旺为撇清主动偷粮才说孙成；
-6. 再经过一个独立压力节拍，周虎只能用“白替他跑腿？”这类自然追问，不能直接问“多少钱”；刘旺犹豫、自保后才吐出五文；
+6. 再经过一个独立压力节拍。固定节奏是：周虎先问“他凭什么使唤你？”→刘旺回避→周虎再追“白替他跑这一趟？”→刘旺抓紧柴、犹豫后才吐出五文。禁止出现“谁给的报酬”“报酬多少”“拿了多少钱”；
 7. 周虎再追袋子放哪，刘旺说后厨侧门；
 8. 周虎再追问后来，刘旺才说袋子后来不见了。
 
@@ -165,7 +169,7 @@ def _part1_instruction(skill: str) -> str:
 
 def _part2_instruction(skill: str, part1_tail: str) -> str:
     return _shared(skill) + f"""
-【只写后半章，目标约 1550 字】
+【只写后半章，目标 1600—1750 个中文字符】
 下面是前半章末尾，只负责承接，不重复已经完成的口供：
 --- 前半章尾 ---
 {part1_tail}
@@ -175,10 +179,10 @@ def _part2_instruction(skill: str, part1_tail: str) -> str:
 1. 周虎留住刘旺，由皂役看着，不再重复问推车、孙成、五文；
 2. 众人沿痕迹搜索，在木棚后旧木板堆旁找到昨日破口粮袋；
 3. 刘旺只确认那不是自己昨夜放袋子的地方；
-4. 周虎按程序让皂役/库房人把袋子上秤，只确认“重量对不上”，不得报具体斤两，不得出现皮重/毛重术语；
-5. 周虎这时才让人去取昨夜入库记录；不得让记录提前藏在周虎怀里；
-6. 再取昨夜同口径官斗，由皂役/库房程序复量；
-7. 只落一个结论：“短三斗一升”；
+4. 周虎按程序让皂役/库房人把袋子上秤；皂役必须明确说出“重量对不上”五个字，不得报具体斤两，不得出现皮重/毛重术语；
+5. 周虎这时才让人去取昨夜入库记录；不得让记录提前藏在周虎怀里。记录必须明确是昨夜用同口径官斗登记的斗数，不得写“入库总称”或斤两；在取记录的动作里自然带出一次“昨日运粮车夫马二”，只说明身份，不提前暗示他出事；
+6. 再取昨夜同口径官斗，由皂役/库房程序复量；不要逐斗报“一、二、三”制造算术歧义，只写按记录应有斗数逐斗复核；
+7. 对照同口径记录后只落一个结论：“短三斗一升”；
 8. 周虎把粮袋与记录分开收好留作查验；可以写“封存”，但不得新增“封条”这一具体物件；不定性谁偷、怎么偷，也不要让人物用“二次移动”这种总结式术语说话；
 9. 最后才有人进院，只报一句：“马二死了。”
 10. “马二死了。”必须是本章最后一句。死讯后不再补“找到时没气”、人物反应、时间锚点、更鼓、发现地点或尸体现场信息。
