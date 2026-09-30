@@ -288,6 +288,17 @@ async def assist(
 
     last_error: Exception | None = None
     profiles = _runtime_profiles(role)
+    input_chars = len(user_prompt)
+    context_tier = (
+        "short" if input_chars <= 6000
+        else "medium" if input_chars <= 14000
+        else "long"
+    )
+    print(
+        f"[model-route] PROMPT role={role or 'unassigned'} "
+        f"input_chars={input_chars} context_tier={context_tier}",
+        flush=True,
+    )
     for attempt, profile in enumerate(profiles, start=1):
         kind = str(profile["protocol"]).strip().lower()
         provider_name = str(profile["name"]).strip()

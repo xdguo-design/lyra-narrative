@@ -81,3 +81,15 @@ def test_named_profile_can_reuse_shared_profile_secret(monkeypatch):
     profile = _named_provider_profile("GLM52")
     assert profile is not None
     assert profile["api_key_env"] == "NARRATIVE_PROFILE_SECRET_SENSENOVA"
+
+
+def test_review_pipeline_budgets_context_by_role():
+    from pathlib import Path
+
+    source = Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    assert 'reader_skill_content[-6000:]' in source
+    assert 'context[-7000:]' in source
+    assert 'reader_skill_content[-4500:]' in source
+    assert 'recent_chapter_window[-5000:]' in source
+    assert 'reader_skill_content[-3500:]' in source
+    assert 'extra_context = ""' in source

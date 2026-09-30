@@ -501,16 +501,26 @@ async def _run_review_round(
                 + prior_outputs[index]
             )
 
-        extra_context = ""
-        if role == "character-dialogue-reviewer":
+        # Reviewers do not all need the same context window. Keep the draft
+        # intact, but budget supporting context by role so short/medium-context
+        # models are not forced to ingest long-form project state they do not use.
+        if role == "continuity-plot-reviewer":
+            skill_context = reader_skill_content[-6000:]
+            extra_context = context[-7000:] if context else ""
+        elif role == "character-dialogue-reviewer":
+            skill_context = reader_skill_content[-4500:]
             extra_context = (
                 "【前章窗口，用于人物关系与说话方式连续性】\n"
-                + recent_chapter_window
+                + recent_chapter_window[-5000:]
                 if recent_chapter_window
                 else ""
             )
         else:
-            extra_context = context
+            # Language/rhythm review is intentionally local: current draft +
+            # compact Reader rules are enough, and full project Memory only
+            # increases latency/context pressure without improving this role.
+            skill_context = reader_skill_content[-3500:]
+            extra_context = ""
 
         return await _run_step(
             task_id=task_id,
@@ -521,7 +531,7 @@ async def _run_review_round(
             instruction="\n\n".join(
                 item
                 for item in [
-                    reader_skill_content,
+                    skill_context,
                     instruction,
                     _review_contract(round_no),
                     prior,
