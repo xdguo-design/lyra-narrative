@@ -235,7 +235,9 @@ def test_short_patch_repair_uses_two_rounds_and_three_insertions():
         'role="writer-search-patch"',
         'role="writer-measurement-patch"',
         'role="writer-transition-patch"',
-        '_insert_before_first(text, "重量对不上", search_patch)',
+        'if "重量对不上" in repaired:',
+        '_insert_before_first(repaired, "重量对不上", search_patch)',
+        'if "短三斗一升" in repaired:',
         '_insert_before_first(repaired, "短三斗一升", measurement_patch)',
         '_insert_before_last(repaired, "马二死了。", transition_patch)',
     ]:
