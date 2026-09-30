@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import math
 import time
-from typing import Any
 import uuid
 
 from app.db import connect
@@ -22,7 +21,7 @@ def start_pipeline_run(
     chapter_id: int | None,
     chapter_number: int,
     pipeline_version: str = PIPELINE_VERSION,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     started_at_ms = epoch_ms()
     run_key = (
         f"ch{chapter_number:02d}-{task_id}-"
@@ -83,7 +82,7 @@ def record_local_event(
     length_distance_before: int | None = None,
     length_distance_after: int | None = None,
     trigger_reason: str = "",
-    metadata: dict[str, Any] | None = None,
+    metadata: dict[str, object] | None = None,
 ) -> int:
     duration_ms = max(0, finished_at_ms - started_at_ms)
     metadata_json = json.dumps(
@@ -335,7 +334,7 @@ def event_summary(pipeline_run_id: int) -> dict[str, int]:
         if str(row["source_stage"]).startswith("review-r1-retry")
     ]
 
-    def wall(group: list[Any]) -> int:
+    def wall(group: list[object]) -> int:
         starts = [int(row["started_at_ms"] or 0) for row in group if row["started_at_ms"]]
         ends = [int(row["finished_at_ms"] or 0) for row in group if row["finished_at_ms"]]
         if not starts or not ends:
@@ -379,7 +378,7 @@ def finish_pipeline_run(
     draft_chars_final: int,
     blocking_count: int,
     hard_gate_count: int,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     summary = event_summary(pipeline_run_id)
     scenario = classify_scenario(
         length_repair_triggered=length_repair_triggered,
@@ -457,7 +456,7 @@ def latency_report(
     *,
     chapter_number: int,
     pipeline_version: str = PIPELINE_VERSION,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     scenarios = [
         "normal",
         "single_reviewer_retry",
@@ -465,7 +464,7 @@ def latency_report(
         "length_repair_and_reviewer_retry",
         "reviewer_retry_failed",
     ]
-    report: dict[str, Any] = {}
+    report: dict[str, object] = {}
     with connect() as conn:
         for scenario in scenarios:
             rows = conn.execute(
@@ -487,7 +486,7 @@ def latency_report(
                 "review_retry_wall_ms",
                 "finalize_ms",
             ]
-            metrics: dict[str, Any] = {}
+            metrics: dict[str, object] = {}
             for metric_name in metric_names:
                 values = [int(row[metric_name]) for row in rows]
                 metrics[metric_name] = {
@@ -511,7 +510,7 @@ def latency_report(
     }
 
 
-def _log_event(payload: dict[str, Any]) -> None:
+def _log_event(payload: dict[str, object]) -> None:
     print(
         "[pipeline-metric] "
         + json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
