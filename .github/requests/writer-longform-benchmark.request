@@ -1,4 +1,4 @@
-attempt: 1
-profiles: AGNES,DOTS3
-task: chinese-fiction-1200-1800
-reason: compare-longform-writer-stability
+attempt: 2
+profiles: AGNES,DOTS3,SENSENOVA68,ATRIA,GLM52,GLM53FLASH
+task: chinese-fiction-2850-3250
+reason: select-production-writer-for-real-3000-char-chapter
