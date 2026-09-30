@@ -173,8 +173,12 @@ async def main() -> int:
         label="whole_chapter_continuity_review",
         system="你是严谨的中文长篇小说连续性审稿人。",
         prompt=REVIEW_INSTRUCTION + "\n\n【完整章节】\n" + review_source,
-        max_tokens=16000,
-        timeout_seconds=300.0,
+        # GLM-5.3-Flash with reasoning_effort=max can spend a large share of
+        # completion tokens on reasoning before emitting visible prose.
+        # The official model supports up to 128K output, so keep enough budget
+        # for both reasoning and ~3000 Chinese characters of final text.
+        max_tokens=48000,
+        timeout_seconds=600.0,
         reasoning_effort="high",
     )
     reviewer["review_source"] = review_source_name
