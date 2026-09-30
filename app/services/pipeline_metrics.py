@@ -7,7 +7,6 @@ import uuid
 
 from app.db import connect
 
-
 PIPELINE_VERSION = "chapter-fast-local-retry-v1"
 
 
