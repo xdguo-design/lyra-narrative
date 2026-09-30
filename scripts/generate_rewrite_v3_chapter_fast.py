@@ -212,7 +212,7 @@ async def _repair_length_if_needed(task_id: int, text: str) -> str:
     target = "2850—3150" if len(text) < 2700 else "3000—3300"
     result = await _run_step(
         task_id=task_id,
-        role="writer",
+        role="writer-retry",
         stage="chapter-02-length-repair",
         mode="polish",
         content=text,
@@ -231,7 +231,20 @@ async def _repair_length_if_needed(task_id: int, text: str) -> str:
 - 只输出完整修订后的正文，不要解释。
 """,
     )
-    return result.content.strip()
+    repaired = result.content.strip()
+    if len(repaired) <= len(text):
+        print(
+            f"[length-repair] REJECT shorter_output original_chars={len(text)} "
+            f"repaired_chars={len(repaired)}",
+            flush=True,
+        )
+        return text
+    print(
+        f"[length-repair] ACCEPT original_chars={len(text)} "
+        f"repaired_chars={len(repaired)}",
+        flush=True,
+    )
+    return repaired
 
 
 def _insert_hard_gate_findings(task_id: int, errors: list[str], chars: int) -> None:
