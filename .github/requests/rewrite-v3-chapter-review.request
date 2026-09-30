@@ -1,7 +1,7 @@
 request: rewrite-v3-chapter-review
 chapter: books/yamen-proficiency/rewrite-v3/chapter-02/final-candidate.md
 previous_chapter: books/yamen-proficiency/rewrite-v3/chapter-01/final-candidate.md
-routing: heterogeneous
+routing: heterogeneous-glm53flash-deep-review
 commercial_reader: chatgpt-in-conversation
-attempt: 5
-reason: chapter-02-dialogue-rewrite-reader-v11
+attempt: 6
+reason: official-glm53flash-continuity-plot-evidence-chain-deep-review
