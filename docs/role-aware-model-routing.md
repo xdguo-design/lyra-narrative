@@ -24,9 +24,12 @@
 - character-dialogue-reviewer: AGNES
 - language-rhythm-reviewer: DOTS3
 
+当前专项深审：
+
+- GLM53FLASH：作为 continuity-plot-reviewer 主模型，使用官方参数流式调用；深审使用 reasoning_effort=high，GLM52 作为 fallback。若官方 5 小时额度触发 429，必须在运行记录中标明“GLM53FLASH 未执行完成”，不得把 fallback 结果记为 GLM53FLASH 结果。
+
 暂不进入关键路径：
 
-- GLM53FLASH：连通正常，但长文写作 120s 超时，审稿约 93s。
 - XINGCHENAGI：smoke / writer / review 均超时。
 - DEEPSEEKV4PRO：RPM/TPM 限流。
 - KIMIK3：RPM/TPM 限流，暂不做稳定生产路由。
