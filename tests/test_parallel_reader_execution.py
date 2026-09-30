@@ -107,7 +107,7 @@ def test_chapter02_pipeline_metrics_are_structured_for_p50_p95():
         assert marker in db_source
 
     for marker in [
-        'PIPELINE_VERSION = "chapter-fast-local-retry-v2"',
+        'PIPELINE_VERSION = "chapter-fast-local-retry-v3"',
         '"normal"',
         '"single_reviewer_retry"',
         '"length_repair"',
@@ -158,3 +158,21 @@ def test_chapter02_short_draft_uses_dedicated_expand_repair():
     assert "正文少于 2700 个中文字符时不得结束生成" in fast_source
     assert "在正文达到至少 2700 个中文字符之前不得写“马二死了。”" in fast_source
     assert "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: SENSENOVA68" in workflow
+
+
+
+def test_writer_retry_has_dedicated_output_budget_and_diagnostic_artifact():
+    ai_source = Path("app/services/ai_service.py").read_text(encoding="utf-8")
+    fast_source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    workflow = Path(".github/workflows/rewrite-v3-chapter-fast.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'normalized_role == "writer-retry"' in ai_source
+    assert "NARRATIVE_WRITER_RETRY_MAX_TOKENS" in ai_source
+    assert "NARRATIVE_WRITER_RETRY_TIMEOUT_SECONDS" in ai_source
+    assert 'NARRATIVE_WRITER_RETRY_MAX_TOKENS: "10000"' in workflow
+    assert 'NARRATIVE_WRITER_RETRY_TIMEOUT_SECONDS: "150"' in workflow
+    assert '"run-started.json"' in fast_source

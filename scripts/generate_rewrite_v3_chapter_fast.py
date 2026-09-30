@@ -433,6 +433,19 @@ def _review_summary(task_id: int) -> list[dict]:
 
 async def main() -> int:
     init_db()
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUTPUT_DIR / "run-started.json").write_text(
+        json.dumps(
+            {
+                "pipeline_version": PIPELINE_VERSION,
+                "status": "started",
+                "purpose": "chapter-02-fast-draft",
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     project_id, chapter_id = create_project()
     task_id = _create_task(
         project_id=project_id,
@@ -545,7 +558,6 @@ async def main() -> int:
     status = "awaiting_master_review"
     finalize_started_at_ms = epoch_ms()
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "chapter-02-fast-candidate.md").write_text(
         "# 第二章 谁让你推的车\n\n" + text + "\n",
         encoding="utf-8",

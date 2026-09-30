@@ -338,8 +338,10 @@ async def assist(
             continue
 
         extra: dict[str, str] = {}
+        normalized_role = role.strip().lower()
+        is_writer_retry = normalized_role == "writer-retry"
         is_glm53_deep_review = (
-            role.strip().lower() == "continuity-plot-reviewer"
+            normalized_role == "continuity-plot-reviewer"
             and model.strip().lower() in {"glm-5.3-flash", "glm-5.3-flashx"}
         )
         if is_glm53_deep_review:
@@ -389,7 +391,16 @@ async def assist(
                             )
                         )
                         if is_glm53_deep_review
-                        else float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180"))
+                        else (
+                            float(
+                                os.getenv(
+                                    "NARRATIVE_WRITER_RETRY_TIMEOUT_SECONDS",
+                                    "150",
+                                )
+                            )
+                            if is_writer_retry
+                            else float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180"))
+                        )
                     ),
                 )
             )
@@ -401,7 +412,16 @@ async def assist(
                     )
                 )
                 if is_glm53_deep_review
-                else max_tokens
+                else (
+                    int(
+                        os.getenv(
+                            "NARRATIVE_WRITER_RETRY_MAX_TOKENS",
+                            "10000",
+                        )
+                    )
+                    if is_writer_retry
+                    else max_tokens
+                )
             )
             response = await provider.chat(
                 ChatRequest(
