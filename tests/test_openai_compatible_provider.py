@@ -150,7 +150,7 @@ class OpenAICompatibleProviderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["reasoning_effort"], "max")
         self.assertEqual(
             payload["thinking"],
-            {"type": "enabled", "clear_thinking": False},
+            {"type": "enabled", "clear_thinking": True},
         )
         self.assertIs(payload["stream"], True)
         self.assertIs(payload["tool_stream"], True)

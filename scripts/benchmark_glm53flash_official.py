@@ -19,12 +19,12 @@ FALLBACK_REVIEW_SOURCE = Path(
 OFFICIAL_PARAMETERS = {
     "temperature": 1.0,
     "top_p": 0.95,
-    "thinking": {"type": "enabled", "clear_thinking": False},
+    "thinking": {"type": "enabled", "clear_thinking": True},
     "stream": True,
     "tool_stream": True,
     "workload_reasoning_effort": {
-        "short_response": "max",
-        "writer_3000_chars": "high",
+        "short_response": "low",
+        "writer_3000_chars": "low",
         "whole_chapter_continuity_review": "high",
     },
 }
@@ -141,7 +141,7 @@ async def main() -> int:
         prompt="只回复两个汉字：正常",
         max_tokens=4096,
         timeout_seconds=180.0,
-        reasoning_effort="max",
+        reasoning_effort="low",
     )
     smoke["quality_gate"] = bool(smoke.get("ok")) and "正常" in smoke_text
     (OUT_DIR / "short-response.txt").write_text(smoke_text, encoding="utf-8")
@@ -150,9 +150,9 @@ async def main() -> int:
         label="writer_3000_chars",
         system="你是中文历史悬疑长篇小说作家，只输出可以直接使用的正文。",
         prompt=WRITER_PROMPT,
-        max_tokens=20000,
+        max_tokens=16000,
         timeout_seconds=300.0,
-        reasoning_effort="high",
+        reasoning_effort="low",
     )
     writer["target_chinese_chars"] = [2800, 3300]
     writer["quality_gate"] = (

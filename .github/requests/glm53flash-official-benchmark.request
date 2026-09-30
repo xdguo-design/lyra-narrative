@@ -1,4 +1,4 @@
-attempt: 2
+attempt: 3
 model: glm-5.3-flash
-mode: official-adapter-workload-reasoning
-reason: max-baseline-exhausted-budget-use-official-high-for-long-writing-and-review
+mode: official-adapter-workload-reasoning-r3
+reason: clear-thinking-chat-low-writing-high-continuity

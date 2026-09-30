@@ -67,7 +67,7 @@ class OpenAICompatibleProvider(BaseProvider):
                 "reasoning_effort": "max",
                 "thinking": {
                     "type": "enabled",
-                    "clear_thinking": False,
+                    "clear_thinking": True,
                 },
                 "stream": True,
                 "tool_stream": True,
