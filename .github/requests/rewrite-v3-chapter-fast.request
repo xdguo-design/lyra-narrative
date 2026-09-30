@@ -1,4 +1,4 @@
-attempt: 22
+attempt: 23
 chapter: 2
-mode: benchmark-routed-generation-r3
-reason: live-load-route-tuning-glm52-continuity-sensenova68-language
+mode: context-aware-generation-r4
+reason: context-tier-routing-plus-writer-length-repair

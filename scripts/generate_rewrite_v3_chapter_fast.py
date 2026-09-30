@@ -75,6 +75,9 @@ def _hard_gate_errors(text: str) -> list[str]:
         "视觉事实": "author-meta-commentary",
         "成分一样": "evidence-overreach",
         "谁给的报酬": "disclosure-threshold-gap",
+        "报酬多少": "disclosure-threshold-gap",
+        "拿了多少钱": "disclosure-threshold-gap",
+        "孙库吏昨晚没吩咐": "disclosure-threshold-gap",
         "入库总称": "measurement-unit-drift",
     }
     for marker, error in forbidden.items():
@@ -202,6 +205,35 @@ async def _run_writer(task_id: int, stage: str, content: str, instruction: str):
     )
 
 
+async def _repair_length_if_needed(task_id: int, text: str) -> str:
+    if 2700 <= len(text) <= 3400:
+        return text
+
+    target = "2850—3150" if len(text) < 2700 else "3000—3300"
+    result = await _run_step(
+        task_id=task_id,
+        role="writer",
+        stage="chapter-02-length-repair",
+        mode="polish",
+        content=text,
+        instruction=f"""请完整重写当前第二章正文，控制在 {target} 个中文字符。
+只允许补足现场动作、空间阻力、人物犹豫和已有线索之间的自然过渡，不得新增事实、人物、物证、精确时间、地点或解释性证据。
+
+硬约束：
+- 保持既有剧情顺序与冻结事实不变。
+- 刘旺必须分层交代：先认昨夜推车，再交代孙成，再经过独立压力节拍才交代五文。
+- 不得由周虎先说出孙成，不得出现“谁给的报酬/报酬多少/拿了多少钱”。
+- 找袋子只能沿既有车辙/现场搜索自然推进，不得新增封口切痕、重新缝线等未冻结物证。
+- 先明确“重量对不上”，再取昨夜同口径官斗记录复量，最后只得出“短三斗一升”。
+- 不把短缺直接定性为偷窃。
+- 不出现皮重、封条、精确时辰、作者元分析。
+- 最后一句必须且只能是：“马二死了。”
+- 只输出完整修订后的正文，不要解释。
+""",
+    )
+    return result.content.strip()
+
+
 def _insert_hard_gate_findings(task_id: int, errors: list[str], chars: int) -> None:
     if not errors:
         return
@@ -275,6 +307,7 @@ async def main() -> int:
     part2 = part2_result.content.strip()
 
     text = (part1.rstrip() + "\n\n" + part2.lstrip()).strip()
+    text = await _repair_length_if_needed(task_id, text)
 
     # Important policy: deterministic gates collect findings but NEVER reject early.
     hard_errors = _hard_gate_errors(text)
