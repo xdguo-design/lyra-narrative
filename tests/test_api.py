@@ -1199,3 +1199,17 @@ def test_builtin_refinement_workflow_skill_is_seeded_and_complements_prose_skill
         assert "任何 blocking 自洽问题" in content
         assert "整段重写，不逐句打补丁" in content
         assert "先解决事实和结构，再解决语言" in content
+
+
+
+def test_lyra_hub_workspace_bridge_contract():
+    with TestClient(app) as client:
+        page = client.get("/")
+        script = client.get("/static/app.js")
+        assert page.status_code == 200
+        assert 'id="hubContextBadge"' in page.text
+        assert script.status_code == 200
+        assert "lyra.app.ready" in script.text
+        assert "lyra.workspace.init" in script.text
+        assert "lyra.capability.invoke" in script.text
+        assert "event.origin !== lyraHubOrigin" in script.text

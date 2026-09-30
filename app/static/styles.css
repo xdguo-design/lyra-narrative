@@ -1817,3 +1817,24 @@ select.mini-input.single-line {
     animation: none;
   }
 }
+
+
+.hub-context-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:0 10px;
+  border:1px solid rgba(86,130,255,.32);
+  border-radius:999px;
+  background:rgba(86,130,255,.12);
+  color:#7fa2ff;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.08em;
+}
+:root[data-theme="paper"] .hub-context-badge,
+:root[data-theme="ink"] .hub-context-badge{
+  color:#355fbc;
+  border-color:rgba(53,95,188,.24);
+  background:rgba(53,95,188,.08);
+}
