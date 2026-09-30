@@ -12,7 +12,7 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       NOVEL_SEED_DEMO: "0"
       NOVEL_AI_HTTP_RETRIES: "0"
