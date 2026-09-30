@@ -1,4 +1,4 @@
-attempt: 28
+attempt: 29
 chapter: 2
-mode: one-shot-writer-expand-repair-instrumented-v3
-reason: validate-writer-retry-10000-token-budget-and-diagnostic-artifact
+mode: one-shot-writer-two-local-patches-instrumented-v4
+reason: validate-local-search-and-measurement-patches-without-whole-rewrite
