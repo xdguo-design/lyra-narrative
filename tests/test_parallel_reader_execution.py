@@ -154,7 +154,7 @@ def test_chapter02_short_draft_uses_local_patch_repair():
 
     assert '"patch": (' in ai_source
     assert "async def _repair_short_draft_with_patches" in fast_source
-    assert "search_result, measurement_result = await asyncio.gather(" in fast_source
+    assert "search_result, measurement_result, transition_result = await asyncio.gather(" in fast_source
     assert "正文少于 2700 个中文字符时不得结束生成" in fast_source
     assert "NARRATIVE_ROLE_WRITER_SEARCH_PATCH_PROFILE: AGNES" in workflow
     assert "NARRATIVE_ROLE_WRITER_MEASUREMENT_PATCH_PROFILE: DOTS3" in workflow
@@ -179,39 +179,44 @@ def test_writer_retry_has_dedicated_output_budget_and_diagnostic_artifact():
 
 
 
-def test_short_length_repair_uses_two_local_patches_not_whole_rewrite():
+def test_short_length_repair_uses_three_local_insertions_not_whole_rewrite():
     source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
         encoding="utf-8"
     )
     for marker in [
         "async def _repair_short_draft_with_patches",
+        "async def _repair_short_draft_round",
         'role="writer-search-patch"',
-        'stage="chapter-02-length-repair-search"',
         'role="writer-measurement-patch"',
-        'stage="chapter-02-length-repair-measurement"',
-        "search_result, measurement_result = await asyncio.gather(",
+        'role="writer-transition-patch"',
+        'stage=f"chapter-02-length-repair-search-r{round_no}"',
+        'stage=f"chapter-02-length-repair-measurement-r{round_no}"',
+        'stage=f"chapter-02-length-repair-transition-r{round_no}"',
+        "search_result, measurement_result, transition_result = await asyncio.gather(",
         "_assemble_short_draft_patches(",
     ]:
         assert marker in source
 
 
-def test_short_patch_assembly_replaces_post_weight_segment_and_keeps_one_hook():
+def test_short_patch_assembly_inserts_without_dropping_existing_middle():
     from scripts.generate_rewrite_v3_chapter_fast import (
         _assemble_short_draft_patches,
     )
 
     original = (
-        "口供段。\n\n找袋段。\n\n重量对不上。\n\n"
-        "旧的跑偏段落，写了不该有的东西。\n\n马二死了。"
+        "口供段。\n\n重量对不上。\n\n"
+        "既有官斗过程。短三斗一升。\n\n马二死了。"
     )
     repaired = _assemble_short_draft_patches(
         original,
         "新增找袋现场。",
-        "官斗复量后，只确认：短三斗一升。有人快步进院。",
+        "新增官斗复量过程。",
+        "有人快步进院前，周虎把记录收好。",
     )
     assert "新增找袋现场。" in repaired
-    assert "旧的跑偏段落" not in repaired
-    assert "短三斗一升" in repaired
+    assert "新增官斗复量过程。" in repaired
+    assert "既有官斗过程。" in repaired
+    assert "周虎把记录收好。" in repaired
     assert repaired.count("马二死了。") == 1
     assert repaired.endswith("马二死了。")
 
