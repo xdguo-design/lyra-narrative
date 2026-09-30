@@ -22,10 +22,11 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
         "NARRATIVE_WRITER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH",
+        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: MODELSCOPE",
         "NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: XINGCHENAGI",
-        "NARRATIVE_PROFILE_XINGCHENAGI: ${{ vars.XINGCHENAGI }}",
+        "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3",
+        "NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}",
+        "NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}",
         "Generate chapter 02 through NarrativeOS",
     ]:
         assert marker in source
@@ -83,7 +84,9 @@ def test_writer_route_prunes_slow_providers():
         for line in source.splitlines()
         if "NARRATIVE_WRITER_FALLBACK_PROFILES:" in line
     )
-    assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES: SENSENOVA"
+    assert writer_line == "NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA"
+    assert "GLM53FLASH" not in writer_line
+    assert "XINGCHENAGI" not in writer_line
     assert 'NOVEL_AI_TIMEOUT_SECONDS: "120"' in source
     assert 'NOVEL_AI_HTTP_RETRIES: "0"' in source
 
@@ -91,10 +94,10 @@ def test_writer_route_prunes_slow_providers():
 def test_benchmark_selected_writer_profile_is_wired():
     source = Path(".github/workflows/rewrite-v3-chapter-generate.yml").read_text(encoding="utf-8")
     for marker in [
-        "NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}",
-        "NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}",
+        "NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}",
+        "NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}",
         "NARRATIVE_WRITER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: AGNES",
+        "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: DOTS3",
         "Validate selected writer profiles",
     ]:
         assert marker in source
