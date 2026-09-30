@@ -276,6 +276,20 @@ async def _run_writer(task_id: int, stage: str, content: str, instruction: str):
     )
 
 
+def _length_distance(text: str) -> int:
+    length = len(text)
+    if 2700 <= length <= 3400:
+        return 0
+    if length < 2700:
+        return 2700 - length
+    return length - 3400
+
+
+def _accept_length_repair(original: str, repaired: str) -> bool:
+    repaired = repaired.strip()
+    return bool(repaired) and _length_distance(repaired) < _length_distance(original)
+
+
 async def _repair_length_if_needed(task_id: int, text: str) -> str:
     if 2700 <= len(text) <= 3400:
         return text
@@ -303,16 +317,19 @@ async def _repair_length_if_needed(task_id: int, text: str) -> str:
 """,
     )
     repaired = result.content.strip()
-    if len(repaired) <= len(text):
+    if not _accept_length_repair(text, repaired):
         print(
-            f"[length-repair] REJECT shorter_output original_chars={len(text)} "
-            f"repaired_chars={len(repaired)}",
+            f"[length-repair] REJECT_NO_IMPROVEMENT original_chars={len(text)} "
+            f"repaired_chars={len(repaired)} "
+            f"original_distance={_length_distance(text)} "
+            f"repaired_distance={_length_distance(repaired)}",
             flush=True,
         )
         return text
     print(
-        f"[length-repair] ACCEPT original_chars={len(text)} "
-        f"repaired_chars={len(repaired)}",
+        f"[length-repair] ACCEPT_LOCAL_ONLY original_chars={len(text)} "
+        f"repaired_chars={len(repaired)} "
+        f"remaining_distance={_length_distance(repaired)}",
         flush=True,
     )
     return repaired
@@ -439,6 +456,7 @@ async def main() -> int:
         context=context,
         round_no=1,
         auto_learn=False,
+        retry_failed_reviewers=1,
     )
 
     # Add deterministic findings only after all AI reviewers have completed.
@@ -496,6 +514,12 @@ async def main() -> int:
             "SELECT role,stage,status,provider,model,error FROM agent_runs WHERE task_id=? ORDER BY id",
             (task_id,),
         ).fetchall()
+    review_retry_count = sum(
+        1 for row in runs if "-retry" in str(row["stage"] or "")
+    )
+    length_repair_count = sum(
+        1 for row in runs if str(row["stage"] or "") == "chapter-02-length-repair"
+    )
 
     manifest = {
         "task_id": task_id,
@@ -510,6 +534,14 @@ async def main() -> int:
         ),
         "automated_reviewer_count": len(review_outputs),
         "automated_blocking": has_automated_blocking,
+        "local_retry_policy": {
+            "reviewer_failed": "retry_failed_reviewer_once_only",
+            "length_failed": "repair_current_draft_once_only",
+            "rerun_writer": False,
+            "rerun_successful_reviewers": False,
+        },
+        "review_retry_count": review_retry_count,
+        "length_repair_count": length_repair_count,
         "master_review_pending": True,
         "master_reader_mode": "external-controller-blind-reader",
         "master_reader_packet": "master-reader-packet.md",

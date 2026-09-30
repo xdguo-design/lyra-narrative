@@ -387,8 +387,9 @@ async def _run_review_round(
     round_no: int,
     prior_outputs: list[str] | None = None,
     auto_learn: bool = True,
+    retry_failed_reviewers: int = 0,
 ) -> tuple[list[str], bool]:
-    """Run three automated reviewers; the fourth master-reader is external ChatGPT controller."""
+    """Run three automated reviewers; retry only failed reviewer roles when requested."""
     with connect() as conn:
         row = conn.execute(
             """
@@ -493,6 +494,7 @@ async def _run_review_round(
         role: str,
         category: str,
         instruction: str,
+        retry_no: int = 0,
     ):
         prior = ""
         if prior_outputs and index < len(prior_outputs):
@@ -530,7 +532,11 @@ async def _run_review_round(
         return await _run_step(
             task_id=task_id,
             role=execution_role,
-            stage=f"review-r{round_no}",
+            stage=(
+                f"review-r{round_no}"
+                if retry_no <= 0
+                else f"review-r{round_no}-retry{retry_no}"
+            ),
             mode="check",
             content=draft,
             instruction="\n\n".join(
@@ -546,12 +552,49 @@ async def _run_review_round(
             ),
         )
 
-    packets = await asyncio.gather(
-        *[
-            _safe_review_task(
-                _run_merged_reviewer(index, role, category, instruction),
+    async def _run_reviewer_packet(
+        index: int,
+        role: str,
+        category: str,
+        instruction: str,
+    ):
+        packet = await _safe_review_task(
+            _run_merged_reviewer(index, role, category, instruction),
+            role,
+        )
+        if packet["ok"] or retry_failed_reviewers <= 0:
+            return packet
+
+        for retry_no in range(1, retry_failed_reviewers + 1):
+            print(
+                f"[review-retry] RETRY_FAILED_ONLY task={task_id} "
+                f"role={role} category={category} retry={retry_no}/"
+                f"{retry_failed_reviewers}",
+                flush=True,
+            )
+            packet = await _safe_review_task(
+                _run_merged_reviewer(
+                    index,
+                    role,
+                    category,
+                    instruction,
+                    retry_no=retry_no,
+                ),
                 role,
             )
+            if packet["ok"]:
+                print(
+                    f"[review-retry] RECOVERED task={task_id} "
+                    f"role={role} retry={retry_no}",
+                    flush=True,
+                )
+                return packet
+
+        return packet
+
+    packets = await asyncio.gather(
+        *[
+            _run_reviewer_packet(index, role, category, instruction)
             for index, (role, category, instruction) in enumerate(reviewer_specs)
         ]
     )
@@ -583,7 +626,7 @@ async def _run_review_round(
                         category,
                         "blocking",
                         f"Reviewer 执行失败：{error_text}",
-                        "修复该 Reviewer 调用后重新完成四角色全量审核；不得用其他 Reviewer 代替。",
+                        "只重试该 Reviewer；保留已成功的 Writer 与其它 Reviewer 结果，不得重跑整章。",
                         "open",
                     ),
                 )
