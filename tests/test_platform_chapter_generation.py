@@ -22,7 +22,7 @@ def test_platform_generation_workflow_uses_writer_and_reader_profiles():
     for marker in [
         "Rewrite v3 Chapter Platform Generate",
         "NARRATIVE_WRITER_PROFILE: AGNES",
-        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: MODELSCOPE",
+        "NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH",
         "NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES",
         "NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3",
         "NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}",

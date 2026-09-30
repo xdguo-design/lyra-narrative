@@ -64,7 +64,7 @@ def test_continuity_plot_reviewer_covers_long_form_drift():
         "知识来源缺口",
     ]:
         assert marker in review
-    assert '"continuity-plot-reviewer": "MODELSCOPE"' in ai
+    assert '"continuity-plot-reviewer": "GLM53FLASH"' in ai
 
 def test_targeted_reader_review_seeds_long_form_control_pack():
     source = Path("scripts/review_rewrite_v3_chapter.py").read_text(
