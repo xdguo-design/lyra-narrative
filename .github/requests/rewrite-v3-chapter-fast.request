@@ -1,4 +1,4 @@
-attempt: 24
+attempt: 25
 chapter: 2
-mode: context-aware-generation-r5
-reason: long-review-agnes-short-review-dots3-short-repair-dots3
+mode: three-scene-context-aware-generation
+reason: confession-search-measurement-three-part-generation-with-controller-master-reader
