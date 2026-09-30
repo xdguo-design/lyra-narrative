@@ -239,7 +239,7 @@ def test_short_patch_repair_uses_two_rounds_and_three_insertions():
         '_insert_before_first(repaired, "重量对不上", search_patch)',
         'if "短三斗一升" in repaired:',
         '_insert_before_first(repaired, "短三斗一升", measurement_patch)',
-        '_insert_before_last(repaired, "马二死了。", transition_patch)',
+        "_insert_before_last(repaired, death_marker, transition_patch)",
     ]:
         assert marker in source
     assert "NARRATIVE_ROLE_WRITER_TRANSITION_PATCH_PROFILE: AGNES" in workflow
