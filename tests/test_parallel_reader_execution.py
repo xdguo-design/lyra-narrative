@@ -107,7 +107,7 @@ def test_chapter02_pipeline_metrics_are_structured_for_p50_p95():
         assert marker in db_source
 
     for marker in [
-        'PIPELINE_VERSION = "chapter-fast-local-retry-v5"',
+        'PIPELINE_VERSION = "chapter-fast-local-retry-v6"',
         '"normal"',
         '"single_reviewer_retry"',
         '"length_repair"',
@@ -261,5 +261,38 @@ def test_three_patch_assembly_preserves_exact_hook_and_inserts_all_segments():
     assert "找袋现场扩写。" in repaired
     assert "官斗复量过程扩写。" in repaired
     assert "院里脚步一停。" in repaired
+    assert repaired.count("马二死了。") == 1
+    assert repaired.endswith("马二死了。")
+
+
+
+def test_short_patch_repair_can_restore_missing_weight_and_shortage_anchors():
+    source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        'weight_missing = "重量对不上" not in text',
+        'shortage_missing = "短三斗一升" not in text',
+        'if "马二死了。" not in text:',
+        "PATCH_UNSAFE_MISSING_HOOK",
+        'if "重量对不上" in repaired:',
+        'if "短三斗一升" in repaired:',
+    ]:
+        assert marker in source
+
+
+def test_three_patch_assembly_handles_missing_shortage_anchor():
+    from scripts.generate_rewrite_v3_chapter_fast import (
+        _assemble_short_draft_patches,
+    )
+
+    original = "口供。\n\n重量对不上。\n\n马二死了。"
+    repaired = _assemble_short_draft_patches(
+        original,
+        "新增找袋现场。",
+        "取官斗复量，最后确认：短三斗一升。",
+        "粮袋与记录分开收好留查。",
+    )
+    assert "短三斗一升" in repaired
     assert repaired.count("马二死了。") == 1
     assert repaired.endswith("马二死了。")

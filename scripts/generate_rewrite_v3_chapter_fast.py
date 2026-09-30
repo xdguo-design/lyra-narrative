@@ -345,15 +345,24 @@ def _assemble_short_draft_patches(
     measurement_patch: str,
     transition_patch: str,
 ) -> str:
-    required = ("重量对不上", "短三斗一升", "马二死了。")
-    if not all(marker in text for marker in required):
+    death_marker = "马二死了。"
+    if death_marker not in text:
         return text
 
-    repaired = _insert_before_first(text, "重量对不上", search_patch)
-    repaired = _insert_before_first(repaired, "短三斗一升", measurement_patch)
-    repaired = _insert_before_last(repaired, "马二死了。", transition_patch)
+    repaired = text
+    if "重量对不上" in repaired:
+        repaired = _insert_before_first(repaired, "重量对不上", search_patch)
+    else:
+        repaired = _insert_before_last(repaired, death_marker, search_patch)
 
-    if repaired.count("马二死了。") != 1 or not repaired.endswith("马二死了。"):
+    if "短三斗一升" in repaired:
+        repaired = _insert_before_first(repaired, "短三斗一升", measurement_patch)
+    else:
+        repaired = _insert_before_last(repaired, death_marker, measurement_patch)
+
+    repaired = _insert_before_last(repaired, death_marker, transition_patch)
+
+    if repaired.count(death_marker) != 1 or not repaired.endswith(death_marker):
         return text
     return repaired
 
@@ -372,17 +381,20 @@ async def _repair_short_draft_round(
     measurement_min, measurement_max = band(measurement_target, 300)
     transition_min, transition_max = band(transition_target, 180)
 
+    weight_missing = "重量对不上" not in text
+    shortage_missing = "短三斗一升" not in text
+
     search_instruction = f"""只补写一个可插入当前第二章的【找袋现场扩写片段】，目标 {search_min}—{search_max} 个中文字符。
-插入位置：正文第一次出现“重量对不上”之前。
+插入位置：{"正文最后一句“马二死了。”之前；补片末尾必须自然落到“重量对不上。”" if weight_missing else "正文第一次出现“重量对不上”之前"}。
 只补刘旺交代“后厨侧门”以后，到众人沿既有窄车辙/木棚/蓝麻线复查、找到昨日破口粮袋、刘旺确认位置不对、准备上秤之间的现场动作、空间阻力和人物反应。
-不得重复当前正文已有句子；不得写“重量对不上”、官斗、短缺数字、马二或死讯。
+{"由于当前正文缺失该节点，补片最后必须逐字写一次：“重量对不上。”" if weight_missing else "不得重复当前正文已有句子；不得再次写“重量对不上”"}；不得写官斗、短缺数字、马二或死讯。
 禁止新增拖痕、切痕、重新缝线、绳子、封条、新人物、新地点、精确时间、数量、伤病或解释性证据。
 只输出新增片段。"""
 
     measurement_instruction = f"""只补写一个可插入当前第二章的【称重到官斗复量扩写片段】，目标 {measurement_min}—{measurement_max} 个中文字符。
-插入位置：正文“重量对不上”之后、“短三斗一升”之前。
+插入位置：{"正文最后一句“马二死了。”之前" if shortage_missing else "正文“重量对不上”之后、“短三斗一升”之前"}。
 只补：发现重量异常后的现场反应、这时才去取昨夜入库记录、记录只写同口径官斗登记斗数、自然带出“昨日运粮车夫马二”身份、取同口径官斗准备复量与复量过程。
-不得写出“短三斗一升”本句，不得提前写死讯，不得新增斤两、皮重、封条、新人物、新地点、精确时间、死因、尸体或解释性证据。
+{"由于当前正文缺失短缺结果，补片结尾必须逐字写一次：“短三斗一升。”" if shortage_missing else "不得再次写“短三斗一升”本句"}；不得提前写死讯，不得新增斤两、皮重、封条、新人物、新地点、精确时间、死因、尸体或解释性证据。
 只输出新增片段。"""
 
     transition_instruction = f"""只补写一个可插入当前第二章的【复量结果到死讯前过渡片段】，目标 {transition_min}—{transition_max} 个中文字符。
@@ -441,10 +453,9 @@ async def _repair_short_draft_round(
 
 
 async def _repair_short_draft_with_patches(task_id: int, text: str) -> str:
-    required = ("重量对不上", "短三斗一升", "马二死了。")
-    if not all(marker in text for marker in required):
+    if "马二死了。" not in text:
         print(
-            "[length-repair] PATCH_UNSAFE_MISSING_ANCHOR "
+            "[length-repair] PATCH_UNSAFE_MISSING_HOOK "
             f"chars={len(text)}",
             flush=True,
         )

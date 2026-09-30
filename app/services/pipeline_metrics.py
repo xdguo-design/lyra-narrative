@@ -7,7 +7,7 @@ import uuid
 
 from app.db import connect
 
-PIPELINE_VERSION = "chapter-fast-local-retry-v5"
+PIPELINE_VERSION = "chapter-fast-local-retry-v6"
 
 
 def epoch_ms() -> int:
