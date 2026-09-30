@@ -7,7 +7,7 @@ import uuid
 
 from app.db import connect
 
-PIPELINE_VERSION = "chapter-fast-local-retry-v3"
+PIPELINE_VERSION = "chapter-fast-local-retry-v4"
 
 
 def epoch_ms() -> int:
@@ -149,6 +149,9 @@ def _normalized_stage(role: str, source_stage: str) -> tuple[str, str, int]:
         return "writer", "writer", 1
     if source_stage == "chapter-02-length-repair":
         return "length-repair", "length", 1
+    if source_stage.startswith("chapter-02-length-repair-"):
+        suffix = source_stage.removeprefix("chapter-02-length-repair-")
+        return f"length-repair-{suffix}", "length", 1
     if source_stage.startswith("review-r1-retry"):
         prefix = category or "review"
         return f"{prefix}-review-retry", category, 2
@@ -318,14 +321,11 @@ def event_summary(pipeline_run_id: int) -> dict[str, int]:
         (int(row["duration_ms"]) for row in rows if row["stage"] == "writer"),
         default=0,
     )
-    length_repair_ms = max(
-        (
-            int(row["duration_ms"])
-            for row in rows
-            if row["stage"] == "length-repair"
-        ),
-        default=0,
-    )
+    length_repairs = [
+        row
+        for row in rows
+        if str(row["source_stage"]).startswith("chapter-02-length-repair")
+    ]
     initial = [row for row in rows if str(row["source_stage"]) == "review-r1"]
     retries = [
         row
@@ -340,6 +340,7 @@ def event_summary(pipeline_run_id: int) -> dict[str, int]:
             return 0
         return max(0, max(ends) - min(starts))
 
+    length_repair_ms = wall(length_repairs)
     review_initial_wall_ms = wall(initial)
     all_review = initial + retries
     review_total_wall_ms = wall(all_review)

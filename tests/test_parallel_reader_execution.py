@@ -107,7 +107,7 @@ def test_chapter02_pipeline_metrics_are_structured_for_p50_p95():
         assert marker in db_source
 
     for marker in [
-        'PIPELINE_VERSION = "chapter-fast-local-retry-v3"',
+        'PIPELINE_VERSION = "chapter-fast-local-retry-v4"',
         '"normal"',
         '"single_reviewer_retry"',
         '"length_repair"',
@@ -157,7 +157,8 @@ def test_chapter02_short_draft_uses_dedicated_expand_repair():
     assert "必须至少净增加约" in fast_source
     assert "正文少于 2700 个中文字符时不得结束生成" in fast_source
     assert "在正文达到至少 2700 个中文字符之前不得写“马二死了。”" in fast_source
-    assert "NARRATIVE_ROLE_WRITER_RETRY_PROFILE: SENSENOVA68" in workflow
+    assert "NARRATIVE_ROLE_WRITER_SEARCH_PATCH_PROFILE: AGNES" in workflow
+    assert "NARRATIVE_ROLE_WRITER_MEASUREMENT_PATCH_PROFILE: DOTS3" in workflow
 
 
 
@@ -176,3 +177,41 @@ def test_writer_retry_has_dedicated_output_budget_and_diagnostic_artifact():
     assert 'NARRATIVE_WRITER_RETRY_MAX_TOKENS: "10000"' in workflow
     assert 'NARRATIVE_WRITER_RETRY_TIMEOUT_SECONDS: "150"' in workflow
     assert '"run-started.json"' in fast_source
+
+
+
+def test_short_length_repair_uses_two_local_patches_not_whole_rewrite():
+    source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "async def _repair_short_draft_with_patches",
+        'role="writer-search-patch"',
+        'stage="chapter-02-length-repair-search"',
+        'role="writer-measurement-patch"',
+        'stage="chapter-02-length-repair-measurement"',
+        "search_result, measurement_result = await asyncio.gather(",
+        "_assemble_short_draft_patches(",
+    ]:
+        assert marker in source
+
+
+def test_short_patch_assembly_replaces_post_weight_segment_and_keeps_one_hook():
+    from scripts.generate_rewrite_v3_chapter_fast import (
+        _assemble_short_draft_patches,
+    )
+
+    original = (
+        "口供段。\n\n找袋段。\n\n重量对不上。\n\n"
+        "旧的跑偏段落，写了不该有的东西。\n\n马二死了。"
+    )
+    repaired = _assemble_short_draft_patches(
+        original,
+        "新增找袋现场。",
+        "官斗复量后，只确认：短三斗一升。有人快步进院。",
+    )
+    assert "新增找袋现场。" in repaired
+    assert "旧的跑偏段落" not in repaired
+    assert "短三斗一升" in repaired
+    assert repaired.count("马二死了。") == 1
+    assert repaired.endswith("马二死了。")

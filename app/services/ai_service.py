@@ -40,6 +40,11 @@ def _system_prompt(mode: str) -> str:
             "只输出扩写后的完整正文。"
             + prose_rules
         ),
+        "patch": (
+            "你是小说局部补写编辑。只输出可直接插入既有正文的新增片段，不重写整章、不复述相邻原文、"
+            "不新增事实、人物、物证、精确时间或地点。补写必须服从用户给出的插入位置、目标长度和事实边界。"
+            + prose_rules
+        ),
         "check": (
             "你是小说一致性审稿人。检查人物行为、时间线、称谓、地点、道具和因果是否冲突；"
             "同时识别碎句堆叠、空洞否定式描写、未落地术语和缺少人物意图的功能性对白，输出精炼的问题清单与修改建议。"
@@ -50,8 +55,8 @@ def _system_prompt(mode: str) -> str:
 
 def _demo(mode: str, content: str, instruction: str = "") -> AssistResult:
     tail = (content or "").strip().splitlines()[-1:] or [""]
-    if mode in {"polish", "expand"}:
-        text = content or "演示模式未连接真实模型；当前没有可润色正文。"
+    if mode in {"polish", "expand", "patch"}:
+        text = content or "演示模式未连接真实模型；当前没有可润色正文."
     elif mode == "check":
         if "NARRATIVEOS_REVIEW_V1" in instruction:
             text = "NO_ISSUE"

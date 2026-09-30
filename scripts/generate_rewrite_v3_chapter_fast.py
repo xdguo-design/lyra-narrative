@@ -299,51 +299,166 @@ def _accept_length_repair(original: str, repaired: str) -> bool:
     return bool(repaired) and _length_distance(repaired) < _length_distance(original)
 
 
+def _short_patch_targets(text: str) -> tuple[int, int]:
+    weight_at = text.find("重量对不上")
+    death_at = text.rfind("马二死了。")
+    if weight_at < 0 or death_at <= weight_at:
+        deficit = max(900, 2900 - len(text))
+        return min(700, max(450, deficit // 3)), min(
+            1400,
+            max(800, deficit),
+        )
+
+    weight_end = weight_at + len("重量对不上")
+    if weight_end < len(text) and text[weight_end] in "。！？":
+        weight_end += 1
+    middle_len = max(0, death_at - weight_end)
+    base_after_replace = len(text) - middle_len
+    needed = max(1100, 2900 - base_after_replace)
+    search_target = min(700, max(500, needed // 3))
+    measurement_target = min(
+        1400,
+        max(850, needed - search_target + 150),
+    )
+    return search_target, measurement_target
+
+
+def _assemble_short_draft_patches(
+    text: str,
+    search_patch: str,
+    measurement_patch: str,
+) -> str:
+    weight_marker = "重量对不上"
+    death_marker = "马二死了。"
+    weight_at = text.find(weight_marker)
+    death_at = text.rfind(death_marker)
+    if weight_at < 0 or death_at <= weight_at:
+        return text
+
+    weight_para_start = text.rfind("\n\n", 0, weight_at)
+    weight_para_start = 0 if weight_para_start < 0 else weight_para_start + 2
+
+    with_search = (
+        text[:weight_para_start].rstrip()
+        + "\n\n"
+        + search_patch.strip()
+        + "\n\n"
+        + text[weight_para_start:]
+    )
+
+    weight_at = with_search.find(weight_marker)
+    death_at = with_search.rfind(death_marker)
+    if weight_at < 0 or death_at <= weight_at:
+        return text
+
+    weight_end = weight_at + len(weight_marker)
+    if weight_end < len(with_search) and with_search[weight_end] in "。！？":
+        weight_end += 1
+
+    return (
+        with_search[:weight_end].rstrip()
+        + "\n\n"
+        + measurement_patch.strip()
+        + "\n\n"
+        + death_marker
+    ).strip()
+
+
+async def _repair_short_draft_with_patches(task_id: int, text: str) -> str:
+    if "重量对不上" not in text or "马二死了。" not in text:
+        print(
+            "[length-repair] PATCH_UNSAFE_MISSING_ANCHOR "
+            f"chars={len(text)}",
+            flush=True,
+        )
+        return text
+
+    search_target, measurement_target = _short_patch_targets(text)
+    search_min = max(400, search_target - 80)
+    search_max = search_target + 100
+    measurement_min = max(700, measurement_target - 100)
+    measurement_max = measurement_target + 120
+
+    search_instruction = f"""只补写一个可插入当前第二章的【找袋与上秤前现场片段】，目标 {search_min}—{search_max} 个中文字符。
+插入位置：正文第一次出现“重量对不上”之前。
+只补刘旺交代袋子在后厨侧门之后，到众人沿既有窄车辙/木棚/蓝麻线复查、找到昨日破口粮袋、刘旺确认这不是昨夜原放置位置、准备上秤之间的现场过程。
+不得重复当前正文已经写出的对白和动作；不得写“重量对不上”、官斗、具体短缺、马二或死讯。
+禁止新增拖痕、切痕、重新缝线、绳子、封条、新人物、新地点、精确时间、数量、伤病或解释性证据。
+只输出新增片段，不要标题、说明、前后文。"""
+
+    measurement_instruction = f"""只补写一个可替换当前第二章【“重量对不上”之后到最后一句“马二死了。”之前】的片段，目标 {measurement_min}—{measurement_max} 个中文字符。
+固定顺序必须完整：
+1. 先从“重量对不上”自然承接；
+2. 这时才取昨夜入库记录，记录只写昨夜同口径官斗登记的斗数；
+3. 自然带出一次“昨日运粮车夫马二”的身份，但不得写他去了哪里、失踪、死因、尸体或任何下一章地点信息；
+4. 取昨夜同口径官斗复量，不逐斗报数；
+5. 复量结束必须逐字出现且只出现一次：“短三斗一升。”
+6. 只确认分量短了、袋子位置变了，不定性谁偷、怎么偷，不猜孙成动机；
+7. 粮袋与记录分开收好留查，可写“封存”，不得出现封条、草绳、油布等新增物证；
+8. 片段最后只留出有人进院报告的自然入口，不得写“马二死了”或任何死讯内容。
+不得新增人物、物证、精确时间、地点、记录内容、伤病或解释性证据。
+只输出替换片段，不要标题、说明、前后文。"""
+
+    search_result, measurement_result = await asyncio.gather(
+        _run_step(
+            task_id=task_id,
+            role="writer-search-patch",
+            stage="chapter-02-length-repair-search",
+            mode="patch",
+            content=text,
+            instruction=search_instruction,
+        ),
+        _run_step(
+            task_id=task_id,
+            role="writer-measurement-patch",
+            stage="chapter-02-length-repair-measurement",
+            mode="patch",
+            content=text,
+            instruction=measurement_instruction,
+        ),
+    )
+    repaired = _assemble_short_draft_patches(
+        text,
+        search_result.content,
+        measurement_result.content,
+    )
+    if not _accept_length_repair(text, repaired):
+        print(
+            f"[length-repair] PATCH_REJECT_NO_IMPROVEMENT original_chars={len(text)} "
+            f"repaired_chars={len(repaired)}",
+            flush=True,
+        )
+        return text
+    print(
+        f"[length-repair] PATCH_ACCEPT_LOCAL_ONLY original_chars={len(text)} "
+        f"repaired_chars={len(repaired)} "
+        f"remaining_distance={_length_distance(repaired)}",
+        flush=True,
+    )
+    return repaired
+
+
 async def _repair_length_if_needed(task_id: int, text: str) -> str:
     if 2700 <= len(text) <= 3400:
         return text
+    if len(text) < 2700:
+        return await _repair_short_draft_with_patches(task_id, text)
 
-    is_short = len(text) < 2700
-    target = "2850—3150" if is_short else "3000—3300"
-    required_growth = max(0, 2850 - len(text))
-    mode = "expand" if is_short else "polish"
-    repair_action = (
-        f"当前正文只有 {len(text)} 个字符，是过短骨架，不是成稿。"
-        f"必须至少净增加约 {required_growth} 个字符，并把完整正文扩写到 {target} 个中文字符。"
-        "不得原样返回，不得只做措辞润色，不得提前结束。"
-        if is_short
-        else f"当前正文过长，请在保留全部冻结事实的前提下压缩到 {target} 个中文字符。"
-    )
     result = await _run_step(
         task_id=task_id,
         role="writer-retry",
         stage="chapter-02-length-repair",
-        mode=mode,
+        mode="polish",
         content=text,
-        instruction=f"""{repair_action}
-输出前请在内部检查长度；不要输出字符统计、说明或修改理由。
-只允许补足或压缩现场动作、空间阻力、人物犹豫和已有线索之间的自然过渡，不得新增事实、人物、物证、精确时间、地点或解释性证据。
-
-硬约束：
-- 保持既有剧情顺序与冻结事实不变。
-- 刘旺必须分层交代：先认昨夜推车，再交代孙成，再经过独立压力节拍才交代五文。
-- 不得由周虎先说出孙成，不得出现“谁给的报酬/报酬多少/拿了多少钱”。
-- 找袋子只能沿既有车辙/现场搜索自然推进，不得新增封口切痕、重新缝线等未冻结物证。
-- 先明确“重量对不上”，再取昨夜同口径官斗记录复量，最后只得出“短三斗一升”。
-- 不把短缺直接定性为偷窃。
-- 不出现皮重、封条、精确时辰、作者元分析。
-- 若原文过短，在正文达到至少 2700 个中文字符之前不得写“马二死了。”；必须先把前三阶段完整展开。
-- 最后一句必须且只能是：“马二死了。”
-- 只输出完整修订后的正文，不要解释。
-""",
+        instruction="""当前第二章正文过长，请在保留全部冻结事实、剧情顺序、人物关系与最后一句“马二死了。”不变的前提下，压缩到 3000—3300 个中文字符。
+只允许删除重复解释、重复动作和冗余过渡，不得新增事实、人物、物证、精确时间、地点或解释性证据。
+只输出完整修订后的正文，不要解释。""",
     )
     repaired = result.content.strip()
     if not _accept_length_repair(text, repaired):
         print(
             f"[length-repair] REJECT_NO_IMPROVEMENT original_chars={len(text)} "
-            f"repaired_chars={len(repaired)} "
-            f"original_distance={_length_distance(text)} "
-            f"repaired_distance={_length_distance(repaired)}",
+            f"repaired_chars={len(repaired)}",
             flush=True,
         )
         return text
@@ -593,7 +708,9 @@ async def main() -> int:
         1 for row in runs if "-retry" in str(row["stage"] or "")
     )
     length_repair_count = sum(
-        1 for row in runs if str(row["stage"] or "") == "chapter-02-length-repair"
+        1
+        for row in runs
+        if str(row["stage"] or "").startswith("chapter-02-length-repair")
     )
 
     sync_agent_run_events(
