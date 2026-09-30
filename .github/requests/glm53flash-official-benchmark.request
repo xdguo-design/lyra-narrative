@@ -1,4 +1,4 @@
 attempt: 2
 model: glm-5.3-flash
-mode: official-adapter-three-stage
-reason: preserve-official-max-reasoning-and-increase-completion-budget-for-long-tasks
+mode: official-adapter-workload-reasoning
+reason: max-baseline-exhausted-budget-use-official-high-for-long-writing-and-review
