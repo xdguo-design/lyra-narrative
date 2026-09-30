@@ -136,6 +136,7 @@ def create_review_task(previous: str, current: str) -> int:
             content=control_path.read_text(encoding="utf-8"),
         )
 
+    with connect() as conn:
         task = conn.execute(
             "INSERT INTO writing_tasks(project_id,chapter_id,goal,instruction,status) "
             "VALUES(?,?,?,?,?)",
