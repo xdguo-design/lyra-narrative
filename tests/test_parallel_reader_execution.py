@@ -143,7 +143,7 @@ def test_agent_run_metrics_capture_failure_latency_and_prompt_shape():
     ]:
         assert marker in source
 
-def test_chapter02_short_draft_uses_dedicated_expand_repair():
+def test_chapter02_short_draft_uses_local_patch_repair():
     ai_source = Path("app/services/ai_service.py").read_text(encoding="utf-8")
     fast_source = Path("scripts/generate_rewrite_v3_chapter_fast.py").read_text(
         encoding="utf-8"
@@ -152,11 +152,10 @@ def test_chapter02_short_draft_uses_dedicated_expand_repair():
         encoding="utf-8"
     )
 
-    assert '"expand": (' in ai_source
-    assert 'mode = "expand" if is_short else "polish"' in fast_source
-    assert "必须至少净增加约" in fast_source
+    assert '"patch": (' in ai_source
+    assert "async def _repair_short_draft_with_patches" in fast_source
+    assert "search_result, measurement_result = await asyncio.gather(" in fast_source
     assert "正文少于 2700 个中文字符时不得结束生成" in fast_source
-    assert "在正文达到至少 2700 个中文字符之前不得写“马二死了。”" in fast_source
     assert "NARRATIVE_ROLE_WRITER_SEARCH_PATCH_PROFILE: AGNES" in workflow
     assert "NARRATIVE_ROLE_WRITER_MEASUREMENT_PATCH_PROFILE: DOTS3" in workflow
 
