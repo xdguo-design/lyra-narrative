@@ -434,10 +434,9 @@ def test_full_pipeline_has_revision_integrity_gate():
         "LOCAL_REWRITE_SEAM_GAP",
         "before=draft",
         "after=revision.content",
-        "before=draft",
-        "after=final_content",
         "second_blocking = True",
-        "final_blocking = final_blocking or integrity_failed_2",
+        "final_blocking = second_blocking",
+        "[review-budget] STOP_AFTER_R2",
     ]
     for marker in required:
         assert marker in source
