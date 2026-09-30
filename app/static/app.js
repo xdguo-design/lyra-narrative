@@ -22,8 +22,106 @@ const state = {
   taskPollTimer: null,
   taskPollBusy: false,
   search: "",
+  workspaceContext: null,
 };
 
+
+const LYRA_BRIDGE_VERSION = "1.0";
+const lyraBridgeParams = new URLSearchParams(window.location.search);
+const lyraHubOrigin = (() => {
+  if (lyraBridgeParams.get("lyraHub") !== "1") return null;
+  const raw = lyraBridgeParams.get("lyraHubOrigin");
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+})();
+const lyraPendingCapabilities = new Map();
+
+function invokeLyraCapability(capability, payload = {}) {
+  if (!lyraHubOrigin || window.parent === window) {
+    return Promise.reject(new Error("Lyra Hub bridge is not available"));
+  }
+
+  const requestId =
+    typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `lyra-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      lyraPendingCapabilities.delete(requestId);
+      reject(new Error("Lyra Hub capability request timed out"));
+    }, 15000);
+
+    lyraPendingCapabilities.set(requestId, { resolve, reject, timer });
+    window.parent.postMessage(
+      {
+        type: "lyra.capability.invoke",
+        version: LYRA_BRIDGE_VERSION,
+        requestId,
+        capability,
+        payload,
+      },
+      lyraHubOrigin,
+    );
+  });
+}
+
+function initLyraHubBridge() {
+  if (!lyraHubOrigin || window.parent === window) return;
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.origin !== lyraHubOrigin) return;
+    const message = event.data || {};
+    if (message.version !== LYRA_BRIDGE_VERSION) return;
+
+    if (message.type === "lyra.workspace.init") {
+      const context = message.context || {};
+      if (context.appId !== "lyra-narrative") return;
+      state.workspaceContext = context;
+      document.documentElement.dataset.lyraMode = "workspace";
+      if (typeof context.locale === "string" && context.locale) {
+        document.documentElement.lang = context.locale;
+      }
+      applyTheme(context.theme === "dark" ? "space" : "paper");
+      const badge = $("#hubContextBadge");
+      if (badge) {
+        badge.classList.remove("hidden");
+        badge.textContent = "LYRA HUB";
+        badge.title = context.identity?.authenticated
+          ? "已连接 Lyra Hub 身份上下文"
+          : "已连接 Lyra Hub；当前为匿名平台上下文";
+      }
+      return;
+    }
+
+    if (message.type === "lyra.capability.result" && message.requestId) {
+      const pending = lyraPendingCapabilities.get(message.requestId);
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      lyraPendingCapabilities.delete(message.requestId);
+      if (message.ok) pending.resolve(message.result);
+      else pending.reject(new Error(message.error || "Lyra Hub capability failed"));
+    }
+  });
+
+  window.lyraHub = {
+    getContext: () => state.workspaceContext,
+    invokeCapability: invokeLyraCapability,
+  };
+
+  window.parent.postMessage(
+    {
+      type: "lyra.app.ready",
+      version: LYRA_BRIDGE_VERSION,
+      appId: "lyra-narrative",
+    },
+    lyraHubOrigin,
+  );
+}
 
 const THEME_KEY = "narrativeos-theme";
 const THEMES = new Set(["ink", "space", "paper", "neo"]);
@@ -1707,6 +1805,7 @@ function bind() {
 }
 
 initTheme();
+initLyraHubBridge();
 bind();
 Promise.all([loadProjects(), loadProviders()]).catch((error) => {
   clearWorkspace();
