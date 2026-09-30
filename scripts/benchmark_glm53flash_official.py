@@ -19,10 +19,14 @@ FALLBACK_REVIEW_SOURCE = Path(
 OFFICIAL_PARAMETERS = {
     "temperature": 1.0,
     "top_p": 0.95,
-    "reasoning_effort": "max",
     "thinking": {"type": "enabled", "clear_thinking": False},
     "stream": True,
     "tool_stream": True,
+    "workload_reasoning_effort": {
+        "short_response": "max",
+        "writer_3000_chars": "high",
+        "whole_chapter_continuity_review": "high",
+    },
 }
 
 WRITER_PROMPT = """写一章约 3000 个中文字符的历史悬疑小说正文，只输出正文。
@@ -79,6 +83,7 @@ async def _call(
     prompt: str,
     max_tokens: int,
     timeout_seconds: float,
+    reasoning_effort: str,
 ) -> tuple[dict, str]:
     profile, provider = _build_provider(timeout_seconds)
     started = time.perf_counter()
@@ -89,6 +94,7 @@ async def _call(
                 messages=[ChatMessage(role="user", content=prompt)],
                 temperature=0.1,
                 max_tokens=max_tokens,
+                extra={"reasoning_effort": reasoning_effort},
             )
         )
     except Exception as exc:
@@ -113,6 +119,8 @@ async def _call(
         "provider": response.provider,
         "model": response.model,
         "configured_model": profile.get("default_model"),
+        "reasoning_effort": reasoning_effort,
+        "request_max_tokens": max_tokens,
         "elapsed_ms": int((time.perf_counter() - started) * 1000),
         "finish_reason": response.finish_reason,
         "usage": response.usage,
@@ -133,6 +141,7 @@ async def main() -> int:
         prompt="只回复两个汉字：正常",
         max_tokens=4096,
         timeout_seconds=180.0,
+        reasoning_effort="max",
     )
     smoke["quality_gate"] = bool(smoke.get("ok")) and "正常" in smoke_text
     (OUT_DIR / "short-response.txt").write_text(smoke_text, encoding="utf-8")
@@ -141,8 +150,9 @@ async def main() -> int:
         label="writer_3000_chars",
         system="你是中文历史悬疑长篇小说作家，只输出可以直接使用的正文。",
         prompt=WRITER_PROMPT,
-        max_tokens=16000,
+        max_tokens=20000,
         timeout_seconds=300.0,
+        reasoning_effort="high",
     )
     writer["target_chinese_chars"] = [2800, 3300]
     writer["quality_gate"] = (
@@ -163,8 +173,9 @@ async def main() -> int:
         label="whole_chapter_continuity_review",
         system="你是严谨的中文长篇小说连续性审稿人。",
         prompt=REVIEW_INSTRUCTION + "\n\n【完整章节】\n" + review_source,
-        max_tokens=10000,
+        max_tokens=16000,
         timeout_seconds=300.0,
+        reasoning_effort="high",
     )
     reviewer["review_source"] = review_source_name
     reviewer["source_chars"] = len(review_source)
