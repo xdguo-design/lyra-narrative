@@ -1,4 +1,4 @@
-attempt: 20
+attempt: 21
 chapter: 2
-mode: benchmark-routed-generation
-reason: agnes-writer-modelscope-continuity-agnes-character-dots3-language-master-chatgpt
+mode: benchmark-routed-generation-r2
+reason: fix-known-content-blockers-and-use-90s-full-chapter-review-timeout
