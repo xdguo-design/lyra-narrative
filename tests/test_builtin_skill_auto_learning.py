@@ -86,6 +86,54 @@ def test_rejection_upgrades_builtin_writer_and_reader_for_current_task(
     assert frozen == versions
 
 
+def test_rejection_learning_is_idempotent_for_duplicate_events(
+    monkeypatch,
+    tmp_path,
+):
+    task_id = _make_task(monkeypatch, tmp_path)
+    event = {
+        "reviewer": "continuity-plot-reviewer",
+        "category": "continuity-plot",
+        "reason": "同一条 blocking 被重复汇总。",
+        "suggestion": "只学习一次。",
+        "excerpt": "重复证据",
+    }
+
+    first = record_rejection_batch(
+        task_id=task_id,
+        source="review-round-1",
+        events=[event, event],
+    )
+    second = record_rejection_batch(
+        task_id=task_id,
+        source="review-round-1",
+        events=[event, event],
+    )
+
+    assert first["recorded"] == 1
+    assert second["recorded"] == 0
+    with connect() as conn:
+        builtin_count = conn.execute(
+            """
+            SELECT COUNT(*) AS n
+            FROM builtin_skill_learning_events
+            WHERE task_id=?
+            """,
+            (task_id,),
+        ).fetchone()["n"]
+        rejection_count = conn.execute(
+            """
+            SELECT COUNT(*) AS n
+            FROM skill_rejection_events
+            WHERE task_id=?
+            """,
+            (task_id,),
+        ).fetchone()["n"]
+
+    assert builtin_count == 1
+    assert rejection_count == 1
+
+
 def test_fresh_database_replays_persisted_builtin_learning(monkeypatch, tmp_path):
     learning_dir = tmp_path / "learning-events"
     monkeypatch.setenv(

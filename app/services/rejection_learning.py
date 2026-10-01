@@ -41,11 +41,12 @@ def record_rejection_batch(
         events=event_list,
     )
 
+    recorded = 0
     with connect() as conn:
         for event in payload["events"]:
-            conn.execute(
+            builtin_insert = conn.execute(
                 """
-                INSERT INTO builtin_skill_learning_events(
+                INSERT OR IGNORE INTO builtin_skill_learning_events(
                     batch_id,task_id,project_id,source,reviewer,category,
                     pattern_signature,reason,suggestion,excerpt
                 ) VALUES(?,?,?,?,?,?,?,?,?,?)
@@ -63,9 +64,10 @@ def record_rejection_batch(
                     event["excerpt"],
                 ),
             )
+            recorded += max(0, int(builtin_insert.rowcount or 0))
             conn.execute(
                 """
-                INSERT INTO skill_rejection_events(
+                INSERT OR IGNORE INTO skill_rejection_events(
                     task_id,project_id,batch_id,source,reviewer,category,
                     pattern_signature,reason,suggestion,excerpt
                 ) VALUES(?,?,?,?,?,?,?,?,?,?)
@@ -121,7 +123,7 @@ def record_rejection_batch(
     )
 
     return {
-        "recorded": len(payload["events"]),
+        "recorded": recorded,
         "batch_id": payload["batch_id"],
         "skill_versions": versions,
     }
