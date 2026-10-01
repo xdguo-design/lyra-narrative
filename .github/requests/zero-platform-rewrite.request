@@ -3,7 +3,7 @@ mode: full-book
 chapters: 8
 skill: 小说精修流程-v4
 review_contract: NARRATIVEOS_REVIEW_V2
-trigger_from_commit: af47d33a48fa9d56fd7e9d83e933e34bd3e4b085
-requested_at: 2026-10-01T19:57:00+08:00
-attempt: 4
+trigger_from_commit: 9c79cf3179b06d81c756105f0924eeb17dc49a82
+requested_at: 2026-10-01T20:40:00+08:00
+attempt: 5
 routing: role-aware-model-pool
