@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import re
 from typing import Any
@@ -157,6 +158,99 @@ def _named_entries(state: dict[str, Any], key: str) -> dict[str, dict[str, Any]]
         if name:
             result[name] = item
     return result
+
+
+def _merge_unique_strings(*groups: list[Any]) -> list[str]:
+    merged: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for item in group:
+            text = str(item).strip()
+            if text and text not in seen:
+                merged.append(text)
+                seen.add(text)
+    return merged
+
+
+def inherit_monotonic_story_state(
+    previous: dict[str, Any],
+    current: dict[str, Any],
+) -> dict[str, Any]:
+    """Fill updater omissions from the previous authoritative snapshot.
+
+    The updater may omit old facts while still correctly describing the current
+    chapter. Missing historical state is inherited; explicit current values are
+    kept, and an open thread closes only when it appears in closed_threads.
+    """
+    if int(previous.get("chapter_number") or 0) <= 0:
+        return current
+
+    merged = copy.deepcopy(current)
+    for key in ("characters", "items", "locations", "world_counters"):
+        current_entries = merged.get(key)
+        if not isinstance(current_entries, list):
+            current_entries = []
+            merged[key] = current_entries
+
+        previous_by_name = _named_entries(previous, key)
+        current_by_name = _named_entries(merged, key)
+
+        for name, old in previous_by_name.items():
+            new = current_by_name.get(name)
+            if new is None:
+                current_entries.append(copy.deepcopy(old))
+                continue
+
+            if key == "characters":
+                for field in ("knowledge", "relationship_changes"):
+                    old_values = old.get(field)
+                    new_values = new.get(field)
+                    new[field] = _merge_unique_strings(
+                        old_values if isinstance(old_values, list) else [],
+                        new_values if isinstance(new_values, list) else [],
+                    )
+                for field in ("location", "physical_state", "active_goal"):
+                    if new.get(field) in {None, ""} and old.get(field) not in {None, ""}:
+                        new[field] = copy.deepcopy(old[field])
+            else:
+                for field, value in old.items():
+                    if field == "name":
+                        continue
+                    if field not in new or new.get(field) in {None, ""}:
+                        new[field] = copy.deepcopy(value)
+
+    for key in ("revealed_facts", "closed_threads", "do_not_reset"):
+        previous_values = previous.get(key)
+        current_values = merged.get(key)
+        merged[key] = _merge_unique_strings(
+            previous_values if isinstance(previous_values, list) else [],
+            current_values if isinstance(current_values, list) else [],
+        )
+
+    closed = {
+        str(item).strip()
+        for item in merged.get("closed_threads", [])
+        if str(item).strip()
+    }
+    previous_open = previous.get("open_threads")
+    current_open = merged.get("open_threads")
+    merged["open_threads"] = [
+        item
+        for item in _merge_unique_strings(
+            previous_open if isinstance(previous_open, list) else [],
+            current_open if isinstance(current_open, list) else [],
+        )
+        if item not in closed
+    ]
+
+    previous_scene = previous.get("last_scene")
+    current_scene = merged.get("last_scene")
+    if isinstance(previous_scene, dict) and isinstance(current_scene, dict):
+        for field, value in previous_scene.items():
+            if field not in current_scene or current_scene.get(field) in {None, ""}:
+                current_scene[field] = copy.deepcopy(value)
+
+    return merged
 
 
 def validate_story_state_transition(
@@ -435,6 +529,7 @@ async def capture_story_state(
         raw_state,
         chapter_number=chapter_number,
     )
+    state = inherit_monotonic_story_state(previous, state)
     validate_story_state_transition(previous, state)
     persist_story_state(
         project_id=project_id,

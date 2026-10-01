@@ -146,6 +146,17 @@ def test_machine_and_human_rejection_paths_feed_builtin_learning():
     assert "rejected approval requires a reason" in api
 
 
+def test_skill_learning_persists_to_current_branch_without_failing_generation():
+    source = Path("scripts/persist_builtin_skill_learning.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'GITHUB_REF_NAME:-dev' in source
+    assert 'HEAD:$TARGET_BRANCH' in source
+    assert 'origin "$TARGET_BRANCH"' in source
+    assert "generation result remains valid" in source
+    assert "HEAD:main" not in source
+
+
 def test_formal_workflows_persist_learning_back_to_repo():
     workflows = [
         "rewrite-v3-chapter-generate.yml",

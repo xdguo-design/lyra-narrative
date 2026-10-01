@@ -14,6 +14,7 @@ from app.services.continuity_service import (
     latest_story_state,
     persist_story_state,
     repetition_report,
+    inherit_monotonic_story_state,
     validate_story_state_transition,
 )
 from app.services.workflow_service import _create_run
@@ -257,6 +258,81 @@ def test_latest_story_state_respects_chapter_boundary(monkeypatch, tmp_path):
     )
     assert before_two["chapter_number"] == 1
     assert before_two["revealed_facts"] == ["事实A"]
+
+
+def test_story_state_inheritance_preserves_omitted_history_and_open_threads():
+    previous = {
+        "chapter_number": 3,
+        "characters": [
+            {
+                "name": "陈默",
+                "location": "广播塔外",
+                "physical_state": "左掌受伤",
+                "knowledge": ["林娜可能在广播塔内部"],
+                "relationship_changes": ["开始怀疑赵凯"],
+                "active_goal": "进入广播塔",
+            }
+        ],
+        "items": [{"name": "核心", "holder": "陈默", "state": "可用"}],
+        "locations": [{"name": "广播塔", "state": "运行中", "access": "受限"}],
+        "world_counters": [{"name": "净化倒计时", "value": 20, "rule": "不可逆"}],
+        "revealed_facts": ["电磁屏蔽网覆盖广播塔"],
+        "open_threads": [
+            "广播塔内部是否有林娜或相关程序正在运行",
+            "陈默能否在电磁屏蔽网下成功进入广播塔",
+            "陈默进入控制终端后，是否能改变或中止‘净化’程序",
+        ],
+        "closed_threads": ["核心已经被陈默带走"],
+        "last_scene": {
+            "time": "00:20",
+            "location": "广播塔外",
+            "present_characters": ["陈默"],
+            "hook": "陈默准备进入广播塔",
+        },
+        "do_not_reset": ["陈默左掌已经受伤"],
+    }
+    current = {
+        "chapter_number": 4,
+        "chapter_summary": "陈默进入广播塔并见到林娜。",
+        "characters": [
+            {
+                "name": "陈默",
+                "location": "控制终端",
+                "physical_state": "",
+                "knowledge": [],
+                "relationship_changes": [],
+                "active_goal": "中止净化",
+            }
+        ],
+        "items": [],
+        "locations": [],
+        "world_counters": [],
+        "revealed_facts": ["林娜正在控制终端运行"],
+        "open_threads": [],
+        "closed_threads": [
+            "广播塔内部是否有林娜或相关程序正在运行",
+            "陈默能否在电磁屏蔽网下成功进入广播塔",
+        ],
+        "last_scene": {
+            "time": "00:12",
+            "location": "控制终端",
+            "present_characters": ["陈默", "林娜"],
+            "hook": "净化仍未中止",
+        },
+        "do_not_reset": [],
+    }
+
+    merged = inherit_monotonic_story_state(previous, current)
+
+    validate_story_state_transition(previous, merged)
+    assert merged["characters"][0]["physical_state"] == "左掌受伤"
+    assert merged["characters"][0]["knowledge"] == ["林娜可能在广播塔内部"]
+    assert merged["items"][0]["name"] == "核心"
+    assert "电磁屏蔽网覆盖广播塔" in merged["revealed_facts"]
+    assert "核心已经被陈默带走" in merged["closed_threads"]
+    assert "陈默进入控制终端后，是否能改变或中止‘净化’程序" in merged["open_threads"]
+    assert "广播塔内部是否有林娜或相关程序正在运行" not in merged["open_threads"]
+    assert "陈默左掌已经受伤" in merged["do_not_reset"]
 
 
 def test_story_state_transition_rejects_forgetting():
