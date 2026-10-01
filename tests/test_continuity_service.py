@@ -11,10 +11,10 @@ from app.services.ai_service import AssistResult
 from app.services.continuity_service import (
     ContinuityStateError,
     capture_story_state,
+    inherit_monotonic_story_state,
     latest_story_state,
     persist_story_state,
     repetition_report,
-    inherit_monotonic_story_state,
     validate_story_state_transition,
 )
 from app.services.workflow_service import _create_run
