@@ -17,16 +17,15 @@ jobs:
       NOVEL_DB_PATH: /tmp/zero-platform-rewrite.db
       NOVEL_SEED_DEMO: "0"
 
-      # Provider instance name is user-defined. It is not a vendor name.
-      NARRATIVE_PROVIDER_NAME: ${{ vars.NARRATIVE_PROVIDER_NAME || '默认写作' }}
-      NARRATIVE_PROVIDER_PROTOCOL: ${{ vars.NARRATIVE_PROVIDER_PROTOCOL || 'openai-compatible' }}
-      NARRATIVE_PROVIDER_MODEL: ${{ vars.NARRATIVE_PROVIDER_MODEL || 'gpt-5.6-sol' }}
-      NARRATIVE_PROVIDER_BASE_URL: ${{ vars.NARRATIVE_PROVIDER_BASE_URL || 'https://api.openai.com/v1' }}
-      NARRATIVE_PROVIDER_SECRET_NAME: ${{ vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY' }}
-      NARRATIVE_PROVIDER_API_KEY: ${{ secrets[vars.NARRATIVE_PROVIDER_SECRET_NAME || 'OPENAI_API_KEY'] }}
+      NARRATIVE_PROVIDER_PROFILE: SENSENOVA
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
 
       NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
       NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
+      NOVEL_AI_TIMEOUT_SECONDS: ${{ vars.NOVEL_AI_TIMEOUT_SECONDS || '120' }}
+      NOVEL_AI_HTTP_RETRIES: ${{ vars.NOVEL_AI_HTTP_RETRIES || '1' }}
+      NOVEL_AI_RETRY_BASE_SECONDS: ${{ vars.NOVEL_AI_RETRY_BASE_SECONDS || '3' }}
       NARRATIVE_OUTPUT_DIR: artifacts/zero-platform-platform-rewrite
 
     steps:
@@ -39,6 +38,71 @@ jobs:
 
       - name: Install NarrativeOS
         run: pip install -r requirements.txt
+
+      - name: Load repository provider profile
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import shlex
+
+          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "SENSENOVA").strip().upper()
+          raw = os.getenv(f"NARRATIVE_PROFILE_{profile_name}", "").strip()
+          if not raw:
+              raise SystemExit(f"provider profile {profile_name!r} is empty or missing")
+
+          allowed = {
+              "NOVEL_AI_KIND",
+              "NOVEL_AI_MODEL",
+              "NOVEL_AI_BASE_URL",
+              "NOVEL_AI_API_KEY_ENV",
+              "NOVEL_AI_API_KEY",
+              "NOVEL_AI_PROVIDER_NAME",
+              "NOVEL_AI_REASONING_EFFORT",
+              "NOVEL_AI_MAX_TOKENS",
+          }
+          parsed = {}
+          for token in shlex.split(raw.replace("\n", " ")):
+              if "=" not in token:
+                  continue
+              key, value = token.split("=", 1)
+              key = key.strip()
+              if key in allowed:
+                  parsed[key] = value.strip()
+
+          for key in ("NOVEL_AI_KIND", "NOVEL_AI_MODEL"):
+              if not parsed.get(key):
+                  raise SystemExit(f"profile {profile_name!r} is missing {key}")
+
+          provider_name = parsed.get("NOVEL_AI_PROVIDER_NAME") or profile_name
+          secret_name = parsed.get("NOVEL_AI_API_KEY_ENV", profile_name).strip().upper()
+          secret_value = (
+              os.getenv(f"NARRATIVE_PROFILE_SECRET_{secret_name}", "").strip()
+              or os.getenv(f"NARRATIVE_PROFILE_SECRET_{profile_name}", "").strip()
+              or parsed.get("NOVEL_AI_API_KEY", "").strip()
+          )
+
+          values = {
+              "NARRATIVE_PROVIDER_NAME": provider_name,
+              "NARRATIVE_PROVIDER_PROTOCOL": parsed["NOVEL_AI_KIND"],
+              "NARRATIVE_PROVIDER_MODEL": parsed["NOVEL_AI_MODEL"],
+              "NARRATIVE_PROVIDER_BASE_URL": parsed.get(
+                  "NOVEL_AI_BASE_URL", "https://api.openai.com/v1"
+              ),
+              "NARRATIVE_PROVIDER_SECRET_NAME": secret_name,
+              "NARRATIVE_PROVIDER_API_KEY": secret_value,
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+              for key, value in values.items():
+                  if "\n" in value or "\r" in value:
+                      raise SystemExit(f"multiline value is not allowed for {key}")
+                  fh.write(f"{key}={value}\n")
+
+          print(f"Loaded provider profile: {profile_name}")
+          print(f"Protocol: {values['NARRATIVE_PROVIDER_PROTOCOL']}")
+          print(f"Model: {values['NARRATIVE_PROVIDER_MODEL']}")
+          print(f"Secret resolved: {'yes' if secret_value else 'no'}")
+          PY
 
       - name: Validate provider selection
         shell: bash
@@ -55,13 +119,17 @@ jobs:
             echo "::error::NARRATIVE_PROVIDER_MODEL must not be empty."
             exit 2
           fi
+          if [ "$NARRATIVE_PROVIDER_PROTOCOL" != "ollama" ] && [ -z "$NARRATIVE_PROVIDER_API_KEY" ]; then
+            echo "::error::Provider API key is missing."
+            exit 2
+          fi
           echo "Provider instance: $NARRATIVE_PROVIDER_NAME"
           echo "Protocol: $NARRATIVE_PROVIDER_PROTOCOL"
           echo "Model: $NARRATIVE_PROVIDER_MODEL"
           echo "Secret name: $NARRATIVE_PROVIDER_SECRET_NAME"
 
       - name: Run NarrativeOS full book pipeline
-        run: python scripts/run_zero_platform_rewrite.py
+        run: PYTHONPATH=. python scripts/run_zero_platform_rewrite.py
 
       - name: Upload platform outputs
         if: always()
@@ -75,4 +143,3 @@ jobs:
       - name: Persist built-in Skill learning
         if: always()
         run: bash scripts/persist_builtin_skill_learning.sh
-
