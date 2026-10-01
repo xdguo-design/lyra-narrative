@@ -247,7 +247,8 @@ def inherit_monotonic_story_state(
     current_scene = merged.get("last_scene")
     if isinstance(previous_scene, dict) and isinstance(current_scene, dict):
         for field, value in previous_scene.items():
-            if field not in current_scene or current_scene.get(field) in {None, ""}:
+            current_value = current_scene.get(field)
+            if field not in current_scene or current_value is None or current_value == "":
                 current_scene[field] = copy.deepcopy(value)
 
     return merged
