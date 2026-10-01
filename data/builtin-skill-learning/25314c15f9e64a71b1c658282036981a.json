@@ -1,0 +1,50 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "25314c15f9e64a71b1c658282036981a",
+  "task_id": 6,
+  "project_id": 1,
+  "source": "review-round-1",
+  "recorded_at": "2026-10-01T13:14:17.876377+00:00",
+  "events": [
+    {
+      "reviewer": "continuity-plot-reviewer",
+      "category": "continuity-plot",
+      "reason": "归档数据明确记录艾拉当前位于“备用检修通道（意识层面连接至零点站台波动）”，且“艾拉指甲嵌入掌心出血，心率偏离标准，承认自己是共犯”。正文将艾拉的位置擅自改为“监狱深处的牢房”，且状态为“从睡梦中惊醒”，与冻结事实严重冲突。",
+      "suggestion": "重写章末艾拉的反应，使其发生在备用检修通道，并体现她作为共犯的恐惧和罪恶感。；处置级别=REWRITE_BLOCK；判级理由=人物物理位置是连续性的基础锚点，此处直接违背已冻结的地点和状态，导致后续剧情空间错乱，LOCAL_REWRITE无法修复这种根本性的设定冲突。；执行目标=确保艾拉的位置和状态与归档数据一致。",
+      "excerpt": "",
+      "pattern_signature": "4b489bc9f3bfc4c9f27775ff"
+    },
+    {
+      "reviewer": "continuity-plot-reviewer",
+      "category": "continuity-plot",
+      "reason": "归档数据明确记录“林远意识稳定性为42%”、“林远意识状态已固化为'铁锈色'，红色噪点停止闪烁，认知层面已撕裂并重建”。正文将意识离散率写为99.7%，并描写肉体脑电波归零、彻底静止，等同于宣告林远肉体死亡和意识消散，与冻结的“固化”状态直接矛盾。",
+      "suggestion": "重写K的台词和结尾林远肉体的状态，体现意识固化而非消散。；处置级别=REWRITE_BLOCK；判级理由=林远的状态是长线剧情的核心，将其写死或意识消散会阻断后续所有剧情，且与归档数据严重冲突，无法通过局部修改解决。；执行目标=确保林远的意识和肉体状态与归档数据一致。",
+      "excerpt": "",
+      "pattern_signature": "e7e43590cad73899cd5f1eae"
+    },
+    {
+      "reviewer": "continuity-plot-reviewer",
+      "category": "continuity-plot",
+      "reason": "归档数据明确记录“林远切断保护协议让全城听见小杰死前最后波形，将其变成武器”。正文将行动主体改为艾拉，写成艾拉主动发送尖叫来撕裂封锁，这改变了关键因果链和人物行为。",
+      "suggestion": "重写该段，描写林远主动切断保护协议，释放小杰的波形作为武器。；处置级别=REWRITE_BLOCK；判级理由=行动主体的改变直接颠覆了已冻结的因果链，将林远的主动行为变成了艾拉的主动行为，严重影响人物动机和后续剧情走向，必须整段重写。；执行目标=确保释放小杰波形的因果链与归档数据一致。",
+      "excerpt": "",
+      "pattern_signature": "2cd096706e9757ddf3f8118b"
+    },
+    {
+      "reviewer": "continuity-plot-reviewer",
+      "category": "continuity-plot",
+      "reason": "归档数据明确记录“艾拉承认自己是共犯，保护林远是因为他是其罪恶见证者”、“艾拉：公开揭露艾拉为共犯，指出其保护动机源于自身罪恶”。正文将艾拉的动机写成“利用弟弟的痛苦作为燃料”，与冻结的“保护林远是因为他是罪恶见证者”和“共犯”身份严重冲突。",
+      "suggestion": "重写林远的心理活动，体现他对艾拉共犯身份和保护动机的认知。；处置级别=REWRITE_BLOCK；判级理由=艾拉的动机是人物关系的核心，将其改为利用林远会破坏整个角色弧光和后续冲突，必须重写。；执行目标=确保艾拉的动机与归档数据一致。",
+      "excerpt": "",
+      "pattern_signature": "0dc6079b2feadf7464809e3e"
+    },
+    {
+      "reviewer": "continuity-plot-reviewer",
+      "category": "continuity-plot",
+      "reason": "归档数据明确记录“K的目标从'格式化'转向'诱导提取'原始漏洞代码”。正文写K在林远脑电波归零后关闭监视器，放弃林远，这与K“诱导提取”的目标直接矛盾。如果林远脑",
+      "suggestion": "处置级别=REWRITE_BLOCK",
+      "excerpt": "",
+      "pattern_signature": "625df30b8c0bc02d08f06e93"
+    }
+  ]
+}
