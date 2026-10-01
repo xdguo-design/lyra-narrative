@@ -1,0 +1,18 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "232a473e44544c989ad1347b5b55dc07",
+  "task_id": 3,
+  "project_id": 2,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-30T14:30:30.413878+00:00",
+  "events": [
+    {
+      "reviewer": "human-approval",
+      "category": "human-reject",
+      "reason": "线索揭示得太早，请延后。",
+      "suggestion": "下一轮 Writer 生成与 Reader 复审必须先吸收本次人工打回原因。",
+      "excerpt": "演示续写：从“”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。 演示续写：从“演示续写：从“”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。",
+      "pattern_signature": "60bb6488e5b12b33350542ae"
+    }
+  ]
+}

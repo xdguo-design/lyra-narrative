@@ -1,0 +1,18 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "e2d414786dfb4337ad745ab92d2df469",
+  "task_id": 2,
+  "project_id": 1,
+  "source": "HUMAN_REJECT",
+  "recorded_at": "2026-09-30T14:25:52.384944+00:00",
+  "events": [
+    {
+      "reviewer": "human-approval",
+      "category": "human-reject",
+      "reason": "线索揭示得太早，请延后。",
+      "suggestion": "下一轮 Writer 生成与 Reader 复审必须先吸收本次人工打回原因。",
+      "excerpt": "雨从凌晨开始下。旧城区的路灯被水汽裹住，只剩一圈昏黄。 林渡推开值班室的门时，桌上的电话刚好响起。电话那头没有人说话，只有很轻的呼吸声，以及远处反复三次的钟声。 他看了一眼墙上的钟：02:17。 演示续写：从“他看了一眼墙上的钟：02:17。”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。 演示续写：从“演示续写：从“他看了一眼墙上的钟：02:17。”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。”继续——走廊尽头传来一声很轻的金属碰撞，像有人刚刚收起钥匙。",
+      "pattern_signature": "60bb6488e5b12b33350542ae"
+    }
+  ]
+}
