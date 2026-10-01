@@ -17,6 +17,7 @@ from app.services.full_novel_pipeline import (
     _require_real_provider,
     _run_review_round,
 )
+from app.services.rejection_learning import learn_from_open_blocking_findings
 from app.services.workflow_service import _run_step, _task_context, get_task
 
 
@@ -508,8 +509,6 @@ async def _run_frozen_chapter(
             task_id=task_id,
             report=final_repetition,
         )
-        from app.services.rejection_learning import learn_from_open_blocking_findings
-
         learn_from_open_blocking_findings(
             task_id=task_id,
             source="final-repetition-gate",

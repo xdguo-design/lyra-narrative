@@ -160,3 +160,13 @@ def test_fast_chapter_exports_blind_controller_reader_packet():
         "不得读取 review-report.json",
     ]:
         assert marker in source
+
+def test_book_pipeline_rejection_learning_import_is_not_function_local():
+    source = Path("app/services/book_pipeline.py").read_text(encoding="utf-8")
+    marker = "from app.services.rejection_learning import learn_from_open_blocking_findings"
+    function_start = source.index("async def _run_frozen_chapter(")
+    function_end = source.index("async def run_book_pipeline(", function_start)
+
+    assert marker in source[:function_start]
+    assert marker not in source[function_start:function_end]
+
