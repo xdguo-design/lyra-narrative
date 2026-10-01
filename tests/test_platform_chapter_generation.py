@@ -170,3 +170,28 @@ def test_book_pipeline_rejection_learning_import_is_not_function_local():
     assert marker in source[:function_start]
     assert marker not in source[function_start:function_end]
 
+def test_zero_platform_runner_exports_partial_snapshot_on_failure():
+    source = Path("scripts/run_zero_platform_rewrite.py").read_text(
+        encoding="utf-8"
+    )
+    for marker in [
+        "def export_snapshot(",
+        '"manuscript.md"',
+        '"review-findings.json"',
+        '"story-state.json"',
+        '"agent-runs.json"',
+        '"error": error',
+        "finally:",
+    ]:
+        assert marker in source
+    assert source.index("output.mkdir(") < source.index("await run_book_pipeline(")
+
+
+def test_full_book_workflow_avoids_timed_out_modelscope_as_primary_reasoner():
+    source = Path(
+        ".github/workflows/zero-platform-rewrite.yml"
+    ).read_text(encoding="utf-8")
+    assert "NARRATIVE_REASONING_READER_PROFILE: GLM52" in source
+    assert "NARRATIVE_REASONING_READER_FALLBACK_PROFILES: DOTS3,AGNES" in source
+    assert "NARRATIVE_REASONING_READER_PROFILE: MODELSCOPE" not in source
+
