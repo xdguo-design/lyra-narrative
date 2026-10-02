@@ -478,7 +478,32 @@ async def _run_frozen_chapter(
         ),
     )
     if not _chapter_text_is_usable(revision.content):
-        raise RuntimeError("revision returned invalid chapter text")
+        print(
+            f"[chapter-text] INVALID task={task_id} stage=revision-r1 "
+            f"chars={len(revision.content.strip())}; retrying full revision",
+            flush=True,
+        )
+        revision = await _run_step(
+            task_id=task_id,
+            role="revision-agent-retry",
+            stage=f"chapter-{chapter_number:02d}-revision-r1-retry",
+            mode="continue",
+            content=draft,
+            instruction="\n\n".join(
+                [
+                    f"重新修订第 {chapter_number} 章《{chapter['title']}》完整正文。",
+                    "上一轮 Revision 输出过短或被截断，已被正文完整性校验拒绝。",
+                    "必须基于当前完整原稿重新完成修订，不得续写上一轮残片，不得只返回被修改的局部。",
+                    "正文必须保留完整场景链、人物动作、对白、冲突推进和章末出口；目标 2500—4500 个中文字符，结尾必须是完整句。",
+                    "必须修复 Reviewer blocking 摘要中的问题；未被指出的问题段落应尽量保留，不得通过删光情节来规避审核。",
+                    "Reviewer blocking 摘要：\n" + _blocking_review_digest(task_id),
+                    review_context,
+                    "只输出修订后的完整章节正文。",
+                ]
+            ),
+        )
+    if not _chapter_text_is_usable(revision.content):
+        raise RuntimeError("revision returned invalid chapter text after retry")
     with connect() as conn:
         conn.execute(
             "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
