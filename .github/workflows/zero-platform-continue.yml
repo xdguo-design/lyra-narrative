@@ -1,0 +1,173 @@
+name: Zero Platform NarrativeOS Continue
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/zero-platform-continue.request"
+
+permissions:
+  contents: write
+
+jobs:
+  continue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NOVEL_DB_PATH: /tmp/zero-platform-continue.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROVIDER_PROFILE: AGNES
+
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_DEEPSEEKV4PRO: ${{ vars.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_KIMIK3: ${{ vars.KIMIK3 }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
+      NARRATIVE_PROFILE_XINGCHENAGI: ${{ vars.XINGCHENAGI }}
+
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_DEEPSEEKV4PRO: ${{ secrets.DEEPSEEKV4PRO }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_GLM53FLASH: ${{ secrets.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_KIMIK3: ${{ secrets.KIMIK3 }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
+      NARRATIVE_PROFILE_SECRET_SILICONFLOW: ${{ secrets.SILICONFLOW }}
+
+      NARRATIVE_WRITER_PROFILE: AGNES
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA
+      NARRATIVE_NATURAL_READER_PROFILE: AGNES
+      NARRATIVE_NATURAL_READER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA
+      NARRATIVE_REASONING_READER_PROFILE: GLM52
+      NARRATIVE_REASONING_READER_FALLBACK_PROFILES: DOTS3,AGNES
+      NARRATIVE_FINAL_REVIEW_PROFILE: SENSENOVA68
+      NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES: DOTS3,ATRIA,AGNES
+      NARRATIVE_WRITER_MAX_ROUTE_ATTEMPTS: "3"
+      NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS: "3"
+
+      NOVEL_AI_REASONING_EFFORT: ${{ vars.NOVEL_AI_REASONING_EFFORT || 'high' }}
+      NOVEL_AI_MAX_TOKENS: ${{ vars.NOVEL_AI_MAX_TOKENS || '8000' }}
+      NOVEL_AI_TIMEOUT_SECONDS: ${{ vars.NOVEL_AI_TIMEOUT_SECONDS || '180' }}
+      NOVEL_AI_HTTP_RETRIES: ${{ vars.NOVEL_AI_HTTP_RETRIES || '1' }}
+      NOVEL_AI_RETRY_BASE_SECONDS: ${{ vars.NOVEL_AI_RETRY_BASE_SECONDS || '3' }}
+      NARRATIVE_OUTPUT_DIR: artifacts/zero-platform-platform-continue
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Load primary repository provider profile
+        shell: bash
+        run: |
+          python - <<'PY'
+          import os
+          import shlex
+
+          profile_name = os.getenv("NARRATIVE_PROVIDER_PROFILE", "AGNES").strip().upper()
+          raw = os.getenv(f"NARRATIVE_PROFILE_{profile_name}", "").strip()
+          if not raw:
+              raise SystemExit(f"provider profile {profile_name!r} is empty or missing")
+
+          allowed = {
+              "NOVEL_AI_KIND",
+              "NOVEL_AI_MODEL",
+              "NOVEL_AI_BASE_URL",
+              "NOVEL_AI_API_KEY_ENV",
+              "NOVEL_AI_API_KEY",
+              "NOVEL_AI_PROVIDER_NAME",
+              "NOVEL_AI_REASONING_EFFORT",
+              "NOVEL_AI_MAX_TOKENS",
+          }
+          parsed = {}
+          for token in shlex.split(raw.replace("\n", " ")):
+              if "=" not in token:
+                  continue
+              key, value = token.split("=", 1)
+              key = key.strip()
+              if key in allowed:
+                  parsed[key] = value.strip()
+
+          for key in ("NOVEL_AI_KIND", "NOVEL_AI_MODEL"):
+              if not parsed.get(key):
+                  raise SystemExit(f"profile {profile_name!r} is missing {key}")
+
+          provider_name = parsed.get("NOVEL_AI_PROVIDER_NAME") or profile_name
+          configured_secret = parsed.get("NOVEL_AI_API_KEY_ENV", "").strip().upper()
+          secret_value = (
+              os.getenv(f"NARRATIVE_PROFILE_SECRET_{profile_name}", "").strip()
+              or (
+                  os.getenv(f"NARRATIVE_PROFILE_SECRET_{configured_secret}", "").strip()
+                  if configured_secret
+                  else ""
+              )
+              or parsed.get("NOVEL_AI_API_KEY", "").strip()
+          )
+
+          values = {
+              "NARRATIVE_PROVIDER_NAME": provider_name,
+              "NARRATIVE_PROVIDER_PROTOCOL": parsed["NOVEL_AI_KIND"],
+              "NARRATIVE_PROVIDER_MODEL": parsed["NOVEL_AI_MODEL"],
+              "NARRATIVE_PROVIDER_BASE_URL": parsed.get(
+                  "NOVEL_AI_BASE_URL", "https://api.openai.com/v1"
+              ),
+              "NARRATIVE_PROVIDER_SECRET_NAME": configured_secret or profile_name,
+              "NARRATIVE_PROVIDER_API_KEY": secret_value,
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+              for key, value in values.items():
+                  if "\n" in value or "\r" in value:
+                      raise SystemExit(f"multiline value is not allowed for {key}")
+                  fh.write(f"{key}={value}\n")
+
+          print(f"Loaded primary provider profile: {profile_name}")
+          print(f"Protocol: {values['NARRATIVE_PROVIDER_PROTOCOL']}")
+          print(f"Model: {values['NARRATIVE_PROVIDER_MODEL']}")
+          print(f"Secret resolved: {'yes' if secret_value else 'no'}")
+          PY
+
+      - name: Validate provider selection
+        shell: bash
+        run: |
+          if [ -z "$NARRATIVE_PROVIDER_NAME" ] || [ -z "$NARRATIVE_PROVIDER_PROTOCOL" ] || [ -z "$NARRATIVE_PROVIDER_MODEL" ]; then
+            echo "::error::Primary provider profile is incomplete."
+            exit 2
+          fi
+          if [ "$NARRATIVE_PROVIDER_PROTOCOL" != "ollama" ] && [ -z "$NARRATIVE_PROVIDER_API_KEY" ]; then
+            echo "::error::Primary provider API key is missing."
+            exit 2
+          fi
+          echo "Primary provider: $NARRATIVE_PROVIDER_NAME / $NARRATIVE_PROVIDER_MODEL"
+          echo "Continuation mode: source chapters 4-6 are frozen; generate only 7-8."
+
+      - name: Run NarrativeOS continuation pipeline
+        run: PYTHONPATH=. python scripts/run_zero_platform_continue.py
+
+      - name: Upload platform outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zero-platform-platform-continue
+          path: artifacts/zero-platform-platform-continue
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
