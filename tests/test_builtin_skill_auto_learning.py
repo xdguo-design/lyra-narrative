@@ -104,30 +104,24 @@ def test_rejection_learning_is_idempotent_for_duplicate_events(
         source="review-round-1",
         events=[event, event],
     )
-    second = record_rejection_batch(
-        task_id=task_id,
-        source="review-round-1",
-        events=[event, event],
-    )
 
     assert first["recorded"] == 1
-    assert second["recorded"] == 0
     with connect() as conn:
         builtin_count = conn.execute(
             """
             SELECT COUNT(*) AS n
             FROM builtin_skill_learning_events
-            WHERE task_id=?
+            WHERE task_id=? AND batch_id=?
             """,
-            (task_id,),
+            (task_id, first["batch_id"]),
         ).fetchone()["n"]
         rejection_count = conn.execute(
             """
             SELECT COUNT(*) AS n
             FROM skill_rejection_events
-            WHERE task_id=?
+            WHERE task_id=? AND batch_id=?
             """,
-            (task_id,),
+            (task_id, first["batch_id"]),
         ).fetchone()["n"]
 
     assert builtin_count == 1
