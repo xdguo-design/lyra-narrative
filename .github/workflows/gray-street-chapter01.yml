@@ -1,0 +1,86 @@
+name: Gray Street Chapter 01 Platform Rewrite
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-chapter01.request"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      NOVEL_DB_PATH: /tmp/gray-street-chapter01.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
+
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
+
+      NARRATIVE_WRITER_PROFILE: AGNES
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA
+      NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_WRITER_RETRY_PROFILE: DOTS3
+      NARRATIVE_ROLE_SCENE_ENRICHER_PROFILE: SENSENOVA68
+      NARRATIVE_ROLE_PROSE_EDITOR_PROFILE: SENSENOVA68
+      NARRATIVE_ROLE_REVISION_AGENT_PROFILE: DOTS3
+
+      NARRATIVE_PROVIDER_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_PROTOCOL: openai-compatible
+      NARRATIVE_PROVIDER_MODEL: deepseek-v4-flash
+      NARRATIVE_PROVIDER_BASE_URL: https://token.sensenova.cn/v1
+      NARRATIVE_PROVIDER_SECRET_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets.SENSENOVA }}
+
+      NOVEL_AI_REASONING_EFFORT: medium
+      NOVEL_AI_MAX_TOKENS: "7500"
+      NOVEL_AI_TIMEOUT_SECONDS: "150"
+      NOVEL_AI_HTTP_RETRIES: "0"
+      NARRATIVE_OUTPUT_DIR: artifacts/gray-street-chapter01
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Generate Gray Street chapter 01 through NarrativeOS
+        run: PYTHONPATH=. python scripts/generate_gray_street_chapter01.py
+
+      - name: Upload Gray Street artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-chapter01-platform
+          path: artifacts/gray-street-chapter01
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
