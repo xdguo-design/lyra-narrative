@@ -25,6 +25,25 @@ def _selected_skills(conn, task_id: int, project_id: int):
         "SELECT mode FROM writing_task_skill_policy WHERE task_id=?",
         (task_id,),
     ).fetchone()
+
+    if policy and str(policy["mode"] or "") == "default":
+        # Default selection means "use the platform defaults", not "pin forever
+        # to the versions that happened to exist when the task was created".
+        # Global Writer/Reader Skills learn from rejections across projects, so
+        # a default task must refresh its bound versions before every run.
+        conn.execute(
+            """
+            UPDATE writing_task_skills
+            SET version=(
+                SELECT s.current_version
+                FROM skills s
+                WHERE s.id=writing_task_skills.skill_id
+            )
+            WHERE task_id=?
+            """,
+            (task_id,),
+        )
+
     selected = conn.execute(
         """
         SELECT s.id,s.name,s.purpose,wts.version,sv.content
@@ -37,8 +56,10 @@ def _selected_skills(conn, task_id: int, project_id: int):
         """,
         (task_id,),
     ).fetchall()
+
     if policy:
         return selected
+
     return conn.execute(
         """
         SELECT s.id,s.name,s.purpose,s.current_version AS version,s.content
