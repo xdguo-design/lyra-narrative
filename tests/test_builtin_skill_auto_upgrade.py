@@ -6,6 +6,7 @@ from app.services.default_skills import (
     BUILTIN_WRITING_SKILL_NAME,
 )
 from app.services.rejection_learning import record_rejection_batch
+from app.services.workflow_service import _selected_skills
 
 
 def _versions():
@@ -148,3 +149,139 @@ def test_every_rejection_path_calls_builtin_learning():
     assert 'source="continuity-state-updater"' in book
     assert 'source="standard-review"' in workflow
     assert 'source="HUMAN_REJECT"' in main
+
+
+
+def _task_with_skill_policy(*, title: str, mode: str = "default") -> tuple[int, int, int]:
+    with connect() as conn:
+        project_id = int(
+            conn.execute(
+                "INSERT INTO projects(title) VALUES(?)",
+                (title,),
+            ).lastrowid
+        )
+        task_id = int(
+            conn.execute(
+                "INSERT INTO writing_tasks(project_id,goal,status) VALUES(?,?,?)",
+                (project_id, "测试跨项目 Skill 进化", "pending"),
+            ).lastrowid
+        )
+        conn.execute(
+            "INSERT INTO writing_task_skill_policy(task_id,mode) VALUES(?,?)",
+            (task_id, mode),
+        )
+        writer = conn.execute(
+            """
+            SELECT id,current_version
+            FROM skills
+            WHERE project_id IS NULL AND name=?
+            """,
+            (BUILTIN_WRITING_SKILL_NAME,),
+        ).fetchone()
+        conn.execute(
+            """
+            INSERT INTO writing_task_skills(task_id,skill_id,version)
+            VALUES(?,?,?)
+            """,
+            (task_id, int(writer["id"]), int(writer["current_version"])),
+        )
+        return project_id, task_id, int(writer["current_version"])
+
+
+def test_default_task_refreshes_global_skill_after_other_project_learns(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setenv("NOVEL_DB_PATH", str(tmp_path / "cross-project.db"))
+    monkeypatch.setenv("NOVEL_SEED_DEMO", "0")
+    monkeypatch.setenv(
+        "NARRATIVE_BUILTIN_SKILL_LEARNING_DIR",
+        str(tmp_path / "audit"),
+    )
+    init_db()
+
+    _, stale_task_id, stale_version = _task_with_skill_policy(title="先建的新书")
+    learning_task_id = _task()
+
+    record_rejection_batch(
+        task_id=learning_task_id,
+        source="HUMAN_REJECT",
+        events=[
+            {
+                "reviewer": "human-controller",
+                "category": "author-summary",
+                "reason": "AUTHOR_SUMMARY_GAP：不要用作者总结替人物行动下结论。",
+                "suggestion": "后续所有小说的默认 Writer 必须主动规避同类表达。",
+                "excerpt": "他不是不怕，而是已经没有退路。",
+            }
+        ],
+    )
+
+    with connect() as conn:
+        latest_version = int(
+            conn.execute(
+                "SELECT current_version FROM skills "
+                "WHERE project_id IS NULL AND name=?",
+                (BUILTIN_WRITING_SKILL_NAME,),
+            ).fetchone()["current_version"]
+        )
+        assert latest_version > stale_version
+
+        selected = _selected_skills(conn, stale_task_id, 1)
+        effective = next(
+            row for row in selected if row["name"] == BUILTIN_WRITING_SKILL_NAME
+        )
+        assert int(effective["version"]) == latest_version
+
+        persisted = int(
+            conn.execute(
+                """
+                SELECT wts.version
+                FROM writing_task_skills wts
+                JOIN skills s ON s.id=wts.skill_id
+                WHERE wts.task_id=? AND s.name=?
+                """,
+                (stale_task_id, BUILTIN_WRITING_SKILL_NAME),
+            ).fetchone()["version"]
+        )
+        assert persisted == latest_version
+
+
+def test_explicit_task_keeps_pinned_skill_version_after_global_learning(
+    monkeypatch,
+    tmp_path,
+):
+    monkeypatch.setenv("NOVEL_DB_PATH", str(tmp_path / "explicit-pin.db"))
+    monkeypatch.setenv("NOVEL_SEED_DEMO", "0")
+    monkeypatch.setenv(
+        "NARRATIVE_BUILTIN_SKILL_LEARNING_DIR",
+        str(tmp_path / "audit"),
+    )
+    init_db()
+
+    project_id, pinned_task_id, pinned_version = _task_with_skill_policy(
+        title="显式固定技能",
+        mode="explicit",
+    )
+    learning_task_id = _task()
+
+    record_rejection_batch(
+        task_id=learning_task_id,
+        source="HUMAN_REJECT",
+        events=[
+            {
+                "reviewer": "human-controller",
+                "category": "dialogue",
+                "reason": "TURN_TAKING_SYMMETRY_GAP：连续问答像聊天框。",
+                "suggestion": "默认任务升级，但显式固定任务保持可复现。",
+                "excerpt": "“去哪儿？”“外面。”",
+            }
+        ],
+    )
+
+    with connect() as conn:
+        selected = _selected_skills(conn, pinned_task_id, project_id)
+        effective = next(
+            row for row in selected if row["name"] == BUILTIN_WRITING_SKILL_NAME
+        )
+        assert int(effective["version"]) == pinned_version
