@@ -18,7 +18,7 @@ def test_parse_source_chapters_keeps_published_positions() -> None:
 正文C。
 """
     chapters = parse_source_chapters(source)
-    assert list(sorted(chapters)) == [4, 5, 6]
+    assert sorted(chapters) == [4, 5, 6]
     assert chapters[4]["title"] == "A"
     assert chapters[6]["content"] == "正文C。"
 
