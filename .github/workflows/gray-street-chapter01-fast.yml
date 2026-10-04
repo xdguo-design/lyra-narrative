@@ -1,0 +1,73 @@
+name: Gray Street Chapter 01 Fast Gate
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-chapter01-fast.request"
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NOVEL_DB_PATH: /tmp/gray-street-chapter01-fast.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+
+      NARRATIVE_WRITER_PROFILE: AGNES
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,ATRIA
+      NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_REVISION_AGENT_PROFILE: AGNES
+
+      NARRATIVE_PROVIDER_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_PROTOCOL: openai-compatible
+      NARRATIVE_PROVIDER_MODEL: deepseek-v4-flash
+      NARRATIVE_PROVIDER_BASE_URL: https://token.sensenova.cn/v1
+      NARRATIVE_PROVIDER_SECRET_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets.SENSENOVA }}
+
+      NOVEL_AI_REASONING_EFFORT: low
+      NOVEL_AI_MAX_TOKENS: "7000"
+      NOVEL_AI_TIMEOUT_SECONDS: "120"
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+      - name: Run Gray Street fast quality pipeline
+        run: PYTHONPATH=. python scripts/generate_gray_street_chapter01_fast.py
+      - name: Upload Gray Street fast artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-chapter01-fast
+          path: artifacts/gray-street-chapter01-fast
+          if-no-files-found: error
+          retention-days: 14
+      - name: Persist built-in Skill learning
+        if: always()
+        run: bash scripts/persist_builtin_skill_learning.sh
