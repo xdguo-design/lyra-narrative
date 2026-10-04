@@ -1,0 +1,34 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "9840a18454ff4691b0f6f9177e4e8947",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "GRAY_STREET_BLIND_READER_REJECT",
+  "recorded_at": "2026-10-04T14:54:56.048633+00:00",
+  "events": [
+    {
+      "reviewer": "reader-normal",
+      "category": "naturalness",
+      "reason": "AUTHOR_SUMMARY_GAP / GENERIC_ACTION_GAP：正文用“似乎在核对什么”“带着故意营造的忙碌感”“这是职业本能”等抽象旁白替代可见行为，人物行动被作者解释。",
+      "suggestion": "所有小说中优先写可见动作、正在处理的具体对象与后果；删掉不新增事实的心理总结和泛化职业总结。",
+      "excerpt": "似乎在核对什么数字 / 带着一种故意营造的忙碌感",
+      "pattern_signature": "8f01e276db27e372012b5791"
+    },
+    {
+      "reviewer": "reader-character-dialogue",
+      "category": "dialogue",
+      "reason": "EMBODIED_DIALOGUE_GAP / ORALITY_GAP：冲突场景退化为规章宣读与功能性问答，人物手上任务和现实利益停止，只剩台词交换。",
+      "suggestion": "对白先由利益、关系、现场动作和自保驱动；程序只给对方造成具体后果，不背条文，不把角色写成制度说明器。",
+      "excerpt": "根据《租务条例》第十七条……条例第五十二条规定……",
+      "pattern_signature": "4bda3de2ca96414948d7f7a6"
+    },
+    {
+      "reviewer": "reader-naturalness",
+      "category": "author-summary",
+      "reason": "AUTHOR_EFFECT_GAP：用“不是A而是B”、自我纠错式短句、宏大空泛比喻和作者点题制造悬疑，形成明显模型腔。",
+      "suggestion": "异常场景只呈现可验证的视觉、声音、触觉和人物选择；不替读者解释，不用短句自问自答制造神秘。",
+      "excerpt": "并不是今天，而是明天 / 不，不对 / 仿佛来自时间的深处",
+      "pattern_signature": "99de6dcd87d83087d62729c3"
+    }
+  ]
+}
