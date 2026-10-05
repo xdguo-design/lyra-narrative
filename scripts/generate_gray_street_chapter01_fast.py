@@ -59,6 +59,83 @@ def open_blocking_digest(task_id: int) -> str:
     )
 
 
+def canon_gate(text: str) -> list[str]:
+    failures: list[str] = []
+    required = (
+        "芬奇",
+        "贝恩",
+        "霍尔",
+        "托马斯·韦德",
+        "EVAN GREY",
+        "银色怀表一枚，运行状态异常，待验",
+        "黑色马车",
+    )
+    for marker in required:
+        if marker not in text:
+            failures.append("missing:" + marker)
+
+    if not ("两点十四" in text or "2:14" in text or "2：14" in text):
+        failures.append("missing:watch-time-2:14")
+    if not re.search(r"(?:三日|三号|3日|3号)", text):
+        failures.append("missing:today-day-3")
+    if not re.search(r"(?:四日|四号|4日|4号)", text):
+        failures.append("missing:watch-day-4")
+    if not re.search(r"(?:数字|一个|下方|下面)[^。！？\n]{0,20}[“\"]?1[”\"]?", text):
+        failures.append("missing:watch-number-1")
+
+    forbidden_literals = (
+        "E.V.A.N.",
+        "限两小时内完成",
+        "程序是唯一的通用语言",
+        "微型博弈",
+        "仿佛来自时间的深处",
+        "拥有自己的生命",
+        "由某种机械驱动",
+        "挂钟又慢",
+        "挂钟慢了",
+        "芬奇不在",
+        "低阶神秘物",
+        "神秘物",
+        "邀请，或者警告",
+        "邀请或警告",
+        "未知的漩涡",
+        "滚烫",
+        "咖啡馆",
+    )
+    for marker in forbidden_literals:
+        if marker in text:
+            failures.append("forbidden:" + marker)
+
+    if re.search(r"《[^》]{1,40}(?:条例|法|规定)[^》]*》", text):
+        failures.append("forbidden:statute-title")
+    if re.search(r"条例第[一二三四五六七八九十百\d]+条", text):
+        failures.append("forbidden:statute-article")
+    if re.search(r"(?m)^\s*[1-5][.、]\s*", text):
+        failures.append("forbidden:numbered-investigation-list")
+
+    # Clock direction: the office clock may be mentioned as fast and Finch may
+    # move it back; a "slow clock" is a canon violation.
+    clock_windows = [
+        text[max(0, m.start() - 80):m.end() + 120]
+        for m in re.finditer("挂钟", text)
+    ]
+    if clock_windows and not any("快" in window for window in clock_windows):
+        failures.append("clock-direction:not-fast")
+
+    # The name must visibly form during the scene, not already exist.
+    evan_at = text.find("EVAN GREY")
+    if evan_at >= 0:
+        window = text[max(0, evan_at - 320):evan_at + 120]
+        if not re.search(r"刻痕|细痕|细线|划痕|一笔|一划|组成|成形|形成|浮出|出现|延伸", window):
+            failures.append("watch-name-not-visibly-forming")
+
+    # First chapter ends at the Gray Street / alley pressure beat, not a second
+    # evening/cafe epilogue.
+    if re.search(r"咖啡|酒馆|星光|夜色|夜空", text[-1400:]):
+        failures.append("forbidden:second-epilogue")
+    return failures
+
+
 async def revise(
     task_id: int,
     text: str,
@@ -78,7 +155,8 @@ async def revise(
                 """你执行《灰街》第一节统一打回修订。只输出完整小说正文。
 不得新增世界规则、人物秘密或幕后解释。保持冻结事件节点和最终事实。
 重点：不要连续裸对白，不要问卷式问答，不要碎短句/大量一句一段，不要“不是A而是B”式作者心理总结，也不要为了修裸对白机械给每句台词贴通用动作。
-人物动作必须属于人物本身并改变交流；正文用自然中长句群和完整段落承载。""",
+人物动作必须属于人物本身并改变交流；正文用自然中长句群和完整段落承载。
+Reviewer 的建议如果与冻结 Canon 冲突，一律忽略建议，只保留它指出的结构性问题。尤其不得删除或写实化怀表异常、黑马车，不得用怀表设饵。""" ,
                 "冻结 Canon：\n" + canon,
                 "专项 Reviewer：\n" + "\n\n".join(reviews),
                 "开放 blocking：\n" + (open_blocking_digest(task_id) or "NONE"),
@@ -89,7 +167,7 @@ async def revise(
     )
 
 
-def export(task_id: int, provider: dict, reviews: list[str], readers: dict, style: dict):
+def export(task_id: int, provider: dict, reviews: list[str], readers: dict, style: dict, canon_failures: list[str]):
     task = get_task(task_id) or {}
     content = str(task.get("revised_content") or task.get("draft") or "").strip()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -145,9 +223,18 @@ async def main() -> None:
                 INSTRUCTION,
                 "冻结 Canon：\n" + canon,
                 "当前全局 Writer Skill 最新学习摘要：\n" + skill,
-                """正文目标 3000—4300 个中文字符。一次写完整。
-先把人物写活，再让异常进入日常；不要用短句堆节奏。
-所有对白写完都做“人物身体仍在现场吗”的检查，但不要机械插动作。
+                """正文目标 3000—4300 个中文字符。一次写完整，只写这个雨天上午/白天。
+
+场景顺序锁死：
+A. 事务所：芬奇本人在场，正想躲外勤；通过他和贝恩围绕工资、外勤、挂钟的小动作把三个人立起来。贝恩把钟拨快，芬奇只能偷偷往回拨。不要把这段写成连续问答。
+B. 派工：贝恩把托马斯·韦德的死亡登记交给埃文；不背法条、不加截止时间。
+C. 去鸦巷：多文化只通过沿街正在发生的生活和埃文熟悉的基层处理经验进入；黑色无家徽马车只作为背景看见一次。
+D. 现场：霍尔在场。哈钦斯太太争欠租和家具；埃文只问有没有出租家具清单。没有，就先按死者财物登记，清单找到了再改。程序用后果表现，不用条文说明。
+E. 房间：写到托马斯尸体、无明显打斗、大量钟表。怀表在正常清点里被发现：今天三日，日期窗四日，停在两点十四。
+F. 异常：碰表冠→秒针重新走→表盖内侧细痕当场一笔笔组成 EVAN GREY→再形成数字 1。只写可观察现象与埃文动作，不叫它神秘物，不解释，不发热。
+G. 收束：埃文选择不公开异变，装袋并登记“银色怀表一枚，运行状态异常，待验。”离开/封存现场时再次确认黑马车，作为第一节唯一尾声。到此结束，不去咖啡馆，不列调查清单，不转夜晚。
+
+先把人物写活，再让异常进入日常；不要用短句堆节奏。所有对白写完都做“人物身体仍在现场吗”的检查，但不要机械插动作。
 只输出正文。""",
             ]
         ),
@@ -173,32 +260,7 @@ async def main() -> None:
     )
     readers, readers_ok = await run_blind_readers(task_id, text)
     style = static_style_gate(text)
-    canon_failures = []
-    for marker in (
-        "EVAN GREY",
-        "银色怀表一枚，运行状态异常，待验",
-        "黑色马车",
-    ):
-        if marker not in text:
-            canon_failures.append("missing:" + marker)
-    if not ("两点十四" in text or "2:14" in text or "2：14" in text):
-        canon_failures.append("missing:watch-time-2:14")
-    if not re.search(r"(?:数字|一个)\s*[“\"]?1[”\"]?", text):
-        canon_failures.append("missing:watch-number-1")
-    for marker in (
-        "E.V.A.N.",
-        "《租务条例》第",
-        "条例第五十二条",
-        "限两小时内完成",
-        "程序是唯一的通用语言",
-        "微型博弈",
-        "仿佛来自时间的深处",
-        "拥有自己的生命",
-        "由某种机械驱动",
-        "挂钟又慢",
-    ):
-        if marker in text:
-            canon_failures.append("forbidden:" + marker)
+    canon_failures = canon_gate(text)
     canon_ok = not canon_failures
 
     if review_blocking or not readers_ok or not style["pass"] or not canon_ok:
@@ -267,7 +329,7 @@ async def main() -> None:
             (text, "awaiting_approval" if passed else "reviewed", task_id),
         )
 
-    export(task_id, provider, reviews, readers, style)
+    export(task_id, provider, reviews, readers, style, canon_failures)
     print(json.dumps({"ok": passed, "task_id": task_id, "chars": len(text)}, ensure_ascii=False), flush=True)
     if not passed:
         raise RuntimeError("Gray Street chapter 01 failed final fast Gate; artifact retained")
