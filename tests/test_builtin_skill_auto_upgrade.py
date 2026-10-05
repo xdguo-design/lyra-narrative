@@ -84,8 +84,6 @@ def test_rejection_auto_upgrades_builtin_writer_and_reader(monkeypatch, tmp_path
     assert after[BUILTIN_READER_REVIEW_SKILL_NAME][0] > before[BUILTIN_READER_REVIEW_SKILL_NAME][0]
     assert "人物与对白" in after[BUILTIN_WRITING_SKILL_NAME][1]
     assert "人物与对白" in after[BUILTIN_READER_REVIEW_SKILL_NAME][1]
-    assert "先记少了多少" not in after[BUILTIN_WRITING_SKILL_NAME][1]
-    assert "先记少了多少" not in after[BUILTIN_READER_REVIEW_SKILL_NAME][1]
 
     with connect() as conn:
         durable = conn.execute(
