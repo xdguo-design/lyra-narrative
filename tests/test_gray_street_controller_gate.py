@@ -1,0 +1,13 @@
+from scripts.gate_gray_street_controller_candidate import chapter_rules, scoped_canon
+
+
+def test_later_chapter_rules_do_not_use_chapter_one_lock():
+    rules = chapter_rules(2, "遗产")
+    assert "第二节《遗产》" in rules
+    assert "第一节《怀表》冻结目标" not in rules
+
+
+def test_scoped_canon_trims_chapter_one_execution_lock_for_later_chapters():
+    canon = "全局设定\n## 第一节《怀表》冻结目标\n第一节专属内容\n"
+    assert scoped_canon(canon, 2) == "全局设定\n"
+    assert scoped_canon(canon, 1) == canon
