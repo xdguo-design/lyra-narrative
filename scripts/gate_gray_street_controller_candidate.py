@@ -36,6 +36,12 @@ def chapter_rules(chapter,title):
  common=plan[common_start:].strip() if common_start>=0 else ""
  return block+"\n\n"+common
 
+def scoped_canon(canon,chapter):
+ if chapter==1:
+  return canon
+ marker="## \u7b2c\u4e00\u8282\u300a\u6000\u8868\u300b\u51bb\u7ed3\u76ee\u6807"
+ return canon.split(marker,1)[0] if marker in canon else canon
+
 def static_gate(text,chapter):
  failures=[]
  if re.search(r"(?:并)?不是[^。！？\n]{0,48}(?:而是|只是)",text): failures.append("not-A-but-B")
@@ -56,11 +62,7 @@ async def main():
  configure_provider(); init_db(); pid,cid=create_project(); tid=_create_task(project_id=pid,chapter_id=cid,goal=f"审核《灰街》第{chapter}节《{title}》外部总编候选稿",instruction="只审核不改稿")
  text=path.read_text(encoding="utf-8").strip()
  if text.startswith("# "): text="\n".join(text.splitlines()[2:]).strip()
- canon=CANON_PATH.read_text(encoding="utf-8")
- if chapter > 1:
-  marker="## \u7b2c\u4e00\u8282\u300a\u6000\u8868\u300b\u51bb\u7ed3\u76ee\u6807"
-  if marker in canon:
-   canon=canon.split(marker,1)[0]
+ canon=scoped_canon(CANON_PATH.read_text(encoding="utf-8"),chapter)
  rules=chapter_rules(chapter,title)
  prior=""
  if req.get("prior_path") and Path(req["prior_path"]).exists(): prior=Path(req["prior_path"]).read_text(encoding="utf-8")[-6500:]
