@@ -257,11 +257,13 @@ def test_writer_skill_summarizes_all_rejection_causes_without_losing_evidence(
     assert "【作者 Skill：正式打回经验总结】" in writer
     assert "人物与对白" in writer
     assert "连续性与事实" in writer
-    assert "刘旺回答过于工整" in writer
-    assert "问卷式盘问" in writer
-    assert "计量算术不成立" in writer
+    assert "ORALITY_GAP" in writer
     assert "累计打回 2 次" in writer
-    assert "原始原因与原文样本仍完整保存在" in writer
+    assert "原始 reason / suggestion / excerpt" in writer
+    assert "刘旺" not in writer
+    assert "孙成" not in writer
+    assert "短三斗一升" not in writer
+    assert "谁让你推的" not in writer
 
 
 
@@ -279,3 +281,43 @@ def test_master_review_path_feeds_complete_rejection_batch():
         assert marker in source
 
     assert "rf.category<>'review-execution'" in learning
+
+
+
+def test_global_reader_skill_does_not_leak_other_novel_entities(
+    monkeypatch,
+    tmp_path,
+):
+    task_id = _make_task(monkeypatch, tmp_path)
+    record_rejection_batch(
+        task_id=task_id,
+        source="HUMAN_REJECT",
+        events=[
+            {
+                "reviewer": "master-reader",
+                "category": "dialogue",
+                "reason": "TURN_TAKING_SYMMETRY_GAP：陈安问孙成，马二回答过快。",
+                "suggestion": "下一本小说继续拦截聊天框式问答，但不要继承陈安、孙成、马二这些事实。",
+                "excerpt": "陈安问：孙成呢？马二答：在西库。",
+            },
+            {
+                "reviewer": "continuity-reviewer",
+                "category": "measurement",
+                "reason": "QUANTITY_GAP：官斗复量后短三斗一升。",
+                "suggestion": "跨作品只继承计量一致性能力。",
+                "excerpt": "短三斗一升。",
+            },
+        ],
+    )
+
+    with connect() as conn:
+        reader = conn.execute(
+            "SELECT content FROM skills WHERE project_id IS NULL AND name=?",
+            (BUILTIN_READER_REVIEW_SKILL_NAME,),
+        ).fetchone()["content"]
+
+    assert "TURN_TAKING_SYMMETRY_GAP" in reader
+    assert "QUANTITY_GAP" in reader
+    for leaked in ("陈安", "孙成", "马二", "西库", "官斗", "短三斗一升"):
+        assert leaked not in reader
+    assert "当前作品的事实只能来自当前项目 Canon / Story State / 正文" in reader

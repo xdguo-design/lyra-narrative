@@ -314,6 +314,13 @@ def _writer_rejection_family(item: dict) -> tuple[str, str, str]:
 
 
 def _summarize_writer_patterns(patterns: list[dict]) -> list[dict]:
+    """Collapse project-specific evidence into cross-project capabilities.
+
+    Raw reasons, suggestions, excerpts, character names, objects, numbers and
+    plot nodes remain in the rejection-learning evidence store. They must not
+    be copied into the global runtime Skill, otherwise a new novel inherits
+    another novel's facts instead of the learned capability.
+    """
     grouped: dict[str, dict] = {}
     for item in patterns:
         key, title, guidance = _writer_rejection_family(item)
@@ -325,31 +332,17 @@ def _summarize_writer_patterns(patterns: list[dict]) -> list[dict]:
                 "guidance": guidance,
                 "occurrences": 0,
                 "pattern_count": 0,
-                "reasons": [],
-                "suggestions": [],
                 "labels": set(),
-                "example": "",
             },
         )
         current["occurrences"] += int(item.get("occurrences") or 0)
         current["pattern_count"] += 1
-
-        reason = _compact(str(item.get("reason") or ""), 420)
-        if reason and reason not in current["reasons"]:
-            current["reasons"].append(reason)
-
-        suggestion = _compact(str(item.get("suggestion") or ""), 280)
-        if suggestion and suggestion not in current["suggestions"]:
-            current["suggestions"].append(suggestion)
-
         current["labels"].update(
             re.findall(
                 r"\b[A-Z][A-Z0-9_]{3,}(?:_GAP|_LEAK|_DRIFT)\b",
                 str(item.get("reason") or ""),
             )
         )
-        if item.get("excerpt"):
-            current["example"] = _compact(str(item["excerpt"]), 220)
 
     result = list(grouped.values())
     result.sort(
@@ -366,15 +359,21 @@ def render_learning_overlay(target: str, batches: list[dict] | None = None) -> s
     if not batches:
         return ""
     patterns = _group_patterns(batches)
+    summaries = _summarize_writer_patterns(patterns)
+
+    shared_boundary = (
+        "历史打回中的人物名、地点、道具、数字、台词、剧情节点和项目专属程序只属于原项目；"
+        "它们保留在证据库用于回放，但绝不能成为新作品的事实、必检词或剧情约束。"
+    )
 
     if target == "writer":
-        summaries = _summarize_writer_patterns(patterns)
         lines = [
             "【作者 Skill：正式打回经验总结】",
             (
-                "以下规则由全部正式打回自动归纳。原始原因与原文样本仍完整保存在 "
-                "builtin_skill_learning_events / JSON 证据库；作者 Skill 只保留可执行总结。"
+                "以下规则由全部正式打回归纳为跨作品能力。原始 reason / suggestion / excerpt "
+                "完整保存在 builtin_skill_learning_events / JSON 证据库，不进入运行时 Skill。"
             ),
+            shared_boundary,
             "执行顺序：写前读取 → 写中主动规避 → 写后自检。复发项优先级高于一次性新问题。",
         ]
         for item in summaries:
@@ -386,35 +385,26 @@ def render_learning_overlay(target: str, batches: list[dict] | None = None) -> s
             labels = sorted(item["labels"])
             if labels:
                 lines.append("  关联标签：" + ", ".join(labels[:16]))
-            if item["suggestions"]:
-                lines.append(
-                    "  复发修复："
-                    + "；".join(item["suggestions"][:3])
-                )
-            lines.append("  已吸收的打回原因：")
-            for reason in item["reasons"]:
-                lines.append(f"    - {reason}")
-            if item["example"]:
-                lines.append(f"  最近样本：{item['example']}")
         return "\n".join(lines)
 
     lines = [
-        "【自动学习记录：Reader 防漏检】",
+        "【Reader Skill：跨作品防漏检能力】",
         (
-            "以下条目来自正式打回。它们是当前内置 Skill 的主动检查项；"
-            "新问题保持 CALIBRATING，同类复发不得忽略。"
+            "Reader 只继承历史失败中可泛化的检查能力，不继承任何旧作品实体或剧情答案。"
+            "当前作品的事实只能来自当前项目 Canon / Story State / 正文。"
         ),
+        shared_boundary,
+        "命中历史失败族时，先在当前文本中寻找同类结构证据；没有当前文本证据就不得判 FAIL。",
     ]
-    for item in patterns[:120]:
+    for item in summaries:
         lines.append(
-            f"- [{item['pattern_signature']}] "
-            f"{item['category']}｜复发 {item['occurrences']} 次"
+            f"- {item['title']}｜历史命中 {item['occurrences']} 次｜"
+            f"{item['pattern_count']} 个独立失败模式"
         )
-        lines.append(f"  失败模式：{item['reason']}")
-        guidance = item["suggestion"] or "复审时主动搜索同类失败，命中后不得因意思能懂而放行。"
-        lines.append(f"  阅读拦截：{guidance}")
-        if item["excerpt"]:
-            lines.append(f"  最近样本：{item['excerpt']}")
+        lines.append(f"  阅读拦截：{item['guidance']}")
+        labels = sorted(item["labels"])
+        if labels:
+            lines.append("  关联标签：" + ", ".join(labels[:16]))
     return "\n".join(lines)
 
 
