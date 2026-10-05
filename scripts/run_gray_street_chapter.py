@@ -193,6 +193,9 @@ async def main() -> None:
     keep_generation_skills_lean(task_id)
     canon = CANON_PATH.read_text(encoding="utf-8")
     chapter_plan = extract_plan(chapter_no)
+    extra_constraints = str(req.get("chapter_constraints") or "").strip()
+    if extra_constraints:
+        chapter_plan += "\n\n【本次结构级返修追加约束】\n" + extra_constraints
     skill = skill_excerpt(task_id)
 
     writer = await _run_step(
