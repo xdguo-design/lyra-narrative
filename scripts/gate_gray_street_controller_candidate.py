@@ -56,9 +56,47 @@ async def main():
    return {"name":name,"verdict":verdict(r.content),"report":r.content,"provider":r.provider,"model":r.model}
   except Exception as e: return {"name":name,"verdict":"ERROR","error":f"{type(e).__name__}: {e}"}
  rs=await asyncio.gather(*(one(*x) for x in SPECS)); sg=static_gate(text,chapter)
- failed=[x for x in rs if x["verdict"]!="PASS"]; passed=(not failed) and sg["pass"]
- OUT.mkdir(parents=True,exist_ok=True); (OUT/"gate.json").write_text(json.dumps({"passed":passed,"static":sg,"reviews":rs},ensure_ascii=False,indent=2),encoding="utf-8")
+
+ compact_reviews=json.dumps(rs,ensure_ascii=False)[:22000]
+ aggregate=await _run_step(
+  task_id=tid,
+  role="master-reader",
+  stage=f"controller-aggregate-ch{chapter:02d}",
+  mode="check",
+  content=text,
+  instruction=f"""你是《灰街》的总编 Gate。前面已经有 8 路独立读者/专项 Reviewer。你的任务不是投票，而是核对证据、消解互相矛盾的意见，并给最终 PASS/FAIL。
+
+硬规则：
+1. 静态硬 Gate 只要失败，最终必须 FAIL。
+2. 任一 Reviewer 如果指出了有逐字证据、且你核对正文后确认存在的【明显 AI 解释腔 / 连续裸对白或问卷式对白 / 人物明显工具化或说话时身体与场景消失 / 真正的 Canon、因果、权限、时间线错误】，必须 FAIL。
+3. 单纯审美偏好、轻微可润色项、与正文不符的误判、重复意见，不得单独阻断。
+4. Reviewer ERROR 不是自动 FAIL。若同一维度已有其他正常 Reviewer 覆盖，且你直接核对正文未发现硬伤，可标记 COVERED_ERROR；若关键维度完全无人覆盖才 FAIL。
+5. 不得按多数票机械判定；必须逐条核对 FAIL 的证据是否真实存在。
+6. 第一节冻结事实：当天十一月三日，怀表日期窗显示四日是故意异常，不是时间线错误。
+7. 用户明确讨厌小短句、连续裸对白、“不是A而是B”作者总结。这三类属于硬规则，不得以风格偏好放过。
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+随后输出：
+【确认的硬伤】没有则写 NONE
+【驳回的误判/轻微项】
+【Reviewer Error 覆盖判断】
+【最终理由】
+
+静态 Gate：
+{json.dumps(sg,ensure_ascii=False)}
+
+独立 Reviewer：
+{compact_reviews}
+
+项目 Canon 摘要：
+{canon[-5000:]}
+"""
+ )
+ master_verdict=verdict(aggregate.content)
+ passed=sg["pass"] and master_verdict=="PASS"
+ OUT.mkdir(parents=True,exist_ok=True)
+ (OUT/"gate.json").write_text(json.dumps({"passed":passed,"static":sg,"reviews":rs,"aggregate":{"verdict":master_verdict,"report":aggregate.content,"provider":aggregate.provider,"model":aggregate.model}},ensure_ascii=False,indent=2),encoding="utf-8")
  (OUT/f"chapter-{chapter:02d}-candidate.md").write_text(f"# 第{chapter}节 {title}\n\n"+text+"\n",encoding="utf-8")
- print(json.dumps({"passed":passed,"chapter":chapter,"failed":[x["name"] for x in failed],"static":sg},ensure_ascii=False),flush=True)
- if not passed: raise RuntimeError("controller gate failed")
+ print(json.dumps({"passed":passed,"chapter":chapter,"master":master_verdict,"static":sg},ensure_ascii=False),flush=True)
+ if not passed: raise RuntimeError("controller aggregate gate failed")
 if __name__=="__main__": asyncio.run(main())
