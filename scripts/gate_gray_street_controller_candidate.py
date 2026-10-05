@@ -1,0 +1,64 @@
+from __future__ import annotations
+import asyncio, json, re
+from pathlib import Path
+from app.db import init_db
+from app.services.book_pipeline import _create_task
+from app.services.workflow_service import _run_step
+from scripts.generate_gray_street_chapter01 import CANON_PATH, configure_provider, create_project
+
+REQUEST=Path(".github/requests/gray-street-controller-gate.json")
+OUT=Path("artifacts/gray-street-controller-gate")
+SPECS=[
+("blind-reader","普通读者","是否自然好读、人物是否活、哪里像AI或想跳过。"),
+("cadence-character-reader","商业读者","节奏、人物记忆点、悬念与继续阅读欲。"),
+("blind-natural-reader","文学自然度读者","作者总结、模板句、不是A而是B、机械转折、碎句。"),
+("character-voice-reviewer","人物读者","人物是否有独立利益、选择和声音，是否工具化。"),
+("blind-dialogue-reader","对白读者","裸对白、问卷式轮流、规章腔、信息倾倒、机械动作。"),
+("continuity-reviewer","连续性审核","时间、地点、道具、权限、因果、前文接口。"),
+("character-dialogue-reviewer","人物对白专项","人物关系、对白口语真实性、身体与空间是否在场。"),
+("language-rhythm-reviewer","语言节奏专项","完整段落、中长句群、AI解释句、小短句和节奏。"),
+]
+def verdict(t):
+ m=re.search(r"VERDICT\s*[:：]\s*(PASS|FAIL)",t,re.I); return m.group(1).upper() if m else "FAIL"
+def static_gate(text,chapter):
+ failures=[]
+ if re.search(r"(?:并)?不是[^。！？\n]{0,48}(?:而是|只是)",text): failures.append("not-A-but-B")
+ paras=[p.strip() for p in re.split(r"\n\s*\n",text) if p.strip()]
+ pure=[bool(re.fullmatch(r"[“\"][^\n]{1,220}[”\"][。！？?!…]*",p)) for p in paras]
+ streak=best=0
+ for q in pure: streak=streak+1 if q else 0; best=max(best,streak)
+ if best>=2: failures.append(f"dialogue-streak:{best}")
+ prose=[p for p,q in zip(paras,pure) if not q]
+ ratio=sum(1 for p in prose if len(re.sub(r"\s+","",p))<=30)/max(1,len(prose))
+ if ratio>0.1: failures.append(f"short-ratio:{ratio:.1%}")
+ if chapter==1:
+  for tok in ["十一月三日","两点十四","四日","EVAN GREY","银色怀表一枚，运行状态异常，待验","黑色马车"]:
+   if tok not in text: failures.append("missing:"+tok)
+ return {"pass":not failures,"failures":failures,"short_ratio":ratio,"dialogue_streak":best}
+async def main():
+ req=json.loads(REQUEST.read_text(encoding="utf-8")); chapter=int(req["chapter_no"]); title=req["title"]; path=Path(req["candidate_path"])
+ configure_provider(); init_db(); pid,cid=create_project(); tid=_create_task(project_id=pid,chapter_id=cid,goal=f"审核《灰街》第{chapter}节《{title}》外部总编候选稿",instruction="只审核不改稿")
+ text=path.read_text(encoding="utf-8").strip()
+ if text.startswith("# "): text="\n".join(text.splitlines()[2:]).strip()
+ canon=CANON_PATH.read_text(encoding="utf-8")
+ prior=""
+ if req.get("prior_path") and Path(req["prior_path"]).exists(): prior=Path(req["prior_path"]).read_text(encoding="utf-8")[-6500:]
+ async def one(role,name,focus):
+  try:
+   extra=""
+   if chapter==1: extra="冻结事实：当天十一月三日，怀表日期窗显示四日是故意异常，不能判时间线错误。"
+   r=await _run_step(task_id=tid,role=role,stage=f"controller-gate-ch{chapter:02d}",mode="check",content=text,instruction=f"""你是{name}。{focus}
+这是正式 Gate，只审核，不重写。只要出现明显AI解释腔、连续裸对白、问卷式对白、人物工具化、成片小短句、真正连续性/因果错误，就 FAIL。
+{extra}
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL，后面最多列5条逐字证据。
+必要前文：{prior}
+项目 Canon 摘要：{canon[-4500:]}""")
+   return {"name":name,"verdict":verdict(r.content),"report":r.content,"provider":r.provider,"model":r.model}
+  except Exception as e: return {"name":name,"verdict":"ERROR","error":f"{type(e).__name__}: {e}"}
+ rs=await asyncio.gather(*(one(*x) for x in SPECS)); sg=static_gate(text,chapter)
+ failed=[x for x in rs if x["verdict"]!="PASS"]; passed=(not failed) and sg["pass"]
+ OUT.mkdir(parents=True,exist_ok=True); (OUT/"gate.json").write_text(json.dumps({"passed":passed,"static":sg,"reviews":rs},ensure_ascii=False,indent=2),encoding="utf-8")
+ (OUT/f"chapter-{chapter:02d}-candidate.md").write_text(f"# 第{chapter}节 {title}\n\n"+text+"\n",encoding="utf-8")
+ print(json.dumps({"passed":passed,"chapter":chapter,"failed":[x["name"] for x in failed],"static":sg},ensure_ascii=False),flush=True)
+ if not passed: raise RuntimeError("controller gate failed")
+if __name__=="__main__": asyncio.run(main())
