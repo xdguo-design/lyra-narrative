@@ -378,14 +378,14 @@ def _normalize_review_field_key(value: str) -> str:
     return (
         str(value or "")
         .strip()
-        .strip("*_\`#[]【】 ")
+        .strip("*_`#[]【】 ")
         .replace(" ", "")
         .lower()
     )
 
 
 def _normalize_review_field_value(value: str) -> str:
-    return str(value or "").strip().strip("*_\` ").strip()
+    return str(value or "").strip().strip("*_` ").strip()
 
 
 def _parse_review_output(text: str, draft: str) -> list[dict]:
