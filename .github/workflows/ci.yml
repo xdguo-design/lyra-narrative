@@ -3,6 +3,10 @@ name: CI
 on:
   push:
     branches: [main, dev]
+    paths-ignore:
+      - "books/**"
+      - ".github/requests/**"
+      - "artifacts/**"
   pull_request:
 
 jobs:
