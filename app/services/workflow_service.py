@@ -374,6 +374,20 @@ async def _run_step(
     return result
 
 
+def _normalize_review_field_key(value: str) -> str:
+    return (
+        str(value or "")
+        .strip()
+        .strip("*_\`#[]【】 ")
+        .replace(" ", "")
+        .lower()
+    )
+
+
+def _normalize_review_field_value(value: str) -> str:
+    return str(value or "").strip().strip("*_\` ").strip()
+
+
 def _parse_review_output(text: str, draft: str) -> list[dict]:
     stripped = text.strip()
     if stripped == "NO_ISSUE":
@@ -398,7 +412,9 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
                 continue
             if line.startswith("【") and "】" in line:
                 key, value = line[1:].split("】", 1)
-                fields[key.strip().lower()] = value.lstrip("：: ").strip()
+                fields[_normalize_review_field_key(key)] = _normalize_review_field_value(
+                    value.lstrip("：: ")
+                )
                 continue
             normalized = line.lstrip("- ").strip()
             if ":" in normalized:
@@ -407,14 +423,63 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
                 key, value = normalized.split("：", 1)
             else:
                 continue
-            fields[key.strip().lower()] = value.strip()
+            fields[_normalize_review_field_key(key)] = _normalize_review_field_value(value)
 
-        severity = fields.get("严重性") or fields.get("severity") or "suggestion"
-        severity = severity.lower()
-        if severity not in {"blocking", "suggestion", "info"}:
+        raw_severity = (
+            fields.get("严重性")
+            or fields.get("severity")
+            or ""
+        )
+        severity_token = _normalize_review_field_value(raw_severity).lower()
+        disposition = _normalize_review_field_value(
+            fields.get("处置级别") or fields.get("disposition") or ""
+        ).upper()
+        verdict = _normalize_review_field_value(
+            fields.get("verdict") or fields.get("复审结果") or ""
+        ).upper()
+
+        if severity_token in {
+            "blocking",
+            "high",
+            "高",
+            "critical",
+            "严重",
+            "p0",
+        }:
+            severity = "blocking"
+        elif severity_token in {
+            "info",
+            "low",
+            "低",
+            "pass",
+            "none",
+        }:
+            severity = "info"
+        elif severity_token in {
+            "suggestion",
+            "medium",
+            "中",
+            "warning",
+            "warn",
+            "p1",
+            "p2",
+        }:
+            severity = "suggestion"
+        else:
             severity = "suggestion"
 
-        excerpt = fields.get("片段") or fields.get("excerpt") or ""
+        # Disposition and recheck verdict are stronger than prose labels.
+        # Reviewer contracts allow localized HIGH findings and explicit
+        # REWRITE_BLOCK/FAIL signals; those must never be silently downgraded.
+        if disposition == "REWRITE_BLOCK" or verdict == "FAIL":
+            severity = "blocking"
+
+        excerpt = (
+            fields.get("逐字片段")
+            or fields.get("片段")
+            or fields.get("excerpt")
+            or ""
+        )
         if excerpt.upper() == "NONE" or excerpt.startswith("<逐字原文"):
             excerpt = ""
 
@@ -424,7 +489,6 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
             or fields.get("summary")
             or stripped
         )
-        disposition = fields.get("处置级别") or ""
         rationale = fields.get("判级理由") or ""
         objective = fields.get("执行目标") or ""
         suggestion = (
