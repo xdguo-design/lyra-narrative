@@ -41,6 +41,10 @@ async def main():
  text=path.read_text(encoding="utf-8").strip()
  if text.startswith("# "): text="\n".join(text.splitlines()[2:]).strip()
  canon=CANON_PATH.read_text(encoding="utf-8")
+ if chapter > 1:
+  marker="## \u7b2c\u4e00\u8282\u300a\u6000\u8868\u300b\u51bb\u7ed3\u76ee\u6807"
+  if marker in canon:
+   canon=canon.split(marker,1)[0]
  prior=""
  if req.get("prior_path") and Path(req["prior_path"]).exists(): prior=Path(req["prior_path"]).read_text(encoding="utf-8")[-6500:]
  async def one(role,name,focus):
