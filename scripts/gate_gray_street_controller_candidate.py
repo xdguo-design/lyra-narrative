@@ -8,6 +8,7 @@ from scripts.generate_gray_street_chapter01 import CANON_PATH, configure_provide
 
 REQUEST=Path(".github/requests/gray-street-controller-gate.json")
 OUT=Path("artifacts/gray-street-controller-gate")
+PLAN=Path("books/gray-street/arc/ch01-05-plan.md")
 SPECS=[
 ("blind-reader","普通读者","是否自然好读、人物是否活、哪里像AI或想跳过。"),
 ("cadence-character-reader","商业读者","节奏、人物记忆点、悬念与继续阅读欲。"),
@@ -20,6 +21,21 @@ SPECS=[
 ]
 def verdict(t):
  m=re.search(r"VERDICT\s*[:：]\s*(PASS|FAIL)",t,re.I); return m.group(1).upper() if m else "FAIL"
+def chapter_rules(chapter,title):
+ if chapter==1:
+  return "第一节按 Canon 中的第一节冻结目标和执行锁审核。"
+ labels={2:"第二节",3:"第三节",4:"第四节",5:"第五节"}
+ plan=PLAN.read_text(encoding="utf-8")
+ heading=f"## {labels.get(chapter, f'第{chapter}节')}《{title}》"
+ start=plan.find(heading)
+ if start<0:
+  return f"当前审核第{chapter}节《{title}》；不得套用第一节专属规则。"
+ end=plan.find("\n## ",start+len(heading))
+ block=plan[start:end if end>=0 else len(plan)].strip()
+ common_start=plan.find("## 前五节共同硬规则")
+ common=plan[common_start:].strip() if common_start>=0 else ""
+ return block+"\n\n"+common
+
 def static_gate(text,chapter):
  failures=[]
  if re.search(r"(?:并)?不是[^。！？\n]{0,48}(?:而是|只是)",text): failures.append("not-A-but-B")
@@ -45,6 +61,7 @@ async def main():
   marker="## \u7b2c\u4e00\u8282\u300a\u6000\u8868\u300b\u51bb\u7ed3\u76ee\u6807"
   if marker in canon:
    canon=canon.split(marker,1)[0]
+ rules=chapter_rules(chapter,title)
  prior=""
  if req.get("prior_path") and Path(req["prior_path"]).exists(): prior=Path(req["prior_path"]).read_text(encoding="utf-8")[-6500:]
  async def one(role,name,focus):
@@ -55,8 +72,7 @@ async def main():
 这是正式 Gate，只审核，不重写。只要出现明显AI解释腔、连续裸对白、问卷式对白、人物工具化、成片小短句、真正连续性/因果错误，就 FAIL。
 {extra}
 第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL，后面最多列5条逐字证据。
-必要前文：{prior}
-项目 Canon 摘要：{canon[-4500:]}""")
+当前章节冻结规则：\n{rules}\n必要前文：{prior}\n项目 Canon 摘要：{canon[-4500:]}""")
    return {"name":name,"verdict":verdict(r.content),"report":r.content,"provider":r.provider,"model":r.model}
   except Exception as e: return {"name":name,"verdict":"ERROR","error":f"{type(e).__name__}: {e}"}
  rs=await asyncio.gather(*(one(*x) for x in SPECS)); sg=static_gate(text,chapter)
@@ -80,7 +96,7 @@ async def main():
 3. 单纯审美偏好、轻微可润色项、与正文不符的误判、重复意见，不得单独阻断。
 4. Reviewer ERROR 不是自动 FAIL。若同一维度已有其他正常 Reviewer 覆盖，且你直接核对正文未发现硬伤，可标记 COVERED_ERROR；若关键维度完全无人覆盖才 FAIL。
 5. 不得按多数票机械判定；必须逐条核对 FAIL 的证据是否真实存在。
-6. 第一节冻结事实：当天十一月三日，怀表日期窗显示四日是故意异常，不是时间线错误。
+6. 若当前审核第一节，十一月三日与日期窗四日属于冻结异常；若当前章节大于第一节，严禁使用第一节专属目标或执行锁判定当前章节，出现这种意见必须标记 SCOPE_MISMATCH 并驳回。
 7. 用户明确讨厌小短句、连续裸对白、“不是A而是B”作者总结。这三类属于硬规则，不得以风格偏好放过。
 
 第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
@@ -93,10 +109,7 @@ async def main():
 静态 Gate：
 {json.dumps(sg,ensure_ascii=False)}
 
-独立 Reviewer：
-{compact_reviews}
-
-项目 Canon 摘要：
+当前章节冻结规则：\n{rules}\n\n独立 Reviewer：\n{compact_reviews}\n\n项目 Canon 摘要：
 {canon[-5000:]}
 """
  )
