@@ -1,0 +1,65 @@
+name: Gray Street Chapter 01 Final2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-chapter01-final2.request"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  final:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NOVEL_DB_PATH: /tmp/gray-ch01-final2.db
+      NOVEL_SEED_DEMO: "0"
+      GH_TOKEN: ${{ github.token }}
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_ROLE_REVISION_AGENT_PROFILE: AGNES
+      NARRATIVE_ROLE_BLIND_READER_PROFILE: AGNES
+      NARRATIVE_ROLE_CADENCE_CHARACTER_READER_PROFILE: DOTS3
+      NARRATIVE_ROLE_BLIND_NATURAL_READER_PROFILE: AGNES
+      NARRATIVE_ROLE_CHARACTER_VOICE_REVIEWER_PROFILE: AGNES
+      NARRATIVE_ROLE_BLIND_DIALOGUE_READER_PROFILE: DOTS3
+      NARRATIVE_ROLE_CONTINUITY_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_PROVIDER_NAME: AGNES
+      NARRATIVE_PROVIDER_PROTOCOL: openai-compatible
+      NARRATIVE_PROVIDER_MODEL: agnes-3.0-flash
+      NARRATIVE_PROVIDER_BASE_URL: https://api.agnes-ai.cn/v1
+      NARRATIVE_PROVIDER_SECRET_NAME: AGNES
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets.AGNES }}
+      NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS: "1"
+      NOVEL_AI_MAX_TOKENS: "7000"
+      NOVEL_AI_TIMEOUT_SECONDS: "100"
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Download failed final1 candidate
+        run: |
+          mkdir -p artifacts/final1-input
+          gh run download 37296147741 --repo xdguo-design/lyra-narrative --name gray-street-chapter01-final --dir artifacts/final1-input
+      - name: Rewrite and final gate
+        run: PYTHONPATH=. python scripts/finalize_gray_street_chapter01_v2.py
+      - name: Upload locked chapter
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-chapter01-final2
+          path: artifacts/gray-street-chapter01-final2
+          if-no-files-found: error
+          retention-days: 14
