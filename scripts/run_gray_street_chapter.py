@@ -104,6 +104,48 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
     return await asyncio.gather(*(one(*spec) for spec in REVIEWERS))
 
 
+async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dict, canon: str, prior_tail: str, chapter_no: int) -> dict:
+    compact = json.dumps(reviews, ensure_ascii=False)[:22000]
+    result = await _run_step(
+        task_id=task_id,
+        role="master-reader",
+        stage=f"gray-street-aggregate-ch{chapter_no:02d}",
+        mode="check",
+        content=text,
+        instruction=f"""你是《灰街》的总编 Gate。你收到 8 路独立审核结果，必须核对正文后做最终判断，不按多数票机械决定。
+
+硬规则：
+- 静态 Gate 失败 => FAIL。
+- 经你核对属实的明显 AI 解释腔、连续裸对白/问卷式对白、人物工具化/场景消失、真正的 Canon/因果/权限/连续性错误 => FAIL。
+- 单纯审美偏好、轻微润色项、误判、重复意见不能阻断。
+- 某 Reviewer ERROR 若有其他 Reviewer 覆盖同一维度，且你核对正文无硬伤，可标 COVERED_ERROR；关键维度无人覆盖才 FAIL。
+- 用户明确禁止大量小短句、连续裸对白、“不是A而是B”作者总结。
+- 不提前泄露后续章节，不允许 Writer 为了解决审核擅自新增规则或线索。
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+随后写【确认的硬伤】【驳回的误判/轻微项】【Error覆盖判断】【最终理由】。
+
+静态 Gate：
+{json.dumps(gate, ensure_ascii=False)}
+
+独立审核：
+{compact}
+
+前文尾部：
+{prior_tail[-4500:]}
+
+Canon 摘要：
+{canon[-4500:]}
+""",
+    )
+    return {
+        "verdict": verdict(result.content),
+        "report": result.content,
+        "provider": result.provider,
+        "model": result.model,
+    }
+
+
 async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: str, prior_tail: str, failed: list[dict], gate: dict):
     compact = json.dumps({"failed_reviews": failed, "static_gate": gate}, ensure_ascii=False)[:18000]
     result = await _run_step(
@@ -181,22 +223,24 @@ async def main() -> None:
 
     reviews = await run_reviews(task_id, text, canon, prior_tail)
     gate = static_gate(text)
+    aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
 
-    if failed or not gate["pass"]:
+    if aggregate["verdict"] != "PASS" or not gate["pass"]:
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable")
         reviews = await run_reviews(task_id, text, canon, prior_tail)
         gate = static_gate(text)
+        aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
 
-    passed = not failed and gate["pass"]
+    passed = gate["pass"] and aggregate["verdict"] == "PASS"
     out = OUT_ROOT / f"chapter-{chapter_no:02d}"
     out.mkdir(parents=True, exist_ok=True)
     (out / f"chapter-{chapter_no:02d}-final.md").write_text(f"# 第{chapter_no}节 {title}\n\n" + text + "\n", encoding="utf-8")
-    (out / "gate.json").write_text(json.dumps({"passed": passed, "static": gate, "reviews": reviews}, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"passed": passed, "chapter": chapter_no, "title": title, "chars": len(text), "failed": [x["name"] for x in failed]}, ensure_ascii=False), flush=True)
+    (out / "gate.json").write_text(json.dumps({"passed": passed, "static": gate, "reviews": reviews, "aggregate": aggregate}, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"passed": passed, "chapter": chapter_no, "title": title, "chars": len(text), "master": aggregate["verdict"], "reviewer_nonpass": [x["name"] for x in failed]}, ensure_ascii=False), flush=True)
     if not passed:
         raise RuntimeError(f"chapter {chapter_no} gate failed")
 
