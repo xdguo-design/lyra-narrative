@@ -1,0 +1,18 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "fadae551795a45dbb678264267714d4d",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "gray-street-v4-round-3",
+  "recorded_at": "2026-10-05T06:14:10.040994+00:00",
+  "events": [
+    {
+      "reviewer": "language-rhythm-reviewer",
+      "category": "language-rhythm",
+      "reason": "Reviewer 执行失败：ProviderError: ATRIA request failed: The read operation timed out",
+      "suggestion": "只重试该 Reviewer；保留已成功的 Writer 与其它 Reviewer 结果，不得重跑整章。",
+      "excerpt": "",
+      "pattern_signature": "9da3a6ec55abb89216fde6b5"
+    }
+  ]
+}
