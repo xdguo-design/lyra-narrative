@@ -1,0 +1,26 @@
+{
+  "schema": "NARRATIVE_BUILTIN_SKILL_LEARNING_V2",
+  "batch_id": "b871bd8470a8474290b4c3821e1e4613",
+  "task_id": 1,
+  "project_id": 1,
+  "source": "GRAY_STREET_V4_GENERALIZED_REJECT",
+  "recorded_at": "2026-10-05T06:18:03.169060+00:00",
+  "events": [
+    {
+      "reviewer": "reader-naturalness",
+      "category": "naturalness",
+      "reason": "ACTION_FRAGMENTATION_GAP：关键场景被大量一句一段、逐字母/逐动作切分，视觉上像游戏UI或短视频分镜，长篇语流被破坏。",
+      "suggestion": "长篇正文优先用完整句群承载动作与异常；除非节奏目的极强，不连续制造单句段落。",
+      "excerpt": "连续短段落制造悬疑",
+      "pattern_signature": "b79de8fc6c085a0a483ee54a"
+    },
+    {
+      "reviewer": "reader-character-dialogue",
+      "category": "dialogue",
+      "reason": "OVER_RATIONAL_DIALOGUE_GAP：基层角色在冲突中变成律师、制度说明器或舞台演说者，用完整逻辑和抽象原则替代现实利益与行动。",
+      "suggestion": "角色只说当下需要说的话；程序通过‘缺材料就不能办/不能拿’等具体后果体现，不背条文，不发表社会评论。",
+      "excerpt": "用法条和原则替代人物说话",
+      "pattern_signature": "b5e8039b6505a929525e61a0"
+    }
+  ]
+}
