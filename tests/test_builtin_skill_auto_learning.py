@@ -243,7 +243,7 @@ def test_writer_skill_summarizes_all_rejection_causes_without_losing_evidence(
                 "category": "continuity",
                 "reason": "计量算术不成立：前后斗数无法推出短三斗一升。",
                 "suggestion": "写前锁定同一计量口径并复算。",
-                "excerpt": "短三斗一升。",
+                "excerpt": "少九十七枚月石。",
             },
         ],
     )
@@ -296,14 +296,14 @@ def test_global_reader_skill_does_not_leak_other_novel_entities(
             {
                 "reviewer": "master-reader",
                 "category": "dialogue",
-                "reason": "TURN_TAKING_SYMMETRY_GAP：陈安问孙成，马二回答过快。",
-                "suggestion": "下一本小说继续拦截聊天框式问答，但不要继承陈安、孙成、马二这些事实。",
-                "excerpt": "陈安问：孙成呢？马二答：在西库。",
+                "reason": "TURN_TAKING_SYMMETRY_GAP：阿尔法公爵问蓝鲸钥匙，紫塔车夫回答过快。",
+                "suggestion": "下一本小说继续拦截聊天框式问答，但不要继承阿尔法公爵、蓝鲸钥匙、紫塔车夫这些事实。",
+                "excerpt": "阿尔法公爵问：蓝鲸钥匙呢？紫塔车夫答：在琥珀仓。",
             },
             {
                 "reviewer": "continuity-reviewer",
                 "category": "measurement",
-                "reason": "QUANTITY_GAP：官斗复量后短三斗一升。",
+                "reason": "QUANTITY_GAP：月石复量后少九十七枚。",
                 "suggestion": "跨作品只继承计量一致性能力。",
                 "excerpt": "短三斗一升。",
             },
@@ -318,6 +318,6 @@ def test_global_reader_skill_does_not_leak_other_novel_entities(
 
     assert "TURN_TAKING_SYMMETRY_GAP" in reader
     assert "QUANTITY_GAP" in reader
-    for leaked in ("陈安", "孙成", "马二", "西库", "官斗", "短三斗一升"):
+    for leaked in ("阿尔法公爵", "蓝鲸钥匙", "紫塔车夫", "琥珀仓", "九十七枚月石"):
         assert leaked not in reader
     assert "当前作品的事实只能来自当前项目 Canon / Story State / 正文" in reader
