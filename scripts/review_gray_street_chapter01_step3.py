@@ -109,34 +109,48 @@ async def main() -> None:
     draft = _strip_title(INPUT.read_text(encoding="utf-8"))
 
     async def run_reader(role: str, name: str, instruction: str):
-        result = await _run_step(
-            task_id=task_id,
-            role=role,
-            stage="gray-street-chapter01-step3-blind-read",
-            mode="check",
-            content=draft,
-            instruction=instruction,
-        )
-        return {
-            "role": role,
-            "reader": name,
-            "provider": result.provider,
-            "model": result.model,
-            "verdict": _verdict(result.content),
-            "report": result.content,
-        }
+        try:
+            result = await _run_step(
+                task_id=task_id,
+                role=role,
+                stage="gray-street-chapter01-step3-blind-read",
+                mode="check",
+                content=draft,
+                instruction=instruction,
+            )
+            return {
+                "role": role,
+                "reader": name,
+                "provider": result.provider,
+                "model": result.model,
+                "verdict": _verdict(result.content),
+                "report": result.content,
+                "error": "",
+            }
+        except Exception as exc:
+            return {
+                "role": role,
+                "reader": name,
+                "provider": "",
+                "model": "",
+                "verdict": "ERROR",
+                "report": "",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
 
     results = await asyncio.gather(
         *(run_reader(role, name, prompt) for role, name, prompt in READERS)
     )
-    fail_count = sum(1 for item in results if item["verdict"] != "PASS")
+    error_count = sum(1 for item in results if item["verdict"] == "ERROR")
+    fail_count = sum(1 for item in results if item["verdict"] == "FAIL")
     summary = {
         "step": 3,
         "task_id": task_id,
         "reader_count": len(results),
         "pass_count": len(results) - fail_count,
         "fail_count": fail_count,
-        "all_pass": fail_count == 0,
+        "error_count": error_count,
+        "all_pass": fail_count == 0 and error_count == 0,
         "status": "multi_reader_complete",
         "next_step": "unified_revision",
     }
