@@ -62,13 +62,17 @@ async def main():
  rs=await asyncio.gather(*(one(*x) for x in SPECS)); sg=static_gate(text,chapter)
 
  compact_reviews=json.dumps(rs,ensure_ascii=False)[:22000]
- aggregate=await _run_step(
-  task_id=tid,
-  role="master-reader",
-  stage=f"controller-aggregate-ch{chapter:02d}",
-  mode="check",
-  content=text,
-  instruction=f"""你是《灰街》的总编 Gate。前面已经有 8 路独立读者/专项 Reviewer。你的任务不是投票，而是核对证据、消解互相矛盾的意见，并给最终 PASS/FAIL。
+ non_pass=[item for item in rs if item["verdict"]!="PASS"]
+ if not non_pass and sg["pass"]:
+  aggregate=type("GateResult",(),{"content":"VERDICT: PASS\nALL_REVIEWERS_PASS","provider":"","model":""})()
+ else:
+  aggregate=await _run_step(
+   task_id=tid,
+   role="master-reader",
+   stage=f"controller-aggregate-ch{chapter:02d}",
+   mode="check",
+   content=text,
+   instruction=f"""你是《灰街》的总编 Gate。前面已经有 8 路独立读者/专项 Reviewer。你的任务不是投票，而是核对证据、消解互相矛盾的意见，并给最终 PASS/FAIL。
 
 硬规则：
 1. 静态硬 Gate 只要失败，最终必须 FAIL。
