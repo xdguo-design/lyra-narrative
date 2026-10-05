@@ -42,6 +42,12 @@ INSTRUCTION = """这是第一节正式重写，不是提纲、说明或审稿意
 8. 只输出小说正文。"""
 
 
+BLIND_READER_CONTEXT = """作品类型：工业诡秘 / 钢铁时代 / 底层成长。
+本节允许且要求出现尚未解释的超自然异常：旧银怀表日期窗显示次日、停表被触碰后重新走动、表盖内侧自行形成持有者姓名与数字。
+这些异常本身不是物理硬伤，不得因为“不符合现实机械常识”而判 FAIL，也不得建议删除、弱化成普通刻痕或改成写实解释。
+盲读仍要严格检查：异常是否写得具体克制、人物反应是否可信、是否违反当前文本已建立事实、是否有 AI 解释腔或强行神秘化。
+"""
+
 READER_SPECS = [
     (
         "reader-normal",
@@ -191,7 +197,7 @@ async def run_blind_readers(task_id: int, text: str):
             stage="gray-street-final-blind-read",
             mode="check",
             content=text,
-            instruction=instruction,
+            instruction=BLIND_READER_CONTEXT + "\n\n" + instruction,
         )
 
     results = await asyncio.gather(*(one(role, instruction) for role, instruction in READER_SPECS))

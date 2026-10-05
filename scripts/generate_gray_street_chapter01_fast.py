@@ -108,6 +108,7 @@ def export(task_id: int, provider: dict, reviews: list[str], readers: dict, styl
                 "pipeline": "writer + 3 specialist reviewers + 4 blind readers + unified revision + recheck",
                 "latest_global_skill_used": True,
                 "style_gate": style,
+                "canon_failures": canon_failures,
             },
             ensure_ascii=False,
             indent=2,
@@ -171,9 +172,46 @@ async def main() -> None:
     )
     readers, readers_ok = await run_blind_readers(task_id, text)
     style = static_style_gate(text)
+    canon_failures = []
+    for marker in (
+        "EVAN GREY",
+        "银色怀表一枚，运行状态异常，待验",
+        "黑色马车",
+    ):
+        if marker not in text:
+            canon_failures.append("missing:" + marker)
+    if not ("两点十四" in text or "2:14" in text or "2：14" in text):
+        canon_failures.append("missing:watch-time-2:14")
+    if not re.search(r"(?:数字|一个)\s*[“\"]?1[”\"]?", text):
+        canon_failures.append("missing:watch-number-1")
+    for marker in (
+        "E.V.A.N.",
+        "《租务条例》第",
+        "条例第五十二条",
+        "限两小时内完成",
+        "程序是唯一的通用语言",
+        "微型博弈",
+        "仿佛来自时间的深处",
+        "拥有自己的生命",
+        "由某种机械驱动",
+        "挂钟又慢",
+    ):
+        if marker in text:
+            canon_failures.append("forbidden:" + marker)
+    canon_ok = not canon_failures
 
-    if review_blocking or not readers_ok or not style["pass"]:
-        revised = await revise(task_id, text, canon, reviews, readers, style)
+    if review_blocking or not readers_ok or not style["pass"] or not canon_ok:
+        revised = await revise(
+            task_id,
+            text,
+            canon,
+            reviews,
+            readers,
+            {
+                **style,
+                "canon_failures": canon_failures,
+            },
+        )
         text = revised.content.strip()
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision returned unusable chapter")
@@ -193,8 +231,35 @@ async def main() -> None:
         )
         readers, readers_ok = await run_blind_readers(task_id, text)
         style = static_style_gate(text)
+        canon_failures = []
+        for marker in (
+            "EVAN GREY",
+            "银色怀表一枚，运行状态异常，待验",
+            "黑色马车",
+        ):
+            if marker not in text:
+                canon_failures.append("missing:" + marker)
+        if not ("两点十四" in text or "2:14" in text or "2：14" in text):
+            canon_failures.append("missing:watch-time-2:14")
+        if not re.search(r"(?:数字|一个)\s*[“\"]?1[”\"]?", text):
+            canon_failures.append("missing:watch-number-1")
+        for marker in (
+            "E.V.A.N.",
+            "《租务条例》第",
+            "条例第五十二条",
+            "限两小时内完成",
+            "程序是唯一的通用语言",
+            "微型博弈",
+            "仿佛来自时间的深处",
+            "拥有自己的生命",
+            "由某种机械驱动",
+            "挂钟又慢",
+        ):
+            if marker in text:
+                canon_failures.append("forbidden:" + marker)
+        canon_ok = not canon_failures
 
-    passed = (not review_blocking) and readers_ok and style["pass"]
+    passed = (not review_blocking) and readers_ok and style["pass"] and canon_ok
     with connect() as conn:
         conn.execute(
             "UPDATE writing_tasks SET revised_content=?,status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
