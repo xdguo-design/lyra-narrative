@@ -1,7 +1,7 @@
 {
-  "chapter_no": 3,
-  "title": "河灯街",
-  "candidate_path": "books/gray-street/controller/chapter-03-candidate.md",
-  "prior_path": "books/gray-street/chapters/02.md",
-  "requested_at": "2026-10-06T11:25:00+08:00"
+  "chapter_no": 4,
+  "title": "十三号仓",
+  "candidate_path": "books/gray-street/controller/chapter-04-candidate.md",
+  "prior_path": "books/gray-street/controller/chapter-03-candidate.md",
+  "requested_at": "2026-10-06T11:25:10+08:00"
 }
