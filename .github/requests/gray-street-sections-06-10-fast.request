@@ -1,11 +1,11 @@
-attempt: 10
+attempt: 11
 project: gray-street
 sections: 6-10
-mode: sequential-fast-batch
+mode: sequential-fast-core-gates
 writer_profile: AGNES
 revision_profile: AGNES
 writer_fallback: MODELSCOPE
-reader_roles: continuity,ordinary,commercial,naturalness,dialogue,rhythm
+reader_roles: continuity,ordinary,commercial,naturalness
 length_gate: draft>=2100 chars per section; revision>=2000 chars per section
 continuity_gate: strict-with-prior-canon
-notes: exact beat sheet; ban invented law-firm/trust/heir/electronic systems; readers receive prior 1-5 canon
+notes: exact beat sheet; remove redundant dialogue/rhythm reviewers that duplicated core readers and caused output-length failures
