@@ -277,7 +277,7 @@ async def main() -> int:
         goal="一次生成并修订《灰街》第6-10节连续正文",
         instruction="快速批处理，但必须遵守NarrativeOS Skill、Canon和多Reader Gate。",
     )
-    context = _task_context(task_id, project_id)
+    _task_context(task_id, project_id)  # freeze/record platform task resources
 
     outline_text = FAST_OUTLINE
     (OUTPUT_DIR / "outline.md").write_text(outline_text + "\n", encoding="utf-8")
