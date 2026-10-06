@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 17
+BUILTIN_WRITING_SKILL_VERSION = 18
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -135,6 +135,18 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 8. 叙述口语与人物口语分开：人物可以省略、绕、说半句；第三人称旁白不能借“口语感”掩盖不自然搭配。
 9. 技术词与普通叙述检查：普通生活场景优先常用中文，“偏摆”等技术词若无人物职业理由，应换成可见动作。
 10. 最终逐句问：这句若不是我自己写的，我第一次看到会不会停一下？只要答案是“会”，就不能以“意思没错”放过。
+
+十七、状态转移、保管链与可观测规则（State / Custody / Observable Rule Gate）
+1. 重要实体必须有状态账。对钥匙、证物、药品、武器、信件、账册、身份牌、容器等会跨场景移动的具体物件，至少能回答：当前在哪里、谁持有、是寄存/借出/核验/转柜/领取/转所有权中的哪一种、上一步怎样变到这一步。
+2. 同一件物体不能“离开两次”。若前文已经写它被取走、销毁、交给别人、封死或失效，后文再次出现同一状态前，必须有明确的归还、重新入库、复制品/第二件、误认或规则例外；否则标 STATE_TRANSITION_LEDGER_GAP。
+3. “转存、转柜、调拨、领取、借出、核验、返还、过户”不是同义词。现实制度或调查场景里，动作词必须和保管状态一致；把仓内换柜写成“被转走”，又让同一物件后来再次被领取，属于 CUSTODY_CHAIN_GAP。
+4. 不同文书可以记录不同范围。收费收据、内部转移单、授权书、清单、封存附页若字段不一致，不自动算矛盾；但当差异会让正常读者误以为作者写错时，正文必须给一个最小“范围锚点”，例如“收据只记计价物，附属封存件走内部单”，否则标 DOCUMENT_SCOPE_GAP。
+5. 已建立的权限必须产生约束。若前文明确“只能本人领取/只有某身份能调阅/必须有授权”，后文由其他人完成同一动作时，必须有代理授权、法定身份、违规放行、受贿或制度例外，并保留相应后果；不能因为剧情需要突然失效。
+6. 神秘机制可以未知，原因可以不解释，但【可观测样本】必须一致。倒计时、诅咒、系统、异能、仪式等若已重复出现“先变浅→再变数”“接触后触发”等可见过程，后续样本不得无提示改成另一套过程；未知原因不等于观测事实可以互相冲突。触发则标 OBSERVABLE_RULE_CONSISTENCY_GAP。
+7. 不要为了修规则而把悬疑写成说明书。修复优先补“可观测状态”和“必要转移”，不要求角色提前总结完整机制；有意未知继续保留。
+8. 时间数字如果会被后文拿来做证据，表达必须唯一。不要只写“长针在十一”让读者猜是 11 点还是 55 分；应写到足够支撑比较的时针/分针/秒针或明确时间。
+9. 超自然选择不能抹掉现实后果。人物为了诅咒、任务、救人等违反正常手续后，账目、物证、职业、法律、人情上的后果必须继续存在，除非正文明确展示被合法补齐或有人承担违规；否则标 REALITY_CONSEQUENCE_GAP。
+10. 物理冲突必须有因果关系再判错。挂链断裂不会自动导致怀表机芯停走；装饰损坏不等于核心机构失效。Reviewer/Writer 不得因“看起来有关”制造伪矛盾。
 
 十八、对话真实性硬门槛（Dialogue Authenticity Gate）
 1. 对话不是“正确回答问题”。每个在场人物必须带着自己的目标、顾虑、身份、关系和当前情绪进入对白。
@@ -1397,12 +1409,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 12
+BUILTIN_READER_REVIEW_SKILL_VERSION = 13
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v12】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v13】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1437,13 +1449,23 @@ D10 默认节奏器：看了看、停了一下、没说话等若没有新增行�
 D11 技术/报告词：普通叙述里是否出现无人物依据的技术词、报告腔。
 D12 类型第一印象：开篇前三段让读者以为在读什么类型，是否与作品定位一致。
 D13 作者笑点：幽默来自人物与处境，还是旁白向读者眨眼。
-D14 人物毛刺鉴别：不标准表达若属于人物声音可标 CHARACTER_ROUGHNESS；作者叙述别扭不能用这个标签保护。
+D14 人物毛刺鉴别：不标准表达若属于人物声音可标 CHARACTER_ROUGHNESS
+STATE_TRANSITION_LEDGER_GAP
+CUSTODY_CHAIN_GAP
+DOCUMENT_SCOPE_GAP
+OBSERVABLE_RULE_CONSISTENCY_GAP
+REALITY_CONSEQUENCE_GAP；作者叙述别扭不能用这个标签保护。
 D15 全文停顿测试：只要第一次读会因措辞本身停一下，而不是因剧情思考停一下，就必须记录。
 D16 叙事肌理：关键场景是否只有事实骨架，声音/气味/触感/动作阻力被写成功能标签，导致“能懂但太干”，标签 SCENE_TEXTURE_GAP。
 D17 连续动作：同一连续动作是否被机械拆成多个单行短句，导致阅读像分镜脚本而不是小说句群，标签 ACTION_FRAGMENTATION_GAP。
 D18 对话局部身体化：非紧急对白的关键话轮附近，是否完全没有说话者的姿态、视线、手中事或空间反应；若连续出现，优先复用 EMBODIED_DIALOGUE_GAP，不新造重复标签。
 D19 记忆接入摩擦：穿越/原身记忆/失忆恢复是否像资料加载一样顺滑，没有“本人没经历却知道”的认知冲突；标签 MEMORY_INTEGRATION_TOO_SMOOTH。
 D20 口语自然度：不只检查极短回应，也检查所有关键对白是否“能说出口”。语法成立、逻辑正确但真人不这么说，或需要读者先翻译成自然口语才能顺过去，标签 ORALITY_GAP。
+D21 状态转移账：跨场景重要物件/人物状态是否能从上一步连续推到下一步；同一钥匙、证物、药品等是否出现“已经离库/销毁/交出，却又无回流再次被领取”的双重状态，标签 STATE_TRANSITION_LEDGER_GAP。
+D22 保管与权限链：寄存、转柜、借出、核验、领取、返还、所有权转移是否被正文混成同一种动作；已建立的“只能本人/需授权”是否无原因失效，标签 CUSTODY_CHAIN_GAP。
+D23 文书范围：收据、清单、内部转移单、授权书记录范围不同时，正文是否给足最小范围锚点，使差异像“不同层级记录”而不是作者自相矛盾；缺失则 DOCUMENT_SCOPE_GAP。
+D24 可观测规则样本：超自然/系统规则的原因可以未知，但重复出现的可见状态变化是否互相兼容；若同一机制在没有例外提示时表现成两套相冲突的过程，标签 OBSERVABLE_RULE_CONSISTENCY_GAP。
+D25 现实后果连续：人物为超自然目标、调查目标或情感选择违反现实手续后，账目、职业、法律、物证或关系后果是否在后文继续存在；凭空归零则 REALITY_CONSEQUENCE_GAP。
 
 三、正式标签
 INTENTIONAL_UNKNOWN
@@ -1473,6 +1495,7 @@ VERDICT: PASS / FAIL
 【是否阻断交付】YES / NO
 
 任何明确的 NATURALNESS_GAP / TONE_GAP / QUANTITY_GAP / REFERENCE_GAP / MICRO_CONTINUITY_GAP 都阻断交付，不因“能理解”降级。
+STATE_TRANSITION_LEDGER_GAP / CUSTODY_CHAIN_GAP / OBSERVABLE_RULE_CONSISTENCY_GAP 若影响关键物件、因果或章间接缝，必须阻断；DOCUMENT_SCOPE_GAP 可先 LOCAL_REWRITE，但若直接改变所有权/授权/证据结论则阻断。REALITY_CONSEQUENCE_GAP 若让主角行为无代价地跨过已建立制度约束，同样阻断。
 
 五、固定失败样本
 1. “先感觉到的不是头疼，是屁股。”
@@ -1493,6 +1516,10 @@ VERDICT: PASS / FAIL
    - 作者批注感，不是人物当场自然知觉。
 9. “先记少了多少，别先替它写成丢了多少。”
    - 逻辑边界正确，但说法过度工整、像作者替办案人物总结原则；应做说出口测试。优先标 ORALITY_GAP，若整章反复出现这类“聪明话”，并标 VOICE_OVERPERFORMANCE_GAP。
+10. “六年前钥匙被转走；九天前红发女人又把同一把钥匙从同一仓库取走。”
+   - 若中间没有归还/重新入库/第二把钥匙，属于 STATE_TRANSITION_LEDGER_GAP + CUSTODY_CHAIN_GAP。若真实意思只是“六年前仓内换柜”，必须把动作词写准。
+11. 同一倒计时规则，一条样本写“第二天直接从四变三”，另一条样本写“先变浅，隔更久才变三”，且正文没有例外信号。
+   - 原因可以继续神秘，但可观测过程互相冲突，标 OBSERVABLE_RULE_CONSISTENCY_GAP；修复只需统一可见样本，不要求角色讲清完整规则。
 
 六、对话真实性判定（Reader B 强制执行）
 Reader B 不只判断人物“想要什么”，还要判断人物是否真的活在对白里。
