@@ -1,8 +1,8 @@
-attempt: 5
+attempt: 6
 project: gray-street
 sections: 6-10
 mode: platform-write-review-revise-gate
 content_ref: xdguo-design/slow-world-novel@feature/gray-street-platform-revision-20261006
 source_policy: prefer-platform-locked-1-5; guarded-reader-input-fallback-with-canon-override
 reader_roles: ordinary,commercial,literary-naturalness
-notes: speed pass - compact revision findings, shorter context, faster reviewer routes
+notes: fix Thompson institutional role, explicit red-haired prior seed, longer section target, stable commercial reader
