@@ -97,44 +97,56 @@ async def main():
   "non_pass":[{
    "name":item["name"],
    "verdict":item["verdict"],
-   "report":str(item.get("report") or "")[:2600],
+   "report":str(item.get("report") or "")[:1400],
    "error":str(item.get("error") or "")[:800]
   } for item in non_pass]
- },ensure_ascii=False)[:10000]
+ },ensure_ascii=False)[:6500]
  if not non_pass and sg["pass"]:
   aggregate=type("GateResult",(),{"content":"VERDICT: PASS\nALL_REVIEWERS_PASS","provider":"","model":""})()
  else:
-  aggregate=await _run_step(
-   task_id=tid,
-   role="master-reader",
-   stage=f"controller-aggregate-ch{chapter:02d}",
-   mode="check",
-   content=text,
-   instruction=f"""你是《灰街》的总编 Gate。前面已经有 8 路独立读者/专项 Reviewer。你的任务不是投票，而是核对证据、消解互相矛盾的意见，并给最终 PASS/FAIL。
+  try:
+   aggregate=await _run_step(
+    task_id=tid,
+    role="master-reader",
+    stage=f"controller-aggregate-ch{chapter:02d}",
+    mode="check",
+    content=text,
+    instruction=f"""你是《灰街》的总编 Gate。只核对阻断项，不复述全文。
 
 硬规则：
-1. 静态硬 Gate 只要失败，最终必须 FAIL。
-2. 任一 Reviewer 如果指出了有逐字证据、且你核对正文后确认存在的【明显 AI 解释腔 / 连续裸对白或问卷式对白 / 人物明显工具化或说话时身体与场景消失 / 真正的 Canon、因果、权限、时间线错误】，必须 FAIL。
-3. 单纯审美偏好、轻微可润色项、与正文不符的误判、重复意见，不得单独阻断。
-4. Reviewer ERROR 不是自动 FAIL。若同一维度已有其他正常 Reviewer 覆盖，且你直接核对正文未发现硬伤，可标记 COVERED_ERROR；若关键维度完全无人覆盖才 FAIL。
-5. 不得按多数票机械判定；必须逐条核对 FAIL 的证据是否真实存在。
-6. 若当前审核第一节，十一月三日与日期窗四日属于冻结异常；若当前章节大于第一节，严禁使用第一节专属目标或执行锁判定当前章节，出现这种意见必须标记 SCOPE_MISMATCH 并驳回。
-7. 用户明确讨厌小短句、连续裸对白、“不是A而是B”作者总结。这三类属于硬规则，不得以风格偏好放过。
+1. 静态硬 Gate 失败则最终 FAIL。
+2. Reviewer 指出有逐字证据的明显 AI 解释腔、连续裸对白/问卷式对白、人物工具化、真正 Canon/因果/权限/时间线错误，核实成立则 FAIL。
+3. 审美偏好、轻微润色项、误判、重复意见不能单独阻断。
+4. Reviewer ERROR 不是自动 FAIL；同维度有其他正常 Reviewer 覆盖即可。
+5. 当前章节大于第一节时，严禁套用第一节专属冻结目标；此类意见标记 SCOPE_MISMATCH。
+6. 用户硬禁：大量小短句、连续裸对白、“不是A而是B”作者总结。
 
 第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
-随后输出：
-【确认的硬伤】没有则写 NONE
+后面仅输出：
+【确认的硬伤】
 【驳回的误判/轻微项】
-【Reviewer Error 覆盖判断】
 【最终理由】
+总输出不超过700个中文字符。
 
 静态 Gate：
 {json.dumps(sg,ensure_ascii=False)}
 
-当前章节冻结规则：\n{rules}\n\n独立 Reviewer：\n{compact_reviews}\n\n项目 Canon 摘要：
-{canon[-5000:]}
+当前章节冻结规则：
+{rules}
+
+独立 Reviewer 摘要：
+{compact_reviews}
+
+项目 Canon 摘要：
+{canon[-3000:]}
 """
- )
+   )
+  except Exception as exc:
+   aggregate=type("GateResult",(),{
+    "content":"VERDICT: FAIL\n【确认的硬伤】AGGREGATE_UNAVAILABLE\n【最终理由】总编模型不可用；独立 Reviewer 和静态 Gate 已保留，必须由创作总控人工核定，禁止自动放行。",
+    "provider":"controller-fallback",
+    "model":type(exc).__name__
+   })()
  master_verdict=verdict(aggregate.content)
  passed=sg["pass"] and master_verdict=="PASS"
  OUT.mkdir(parents=True,exist_ok=True)
