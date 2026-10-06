@@ -365,56 +365,52 @@ def render_learning_overlay(target: str, batches: list[dict] | None = None) -> s
     batches = load_learning_batches() if batches is None else batches
     if not batches:
         return ""
+
     patterns = _group_patterns(batches)
-
-    if target == "writer":
-        summaries = _summarize_writer_patterns(patterns)
-        lines = [
-            "【作者 Skill：正式打回经验总结】",
-            (
-                "以下规则由全部正式打回自动归纳。原始原因与原文样本仍完整保存在 "
-                "builtin_skill_learning_events / JSON 证据库；作者 Skill 只保留可执行总结。"
-            ),
-            "执行顺序：写前读取 → 写中主动规避 → 写后自检。复发项优先级高于一次性新问题。",
-        ]
-        for item in summaries:
-            lines.append(
-                f"- {item['title']}｜累计打回 {item['occurrences']} 次｜"
-                f"{item['pattern_count']} 个独立失败模式"
-            )
-            lines.append(f"  作者规则：{item['guidance']}")
-            labels = sorted(item["labels"])
-            if labels:
-                lines.append("  关联标签：" + ", ".join(labels[:16]))
-            if item["suggestions"]:
-                lines.append(
-                    "  复发修复："
-                    + "；".join(item["suggestions"][:3])
-                )
-            lines.append("  已吸收的打回原因：")
-            for reason in item["reasons"]:
-                lines.append(f"    - {reason}")
-            if item["example"]:
-                lines.append(f"  最近样本：{item['example']}")
-        return "\n".join(lines)
-
-    lines = [
-        "【自动学习记录：Reader 防漏检】",
-        (
-            "以下条目来自正式打回。它们是当前内置 Skill 的主动检查项；"
-            "新问题保持 CALIBRATING，同类复发不得忽略。"
-        ),
+    summaries = [
+        item
+        for item in _summarize_writer_patterns(patterns)
+        if str(item.get("key") or "") != "other"
     ]
-    for item in patterns[:120]:
+    if not summaries:
+        return ""
+
+    # Raw rejection reasons/excerpts remain audit evidence in
+    # builtin_skill_learning_events / JSON archives. They MUST NOT be copied
+    # into the global built-in Skill, because those records contain
+    # project-specific names, plot facts, quantities and repair instructions.
+    # Only generalized family guidance and stable labels may transfer globally.
+    if target == "writer":
+        lines = [
+            "【作者 Skill：正式打回经验的全局泛化摘要】",
+            (
+                "原始打回证据仅保存在 builtin_skill_learning_events / JSON 证据库；"
+                "这里不注入具体人物、章节、物件、数字或逐字失败样本，防止跨作品污染。"
+            ),
+            "执行顺序：写前读取 → 写中主动规避 → 写后自检。未完成正式泛化的事件不得自动变成全局写作指令。",
+        ]
+        rule_prefix = "作者规则"
+    else:
+        lines = [
+            "【Reader Skill：正式打回经验的全局泛化摘要】",
+            (
+                "原始打回原因、建议和逐字样本只留在证据库；"
+                "Reader 仅继承可跨作品复用的失败家族与稳定标签，不继承项目专名和具体剧情。"
+            ),
+            "未完成正式泛化的事件不得作为另一部作品的额外要求、既往问题或复审合同。",
+        ]
+        rule_prefix = "Reader 规则"
+
+    for item in summaries:
         lines.append(
-            f"- [{item['pattern_signature']}] "
-            f"{item['category']}｜复发 {item['occurrences']} 次"
+            f"- {item['title']}｜累计打回 {item['occurrences']} 次｜"
+            f"{item['pattern_count']} 个独立失败模式"
         )
-        lines.append(f"  失败模式：{item['reason']}")
-        guidance = item["suggestion"] or "复审时主动搜索同类失败，命中后不得因意思能懂而放行。"
-        lines.append(f"  阅读拦截：{guidance}")
-        if item["excerpt"]:
-            lines.append(f"  最近样本：{item['excerpt']}")
+        lines.append(f"  {rule_prefix}：{item['guidance']}")
+        labels = sorted(item["labels"])
+        if labels:
+            lines.append("  关联稳定标签：" + ", ".join(labels[:20]))
+
     return "\n".join(lines)
 
 
