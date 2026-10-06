@@ -405,9 +405,7 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
             or fields.get("severity")
             or ""
         ).strip().lower()
-        if disposition == "REWRITE_BLOCK":
-            severity = "blocking"
-        elif raw_severity in {
+        if disposition == "REWRITE_BLOCK" or raw_severity in {
             "blocking", "blocker", "critical", "high", "严重", "高"
         }:
             severity = "blocking"
