@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import dataclass
 
@@ -373,6 +374,11 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
         fields: dict[str, str] = {}
         for raw_line in block.splitlines():
             line = raw_line.strip()
+            line = re.sub(
+                r"^\\*\\*([^*]+)\\*\\*(\\s*[：:].*)$",
+                r"\\1\\2",
+                line,
+            )
             if not line:
                 continue
             if line.startswith("【") and "】" in line:
@@ -380,6 +386,11 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
                 fields[key.strip().lower()] = value.lstrip("：: ").strip()
                 continue
             normalized = line.lstrip("- ").strip()
+            normalized = re.sub(
+                r"^\\*\\*([^*]+)\\*\\*(\\s*[：:].*)$",
+                r"\\1\\2",
+                normalized,
+            )
             if ":" in normalized:
                 key, value = normalized.split(":", 1)
             elif "：" in normalized:
@@ -388,12 +399,35 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
                 continue
             fields[key.strip().lower()] = value.strip()
 
-        severity = fields.get("严重性") or fields.get("severity") or "suggestion"
-        severity = severity.lower()
-        if severity not in {"blocking", "suggestion", "info"}:
+        disposition = (fields.get("处置级别") or "").strip().upper()
+        raw_severity = (
+            fields.get("严重性")
+            or fields.get("severity")
+            or ""
+        ).strip().lower()
+        if disposition == "REWRITE_BLOCK":
+            severity = "blocking"
+        elif raw_severity in {
+            "blocking", "blocker", "critical", "high", "严重", "高"
+        }:
+            severity = "blocking"
+        elif raw_severity in {"info", "information", "low", "低"}:
+            severity = "info"
+        elif raw_severity in {"suggestion", "medium", "中", "建议"}:
+            severity = "suggestion"
+        elif "REWRITE_BLOCK" in block.upper() or "VERDICT: FAIL" in block.upper():
+            # Fail closed: reviewer formatting drift may not downgrade a
+            # model-declared rewrite block to a suggestion.
+            severity = "blocking"
+        else:
             severity = "suggestion"
 
-        excerpt = fields.get("片段") or fields.get("excerpt") or ""
+        excerpt = (
+            fields.get("片段")
+            or fields.get("逐字片段")
+            or fields.get("excerpt")
+            or ""
+        )
         if excerpt.upper() == "NONE" or excerpt.startswith("<逐字原文"):
             excerpt = ""
 
@@ -444,7 +478,17 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
     lowered = stripped.lower()
     severity = (
         "blocking"
-        if any(token in lowered for token in ("冲突", "错误", "矛盾", "阻断"))
+        if any(
+            token in lowered
+            for token in (
+                "rewrite_block",
+                "verdict: fail",
+                "冲突",
+                "错误",
+                "矛盾",
+                "阻断",
+            )
+        )
         else "suggestion"
     )
     return [
