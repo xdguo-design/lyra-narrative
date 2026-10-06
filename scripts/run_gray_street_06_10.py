@@ -8,7 +8,6 @@ from pathlib import Path
 from app.db import connect, init_db
 from app.services.book_pipeline import _create_task, _run_frozen_chapter
 from app.services.full_novel_pipeline import _persist_memory
-from app.services.default_skills import BUILTIN_REFINEMENT_SKILL_NAME, BUILTIN_WRITING_SKILL_NAME
 from app.services.workflow_service import get_task
 
 
@@ -115,18 +114,15 @@ def create_project() -> tuple[int, dict[int, int]]:
     return project_id, chapter_ids
 
 
-def keep_generation_skills_lean(task_id: int) -> None:
+def use_explicit_gray_street_contract(task_id: int) -> None:
+    # This production run keeps NarrativeOS orchestration/review/revision intact,
+    # but avoids injecting the large generic Skill corpus into every model call.
+    # All Gray Street hard rules are frozen explicitly in the task instruction
+    # and project Memory above.
     with connect() as conn:
         conn.execute(
-            """
-            DELETE FROM writing_task_skills
-            WHERE task_id=?
-              AND skill_id NOT IN (
-                  SELECT id FROM skills
-                  WHERE project_id IS NULL AND name IN (?,?)
-              )
-            """,
-            (task_id, BUILTIN_WRITING_SKILL_NAME, BUILTIN_REFINEMENT_SKILL_NAME),
+            "DELETE FROM writing_task_skills WHERE task_id=?",
+            (task_id,),
         )
 
 
@@ -179,7 +175,7 @@ async def main() -> None:
                 ]
             ),
         )
-        keep_generation_skills_lean(task_id)
+        use_explicit_gray_street_contract(task_id)
         result = await _run_frozen_chapter(
             task_id=task_id,
             chapter_number=number,
