@@ -396,9 +396,10 @@ async def main() -> int:
             task_id,
             draft,
             "commercial",
-            "master-reader",
-            """你是商业阅读Reader。检查五节整体节奏、每节推进、人物记忆点、续读欲与章末状态变化。
-不要要求大量短句或网文化碎段。""",
+            "commercial-reader-fast",
+            """你是商业阅读Reader。只检查五节整体节奏、每节是否有真实推进、人物记忆点、续读欲与章末状态变化。
+不要复述剧情，不要逐段点评，不要要求大量短句或网文化碎段。
+最多列3个真正影响续读的具体问题；没有明显问题直接输出NO_ISSUE。""",
         ),
         _review(
             task_id,
