@@ -79,6 +79,17 @@ async def main():
   except Exception as e: return {"name":name,"verdict":"ERROR","error":f"{type(e).__name__}: {e}"}
  rs=await asyncio.gather(*(one(*x) for x in SPECS)); sg=static_gate(text,chapter)
 
+ OUT.mkdir(parents=True,exist_ok=True)
+ (OUT/"gate.json").write_text(json.dumps({
+  "passed":False,
+  "chapter":chapter,
+  "title":title,
+  "static":sg,
+  "reviews":rs,
+  "aggregate":{"verdict":"PENDING","report":"","provider":"","model":""}
+ },ensure_ascii=False,indent=2),encoding="utf-8")
+ (OUT/f"chapter-{chapter:02d}-candidate.md").write_text(f"# 第{chapter}节 {title}\n\n"+text+"\n",encoding="utf-8")
+
  compact_reviews=json.dumps(rs,ensure_ascii=False)[:22000]
  non_pass=[item for item in rs if item["verdict"]!="PASS"]
  if not non_pass and sg["pass"]:
