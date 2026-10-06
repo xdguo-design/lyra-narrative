@@ -1,4 +1,4 @@
-attempt: 4
+attempt: 5
 project: gray-street
 sections: 6-10
 mode: deterministic-fast-batch
@@ -7,4 +7,4 @@ writer_profile: AGNES
 revision_profile: AGNES
 reader_roles: continuity,ordinary,commercial,naturalness,dialogue,rhythm
 length_gate: draft>=2300 chars per section; revision>=2200 chars per section
-notes: frozen human-designed outline; compact writer prompt; no planner call; parallel section revision
+notes: rerun after lint cleanup
