@@ -90,8 +90,17 @@ async def main():
  },ensure_ascii=False,indent=2),encoding="utf-8")
  (OUT/f"chapter-{chapter:02d}-candidate.md").write_text(f"# 第{chapter}节 {title}\n\n"+text+"\n",encoding="utf-8")
 
- compact_reviews=json.dumps(rs,ensure_ascii=False)[:22000]
  non_pass=[item for item in rs if item["verdict"]!="PASS"]
+ pass_names=[item["name"] for item in rs if item["verdict"]=="PASS"]
+ compact_reviews=json.dumps({
+  "pass":pass_names,
+  "non_pass":[{
+   "name":item["name"],
+   "verdict":item["verdict"],
+   "report":str(item.get("report") or "")[:2600],
+   "error":str(item.get("error") or "")[:800]
+  } for item in non_pass]
+ },ensure_ascii=False)[:10000]
  if not non_pass and sg["pass"]:
   aggregate=type("GateResult",(),{"content":"VERDICT: PASS\nALL_REVIEWERS_PASS","provider":"","model":""})()
  else:
