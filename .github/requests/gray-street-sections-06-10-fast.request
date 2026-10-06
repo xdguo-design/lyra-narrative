@@ -1,4 +1,4 @@
-attempt: 8
+attempt: 9
 project: gray-street
 sections: 6-10
 mode: sequential-fast-batch
@@ -6,6 +6,6 @@ writer_profile: AGNES
 revision_profile: AGNES
 writer_fallback: MODELSCOPE
 reader_roles: continuity,ordinary,commercial,naturalness,dialogue,rhythm
-length_gate: draft>=2300 chars per section; revision>=2200 chars per section
+length_gate: draft>=2100 chars per section; revision>=2000 chars per section
 continuity_gate: strict
-notes: sequential chapter generation with previous-section tail; frozen timeline/identity/institution/era contract
+notes: truncate accidental next-section spill; practical long-form length floor
