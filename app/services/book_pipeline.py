@@ -459,6 +459,7 @@ async def _run_frozen_chapter(
         draft=draft,
         context=review_context,
         round_no=1,
+        retry_failed_reviewers=1,
     )
     context = _task_context(task_id, project_id)
     review_context = context + "\n\n" + story_state_context
@@ -490,6 +491,7 @@ async def _run_frozen_chapter(
         context=review_context,
         round_no=2,
         prior_outputs=first_reviews,
+        retry_failed_reviewers=1,
     )
     context = _task_context(task_id, project_id)
     review_context = context + "\n\n" + story_state_context
