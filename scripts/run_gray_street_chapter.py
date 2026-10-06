@@ -15,8 +15,31 @@ REQUEST = Path(".github/requests/gray-street-chapter-run.json")
 PLAN = Path("books/gray-street/arc/ch01-05-plan.md")
 OUT_ROOT = Path("artifacts/gray-street-chapter-run")
 
-TITLES = {2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落"}
+TITLES = {
+    2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落",
+    6: "第7号箱", 7: "第七节", 8: "第八节", 9: "第九节", 10: "第十节",
+}
 SECTION_HEADERS = {2: "## 第二节《遗产》", 3: "## 第三节《河灯街》", 4: "## 第四节《十三号仓》", 5: "## 第五节《日落》"}
+
+POST5_CANON = """【第6节以后锁定连续性】
+- 主角是埃文·格雷（EVAN GREY）；雷蒙德·克莱是外部遗产主张人/代理层人物。两人绝不能混淆。
+- 第5节已经完成第一笔归还：米拉·阿尔瓦合法收回母亲萨维娜的银牌；怀表上的数字1与“四日，日落以前，归还第一笔”消失，内盖只剩 EVAN GREY，走速恢复正常。
+- 第5节章末：埃文收到匿名短函，只写同一海关总批次号与“SV-7 / 第7号箱”，并被铅笔重重画圈。第6节必须从这个状态自然接上。
+- 怀表截至第5节只验证过：异常走时/停止、内盖文字与数字自行出现或消失、靠近银牌时密跳。禁止新增心率同步、温度变化、自动定位、危险预警、读心、污染识别、共振导航等新能力或新规则。
+- 埃文是基层办事员，不是警察、侦探或打手；靠程序、记录、有限权限、人情与现实跑动推进，可以受阻、误判和付代价。
+- 黑色马车/无标车辆在前五节已经达到直接出场上限，第6节起必须明显降频，不能继续当固定危险提示器。
+- 禁止复制“查纸→地址→新纸”的单一推进。程序既要帮助埃文，也要造成延误、责任或被对手反利用。
+- 家庭成员玛格丽特、露西已经建立；只有当主线现实成本真正碰到家庭时才进入，禁止硬插。
+- 托马斯·韦德已经死亡，只能通过旧账、遗留行为和他人记忆继续塑造，不能复活或留下万能说明书。
+"""
+
+POST5_GOALS = {
+    6: "承接匿名短函和 SV-7 / 第7号箱，把线索迅速变成现实行动或现实冲突；让既有角色或机构主动制造阻力，不得用黑车替代戏。",
+    7: "让第7号箱的争夺或控制关系升级；埃文必须在有限权限、程序责任和效率之间做一个有代价的选择，对手开始利用程序。",
+    8: "把代价推进到人物关系或现实生活；至少一条既有关系被主线真实影响，同时获得一项可核实但不等于总答案的新事实。",
+    9: "完成一次高压现实场景或正面交锋；信息来自行动、证人、物证或程序后果，埃文允许误判或付代价，怀表不能自动解题。",
+    10: "完成第6—10节小阶段闭环：回收一个明确问题，确认一层更大风险，并留下更个人化的下一阶段入口；章尾不用总结句。",
+}
 
 REVIEWERS = [
     ("continuity-reviewer", "连续性与剧情", "检查时间地点、道具、人物知识来源、权限、因果、线索顺序和前后章接口。"),
@@ -31,6 +54,14 @@ REVIEWERS = [
 
 
 def extract_plan(chapter_no: int) -> str:
+    if chapter_no >= 6:
+        return POST5_CANON + "\n\n【本节功能】\n" + POST5_GOALS[chapter_no] + """
+
+【第6—10节共同硬规则】
+- 正文以完整段落和自然中长句群为主，禁止大量一句一段、裸对白、问卷式问答和作者总结。
+- 每节必须有现场事件、人物选择或现实阻力，不准整节只查档案。
+- 不新增世界规则，不通过新设定绕开冲突。
+- 第6—10节整体要形成入口→竞争/阻力→代价→局部验证→阶段回收与更危险入口。"""
     text = PLAN.read_text(encoding="utf-8")
     start = text.index(SECTION_HEADERS[chapter_no])
     next_candidates = [text.find(h, start + 1) for n, h in SECTION_HEADERS.items() if n > chapter_no]
@@ -181,10 +212,19 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
 async def main() -> None:
     req = json.loads(REQUEST.read_text(encoding="utf-8"))
     chapter_no = int(req["chapter_no"])
-    title = TITLES[chapter_no]
-    prior_file = Path(req["prior_file"])
-    prior_text = prior_file.read_text(encoding="utf-8")
-    prior_tail = prior_text[-12000:]
+    title = str(req.get("title") or TITLES[chapter_no])
+    prior_file = Path(req.get("prior_file") or "")
+    prior_parts = []
+    for number in range(1, chapter_no):
+        path = Path(f"books/gray-street/chapters/{number:02d}.md")
+        if path.exists():
+            prior_parts.append(path.read_text(encoding="utf-8"))
+    if prior_file and prior_file.exists() and not any(str(prior_file).endswith(f"/{number:02d}.md") for number in range(1, chapter_no)):
+        prior_parts.append(prior_file.read_text(encoding="utf-8"))
+    if not prior_parts:
+        raise FileNotFoundError("no prior Gray Street chapters found")
+    prior_text = "\n\n".join(prior_parts)
+    prior_tail = prior_text[-16000:]
 
     configure_provider()
     init_db()
@@ -192,6 +232,8 @@ async def main() -> None:
     task_id = _create_task(project_id=project_id, chapter_id=chapter_id, goal=f"生成《灰街》第{chapter_no}节《{title}》并通过短链路 Gate。", instruction="必须通过多读者与专项审核才可进入下一节。")
     keep_generation_skills_lean(task_id)
     canon = CANON_PATH.read_text(encoding="utf-8")
+    if chapter_no >= 6:
+        canon += "\n\n" + POST5_CANON
     chapter_plan = extract_plan(chapter_no)
     extra_constraints = str(req.get("chapter_constraints") or "").strip()
     if extra_constraints:
