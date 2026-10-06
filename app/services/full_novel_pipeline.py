@@ -455,6 +455,7 @@ async def _run_review_round(
 14. 判定物理矛盾前先确认真实因果关系；例如怀表挂链断裂本身不影响机芯走时，不得把表面相关当成硬冲突。
 
 STATE_TRANSITION_LEDGER_GAP / CUSTODY_CHAIN_GAP / OBSERVABLE_RULE_CONSISTENCY_GAP 若影响关键因果或章间接口，优先判 blocking；DOCUMENT_SCOPE_GAP 可按影响范围 LOCAL_REWRITE；REALITY_CONSEQUENCE_GAP 若让既有制度约束无代价消失，判 blocking。
+命中上述五类问题时，必须在【问题说明】或【建议动作】里逐字写出对应稳定标签，便于 Skill replay 自动验证；不要只写泛化中文描述。
 事实、因果、权限、时间线、证据边界问题优先判 blocking。""",
         ),
         (
