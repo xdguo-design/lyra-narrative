@@ -1,5 +1,6 @@
-attempt: 1
+attempt: 2
 project: gray-street
 source: external-readers-20261006
 mode: skill-evolution-replay-then-platform-revision
 content_ref: xdguo-design/slow-world-novel@feature/gray-street-platform-revision-20261006
+notes: rerun after cross-project skill-isolation fix, reviewer fail-closed parser fix, and deterministic section acceptance contract
