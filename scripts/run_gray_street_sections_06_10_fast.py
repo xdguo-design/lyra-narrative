@@ -407,20 +407,6 @@ async def main() -> int:
             "blind-natural-reader",
             """你是文学自然度Reader。检查AI味、模板句、作者替读者总结、办案纪要感、台词墙、碎短句和过度工整对白。""",
         ),
-        _review(
-            task_id,
-            draft,
-            "dialogue",
-            "character-dialogue-reviewer",
-            """检查人物动机和对白。对白必须与角色利益、已知信息和机构身份相符；不要把功能角色写成说明书。""",
-        ),
-        _review(
-            task_id,
-            draft,
-            "rhythm",
-            "language-rhythm-reviewer",
-            """检查语言节奏与段落自然度。只抓真实问题，不做审美偏好式过度重写。""",
-        ),
     )
 
     compact_reviews = _compact_findings(list(reviews), draft, limit=10000)
@@ -525,7 +511,7 @@ async def main() -> int:
     )
     manifest = {
         "project": "灰街",
-        "mode": "fast-batch",
+        "mode": "fast-core-gates",
         "source": str(source_path),
         "source_is_platform_locked": source_path == LOCKED_SOURCE,
         "sections": [6, 7, 8, 9, 10],
