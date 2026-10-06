@@ -375,8 +375,8 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
         for raw_line in block.splitlines():
             line = raw_line.strip()
             line = re.sub(
-                r"^\\*\\*([^*]+)\\*\\*(\\s*[：:].*)$",
-                r"\\1\\2",
+                r"^\*\*([^*]+)\*\*(\s*[：:].*)$",
+                r"\1\2",
                 line,
             )
             if not line:
@@ -387,8 +387,8 @@ def _parse_review_output(text: str, draft: str) -> list[dict]:
                 continue
             normalized = line.lstrip("- ").strip()
             normalized = re.sub(
-                r"^\\*\\*([^*]+)\\*\\*(\\s*[：:].*)$",
-                r"\\1\\2",
+                r"^\*\*([^*]+)\*\*(\s*[：:].*)$",
+                r"\1\2",
                 normalized,
             )
             if ":" in normalized:
