@@ -81,13 +81,20 @@ def test_rejection_auto_upgrades_builtin_writer_and_reader(monkeypatch, tmp_path
     assert result["recorded"] == 1
     assert after[BUILTIN_WRITING_SKILL_NAME][0] > before[BUILTIN_WRITING_SKILL_NAME][0]
     assert after[BUILTIN_READER_REVIEW_SKILL_NAME][0] > before[BUILTIN_READER_REVIEW_SKILL_NAME][0]
-    assert "对白逻辑正确但像作者总结" in after[BUILTIN_WRITING_SKILL_NAME][1]
-    assert "对白逻辑正确但像作者总结" in after[BUILTIN_READER_REVIEW_SKILL_NAME][1]
+    writer_content = after[BUILTIN_WRITING_SKILL_NAME][1]
+    reader_content = after[BUILTIN_READER_REVIEW_SKILL_NAME][1]
+    assert "人物与对白" in writer_content
+    assert "人物与对白" in reader_content
+    assert "对白逻辑正确但像作者总结" not in writer_content
+    assert "对白逻辑正确但像作者总结" not in reader_content
 
     with connect() as conn:
         durable = conn.execute(
             "SELECT COUNT(*) AS n FROM builtin_skill_learning_events"
         ).fetchone()["n"]
+        stored_reason = conn.execute(
+            "SELECT reason FROM builtin_skill_learning_events ORDER BY id LIMIT 1"
+        ).fetchone()["reason"]
         bindings = conn.execute(
             """
             SELECT COUNT(*) AS n
@@ -97,6 +104,7 @@ def test_rejection_auto_upgrades_builtin_writer_and_reader(monkeypatch, tmp_path
             (task_id,),
         ).fetchone()["n"]
     assert durable == 1
+    assert "对白逻辑正确但像作者总结" in stored_reason
     assert bindings >= 2
 
 
