@@ -8,6 +8,7 @@ from pathlib import Path
 from app.db import connect, init_db
 from app.services.book_pipeline import _create_task, _run_frozen_chapter
 from app.services.full_novel_pipeline import _persist_memory
+from app.services.default_skills import BUILTIN_REFINEMENT_SKILL_NAME, BUILTIN_WRITING_SKILL_NAME
 from app.services.workflow_service import get_task
 
 
@@ -114,6 +115,21 @@ def create_project() -> tuple[int, dict[int, int]]:
     return project_id, chapter_ids
 
 
+def keep_generation_skills_lean(task_id: int) -> None:
+    with connect() as conn:
+        conn.execute(
+            """
+            DELETE FROM writing_task_skills
+            WHERE task_id=?
+              AND skill_id NOT IN (
+                  SELECT id FROM skills
+                  WHERE project_id IS NULL AND name IN (?,?)
+              )
+            """,
+            (task_id, BUILTIN_WRITING_SKILL_NAME, BUILTIN_REFINEMENT_SKILL_NAME),
+        )
+
+
 def export_task(task_id: int, number: int) -> tuple[str, dict]:
     task = get_task(task_id) or {}
     content = str(task.get("revised_content") or task.get("draft") or "").strip()
@@ -135,6 +151,7 @@ async def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     prior_manuscript = PREVIOUS_FIVE
+    (OUTPUT_DIR / "run-started.txt").write_text("Gray Street 06-10 NarrativeOS run started.\n", encoding="utf-8")
     manifest = {
         "project_id": project_id,
         "sections": [],
@@ -162,6 +179,7 @@ async def main() -> None:
                 ]
             ),
         )
+        keep_generation_skills_lean(task_id)
         result = await _run_frozen_chapter(
             task_id=task_id,
             chapter_number=number,
