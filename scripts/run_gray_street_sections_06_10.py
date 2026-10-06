@@ -14,7 +14,6 @@ from app.services.full_novel_pipeline import (
 )
 from app.services.workflow_service import _parse_review_output, _run_step, _task_context
 
-
 OUTPUT_DIR = Path("artifacts/gray-street-sections-06-10")
 CONTENT_ROOT = Path(os.getenv("GRAY_STREET_CONTENT_ROOT", "content-repo"))
 LOCKED_SOURCE = CONTENT_ROOT / "novels/gray-street/versions/sections-01-05-platform-locked.md"
