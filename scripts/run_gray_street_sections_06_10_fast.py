@@ -117,6 +117,104 @@ async def _review(task_id: int, draft: str, kind: str, role: str, focus: str) ->
     return result.content
 
 
+
+def _extract_outline_section(outline: str, number: int) -> str:
+    cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
+    next_cn = {6: "七", 7: "八", 8: "九", 9: "十", 10: None}[number]
+    start_match = re.search(
+        rf"(?m)^#{1,3}\s*第{cn}节.*$|^第{cn}节.*$",
+        outline,
+    )
+    if not start_match:
+        return outline
+    start = start_match.start()
+    if next_cn is None:
+        return outline[start:].strip()
+    next_match = re.search(
+        rf"(?m)^#{1,3}\s*第{next_cn}节.*$|^第{next_cn}节.*$",
+        outline[start_match.end():],
+    )
+    if not next_match:
+        return outline[start:].strip()
+    end = start_match.end() + next_match.start()
+    return outline[start:end].strip()
+
+
+def _section_body_length(text: str) -> int:
+    body = re.sub(r"(?m)^#\s*第[六七八九十]节[^\n]*\n?", "", text, count=1)
+    return len(body.strip())
+
+
+async def _write_one_section(
+    *,
+    task_id: int,
+    number: int,
+    outline: str,
+    brief: str,
+    context: str,
+) -> str:
+    cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
+    section_outline = _extract_outline_section(outline, number)
+    result = await _run_step(
+        task_id=task_id,
+        role="writer",
+        stage=f"gray-fast-draft-{number}",
+        mode="continue",
+        content=section_outline,
+        instruction=(
+            f"只写《灰街》第{cn}节完整正文。不要写其他节。\n\n"
+            + context[-10000:]
+            + "\n\n【本节大纲】\n"
+            + section_outline
+            + "\n\n【全局续写约束】\n"
+            + brief[-8000:]
+            + f"""
+\n硬要求：
+- 正文目标 2500—3800 中文字符；少于2200字符视为未完成，不允许写成梗概；
+- 必须有完整场景弧：开场现实任务 → 阻碍升级 → 人物选择/关系或证据变化 → 章末状态变化；
+- 埃文始终是主要视角；
+- 汤普森始终是警官，不是事务所职员或埃文上级；
+- 红发女人是前文已出现的人，不是新角色空降；
+- 怀表不能当万能导航器；警方信息必须有合法来源；
+- 完整段落、自然长短句，不要大量一行一句和台词墙；
+- 只输出标题与正文，标题格式：# 第{cn}节　<标题>。
+"""
+        ),
+    )
+    text = result.content.strip()
+    if _section_body_length(text) >= 2200:
+        return text
+
+    # One targeted expansion retry for under-length prose. This keeps the
+    # five-section benchmark honest without rerunning the entire pipeline.
+    expanded = await _run_step(
+        task_id=task_id,
+        role="writer",
+        stage=f"gray-fast-expand-{number}",
+        mode="expand",
+        content=text,
+        instruction=(
+            f"当前第{cn}节只有约{_section_body_length(text)}字符，属于未完成短章。"
+            "在不改变事件顺序、Canon、线索来源和章末状态的前提下扩成完整小说正文，"
+            "补足现场、动作、人物犹豫、潜台词与必要过渡，不加新人物/新规则/新巧合。"
+            "目标2500—3800中文字符，至少2200字符。保持完整段落。只输出本节完整正文。"
+        ),
+    )
+    return expanded.content.strip()
+
+
+def _validate_five_sections(text: str) -> dict[int, int]:
+    lengths: dict[int, int] = {}
+    cn_to_num = {"六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+    pattern = re.compile(r"(?m)^# 第([六七八九十])节[^\n]*$")
+    matches = list(pattern.finditer(text))
+    for idx, match in enumerate(matches):
+        number = cn_to_num[match.group(1)]
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
+        lengths[number] = len(text[match.end():end].strip())
+    return lengths
+
+
 async def main() -> int:
     init_db()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,38 +250,24 @@ async def main() -> int:
         ),
     )
 
-    draft_result = await _run_step(
-        task_id=task_id,
-        role="writer",
-        stage="gray-fast-draft-06-10",
-        mode="continue",
-        content=outline.content,
-        instruction=(
-            context
-            + "\n\n【第6-10节执行大纲】\n"
-            + outline.content
-            + "\n\n【硬约束】\n"
-            + brief
-            + """
-\n一次性写完整第6、7、8、9、10节正文，每节约2500-3800中文字符。
-必须连续，不重启故事。第6节先兑现银牌账务/核验后果，再自然推出七号箱和费恩死亡。
-汤普森是警官，不是事务所职员。事务所压力由事务所内部人员承担。
-红发女人前文已经出现，不得当成新角色空降。
-怀表不能当万能导航器。警方信息必须有合法来源。
-第7-10节不能因为一次性生成而跳过人物选择、关系代价和现实手续后果。
-用完整段落、自然长短句，不写碎短句和台词墙。
-只输出正文，标题格式必须是：
-# 第六节　...
-# 第七节　...
-# 第八节　...
-# 第九节　...
-# 第十节　...
-"""
-        ),
+    section_drafts = await asyncio.gather(
+        *[
+            _write_one_section(
+                task_id=task_id,
+                number=number,
+                outline=outline.content,
+                brief=brief,
+                context=context,
+            )
+            for number in (6, 7, 8, 9, 10)
+        ]
     )
-    draft = draft_result.content.strip()
-    if len(re.findall(r"^# 第[六七八九十]节", draft, re.MULTILINE)) != 5:
-        raise RuntimeError("writer did not return all five sections")
+    draft = "\n\n".join(section.strip() for section in section_drafts).strip()
+    draft_lengths = _validate_five_sections(draft)
+    if set(draft_lengths) != {6, 7, 8, 9, 10}:
+        raise RuntimeError(f"writer did not return all five sections: {draft_lengths}")
+    if any(length < 2200 for length in draft_lengths.values()):
+        raise RuntimeError(f"one or more sections remain under-length: {draft_lengths}")
 
     reviews = await asyncio.gather(
         _review(
@@ -248,12 +332,15 @@ async def main() -> int:
             + """
 \n一次性修订第6-10节。blocking必须修，普通偏好不要乱改Canon。
 不得新增角色、规则、物证或巧合；不得删掉现实账务后果、警方权限边界、红发女人既有伏笔。
-保持完整段落和自然语流。只输出五节完整正文。"""
+保持完整段落和自然语流。每节不得压缩成梗概，必须保留至少2200中文字符。只输出五节完整正文。"""
         ),
     )
     revised = revision.content.strip()
-    if len(re.findall(r"^# 第[六七八九十]节", revised, re.MULTILINE)) != 5:
-        raise RuntimeError("revision lost one or more sections")
+    revised_lengths = _validate_five_sections(revised)
+    if set(revised_lengths) != {6, 7, 8, 9, 10}:
+        raise RuntimeError(f"revision lost one or more sections: {revised_lengths}")
+    if any(length < 2000 for length in revised_lengths.values()):
+        raise RuntimeError(f"revision over-compressed one or more sections: {revised_lengths}")
 
     final_reviews = await asyncio.gather(
         _review(
@@ -302,6 +389,8 @@ async def main() -> int:
         "source": str(source_path),
         "source_is_platform_locked": source_path == LOCKED_SOURCE,
         "sections": [6, 7, 8, 9, 10],
+        "draft_lengths": draft_lengths,
+        "final_lengths": revised_lengths,
         "final_blocking": blocking,
         "status": "awaiting_human_approval" if not blocking else "blocked",
     }
