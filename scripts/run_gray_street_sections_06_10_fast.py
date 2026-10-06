@@ -32,6 +32,54 @@ REVIEW_FORMAT = """NARRATIVEOS_REVIEW_V3
 复审结果=PENDING
 多个问题用单独一行 --- 分隔。"""
 
+FAST_OUTLINE = """## 第六节　七号箱
+开场：第一笔归还后的第二天早晨，埃文提前到格兰特事务所，银牌核验单对不上实物去向，事务所内部高级文员要求他当天补交接说明。
+推进：埃文重查克莱遗产的原始附页，发现一条此前被归入“旧港务杂项”的未结记录：七码头资产处内部物件“七号箱”，状态栏长期写“待处置”，没有合法出库签名。记录旁的旧编号与SV-7同源，但正文不解释SV含义。
+现实压力：汤普森以警官身份来电/到访，告知鲍勃·费恩已死亡；埃文因前一日刚去过十三号仓，成为必须说明行踪的关联证人。汤普森只提供警方有权告诉证人的最少信息，不泄露完整案卷。
+人物行动：红发女人不再只远远出现。她通过一个现实动作改变局势，例如在事务所外截走一份本应送达的旧港务回函、或短暂与埃文擦肩并故意留下可识别线索。她仍戴手套。
+结尾：埃文意识到七号箱不是“七码头第七扇门”，而是一件被资产处登记过、后来失去合法去向的实物。现实责任让他无法退出。
+
+## 第七节　第七码头资产处
+开场：埃文一边准备警方询问，一边用遗产清算员可合法申请的旧资产核验权限追查七号箱，不潜入、不冒充警员。
+推进：港务旧档案或转移目录显示，七号箱曾由第七码头资产处管理，六年前被列入内部转运，但最终签收人一栏不是米拉或克莱，而是“维尔”。名字来自合法档案，不从怀表弹出。
+人物冲突：汤普森怀疑埃文隐瞒了十三号仓的真实目的；埃文不得不承认银牌存在，却仍保留怀表异常。事务所同时催他补银牌交接。
+红发女人：她第一次与埃文有近距离、短促、带利益目的的接触，只确认“钥匙不等于箱子”，不讲世界观。
+结尾：埃文拿到“维尔”的全名或足够身份信息，准备去找人。
+
+## 第八节　已死的维尔
+开场：埃文按现实路径查找维尔——旧雇员名册、住址登记、报纸讣告或公证记录。
+核心反转：维尔已经死了，而且不是最近才死；死亡时间早于近期围绕七号箱发生的某项签收/续费/转移记录。由此产生真正的制度矛盾：有人仍在使用死者身份，或旧授权仍在被调用。
+连续性：不要宣布鬼魂签字，也不要直接下结论是伪造；先把可验证事实摆在一起。
+米拉：埃文没有立刻找她，兑现“如果再看见SV-7别来找我”的警告压力；但他开始确认她隐瞒的不是一个简单旧组织。
+结尾：一条近期记录把“维尔”与旧盐场重新连起来，且时间落在克莱死亡前后。
+
+## 第九节　旧盐场交易
+开场：埃文不是去重复“十三号仓取东西”，而是去完成/观察一笔已经被现实记录触发的交易或交接。
+交易对象：可由红发女人或她安排的中间人出现；交易围绕七号箱的“保管权/位置/钥匙条件/一份旧文件”展开，不直接给箱子。
+冲突：红发女人与埃文目标不一致。她要阻止某个人先拿到箱子，埃文要搞清费恩为什么死、自己的账目为什么被卷入。
+米拉：在交易前后被迫重新介入。她必须交出一项有限、可验证的信息，并为之前隐瞒付出关系代价；她仍不解释完整SV-7机制。
+行动危险：来自现实人物、跟踪、抢夺、封锁或交易破裂，不用怀表突然救场。
+结尾：七号箱的位置第一次被确认，或者其当前持有人被确认；同时暴露“第二笔”即将被触发。
+
+## 第十节　第二笔
+阶段高潮：埃文到达七号箱所在处，现实人物多方目的发生碰撞。箱子的开启必须依赖此前已存在的钥匙/授权/保管条件，而不是新法术。
+回收：红发女人为何九天前取钥匙得到一个阶段性答案，但身份和最终动机仍保留更深一层。
+第二笔：箱内内容或随箱文书让“第二笔”成为现实可指向的债/归还对象；怀表可以在此极少量回应，但不能替代发现过程。
+状态变化：至少改变两项——七号箱由未知位置变成已打开/被转移；埃文与米拉关系发生实质变化；汤普森对埃文从单纯怀疑转为承认其卷入更深事件；红发女人从试探转为公开行动。
+结尾：用现实行动后果收束，例如有人带走关键物、警方封锁现场、埃文失去事务所资格或不得不做下一步选择。不要只靠一行新字结束。"""
+
+FAST_WRITER_RULES = """【NarrativeOS Writer Skill v18 快速执行摘要】
+- 正文以完整段落和自然长短句为主，短句只用于确有需要的冲击；禁止电报体、台词墙。
+- 先让人物在现场做事、遇到阻力、承担后果，再解释必要信息；程序和账目必须服务冲突，不写成报告。
+- 对白必须带试探、躲避、攻击、求证、拖延等人物意图，不做问答式资料传输。
+- 重要物件维护状态账：地点、持有人、转柜/核验/领取/返还不可混写，同一物件不得无解释“离开两次”。
+- 超自然原因可以未知，但已出现的可观测事实必须兼容；怀表不得成为万能导航器。
+- 现实制度不会因超自然目标消失：遗产、警方权限、所有权、职业后果都要连续。
+- 克制模型腔、作者总结、过度工整金句和高频“不是A，是B”。
+- 现场每场抓2—3个值钱细节即可，优先人物动作、身体感受、视线和空间关系。
+"""
+
+
 
 def _section5(text: str) -> str:
     match = re.search(r"^# 第五节[　 ]+.+?$", text, re.MULTILINE)
@@ -149,55 +197,50 @@ async def _write_one_section(
     *,
     task_id: int,
     number: int,
-    outline: str,
+    section5_tail: str,
     brief: str,
-    context: str,
 ) -> str:
     cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
-    section_outline = _extract_outline_section(outline, number)
+    section_outline = _extract_outline_section(FAST_OUTLINE, number)
+    compact_brief = brief[-4200:]
     result = await _run_step(
         task_id=task_id,
-        role="writer",
+        role="writer-fast",
         stage=f"gray-fast-draft-{number}",
         mode="continue",
         content=section_outline,
         instruction=(
-            f"只写《灰街》第{cn}节完整正文。不要写其他节。\n\n"
-            + context[-10000:]
-            + "\n\n【本节大纲】\n"
+            FAST_WRITER_RULES
+            + "\n\n【第5节交接尾部】\n"
+            + section5_tail[-2600:]
+            + "\n\n【本节冻结大纲】\n"
             + section_outline
-            + "\n\n【全局续写约束】\n"
-            + brief[-8000:]
+            + "\n\n【项目续写约束摘录】\n"
+            + compact_brief
             + f"""
-\n硬要求：
-- 正文目标 2500—3800 中文字符；少于2200字符视为未完成，不允许写成梗概；
-- 必须有完整场景弧：开场现实任务 → 阻碍升级 → 人物选择/关系或证据变化 → 章末状态变化；
-- 埃文始终是主要视角；
-- 汤普森始终是警官，不是事务所职员或埃文上级；
-- 红发女人是前文已出现的人，不是新角色空降；
-- 怀表不能当万能导航器；警方信息必须有合法来源；
-- 完整段落、自然长短句，不要大量一行一句和台词墙；
-- 只输出标题与正文，标题格式：# 第{cn}节　<标题>。
-"""
+\n只写《灰街》第{cn}节完整正文，不写其他节。
+目标 2600—3600 中文字符；至少2300字符。不要为了凑字数重复解释。
+形成完整场景弧：现实任务 → 阻碍升级 → 人物主动选择 → 状态变化。
+埃文始终是主要视角；汤普森始终是警官；红发女人是前文已出现角色。
+不得新增超自然规则、新关键人物或巧合送线索。
+标题格式：# 第{cn}节　<标题>。只输出标题与正文。"""
         ),
     )
     text = result.content.strip()
-    if _section_body_length(text) >= 2200:
+    if _section_body_length(text) >= 2300:
         return text
 
-    # One targeted expansion retry for under-length prose. This keeps the
-    # five-section benchmark honest without rerunning the entire pipeline.
     expanded = await _run_step(
         task_id=task_id,
-        role="writer",
+        role="writer-fast",
         stage=f"gray-fast-expand-{number}",
         mode="expand",
         content=text,
         instruction=(
-            f"当前第{cn}节只有约{_section_body_length(text)}字符，属于未完成短章。"
-            "在不改变事件顺序、Canon、线索来源和章末状态的前提下扩成完整小说正文，"
-            "补足现场、动作、人物犹豫、潜台词与必要过渡，不加新人物/新规则/新巧合。"
-            "目标2500—3800中文字符，至少2200字符。保持完整段落。只输出本节完整正文。"
+            FAST_WRITER_RULES
+            + f"\n当前第{cn}节约{_section_body_length(text)}字符，仍是短章。"
+            + "不改变事实、事件顺序、线索来源和章末状态，只补现场动作、空间移动、人物犹豫、潜台词和必要过渡。"
+            + "扩到2600—3600中文字符，至少2300字符。只输出本节完整正文。"
         ),
     )
     return expanded.content.strip()
@@ -236,28 +279,16 @@ async def main() -> int:
     )
     context = _task_context(task_id, project_id)
 
-    outline = await _run_step(
-        task_id=task_id,
-        role="plot-planner",
-        stage="gray-fast-outline",
-        mode="continue",
-        content=_section5(source_text),
-        instruction=(
-            context
-            + "\n\n【硬约束】\n"
-            + brief
-            + "\n\n只输出第6-10节执行大纲。每节给：标题、现实目标、阻碍、场景、线索来源、人物选择、章末状态变化。"
-        ),
-    )
+    outline_text = FAST_OUTLINE
+    (OUTPUT_DIR / "outline.md").write_text(outline_text + "\n", encoding="utf-8")
 
     section_drafts = await asyncio.gather(
         *[
             _write_one_section(
                 task_id=task_id,
                 number=number,
-                outline=outline.content,
+                section5_tail=_section5(source_text),
                 brief=brief,
-                context=context,
             )
             for number in (6, 7, 8, 9, 10)
         ]
@@ -318,28 +349,47 @@ async def main() -> int:
         ),
     )
 
-    revision = await _run_step(
-        task_id=task_id,
-        role="revision-agent",
-        stage="gray-fast-revision-06-10",
-        mode="polish",
-        content=draft,
-        instruction=(
-            "【精简审核问题】\n"
-            + _compact_findings(list(reviews), draft)
-            + "\n\n【必须保留】\n"
-            + brief[-9000:]
-            + """
-\n一次性修订第6-10节。blocking必须修，普通偏好不要乱改Canon。
-不得新增角色、规则、物证或巧合；不得删掉现实账务后果、警方权限边界、红发女人既有伏笔。
-保持完整段落和自然语流。每节不得压缩成梗概，必须保留至少2200中文字符。只输出五节完整正文。"""
-        ),
+    compact_reviews = _compact_findings(list(reviews), draft, limit=10000)
+
+    async def revise_one(section_text: str, number: int) -> str:
+        cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
+        result = await _run_step(
+            task_id=task_id,
+            role="revision-fast",
+            stage=f"gray-fast-revision-{number}",
+            mode="polish",
+            content=section_text,
+            instruction=(
+                FAST_WRITER_RULES
+                + "\n\n【本轮多Reader精简问题】\n"
+                + compact_reviews[:7000]
+                + "\n\n【本节冻结大纲】\n"
+                + _extract_outline_section(FAST_OUTLINE, number)
+                + f"""
+\n只修第{cn}节。只处理与本节有关的真实问题；普通偏好不得改Canon。
+不得压缩成梗概，不得删现实后果、权限边界、线索来源或章末状态变化。
+修订后至少2200中文字符。只输出本节完整正文。"""
+            ),
+        )
+        return result.content.strip()
+
+    draft_parts: dict[int, str] = {}
+    pattern = re.compile(r"(?m)^# 第([六七八九十])节[^\n]*$")
+    cn_to_num = {"六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+    matches = list(pattern.finditer(draft))
+    for idx, match in enumerate(matches):
+        number = cn_to_num[match.group(1)]
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(draft)
+        draft_parts[number] = draft[match.start():end].strip()
+
+    revised_parts = await asyncio.gather(
+        *[revise_one(draft_parts[number], number) for number in (6, 7, 8, 9, 10)]
     )
-    revised = revision.content.strip()
+    revised = "\n\n".join(revised_parts).strip()
     revised_lengths = _validate_five_sections(revised)
     if set(revised_lengths) != {6, 7, 8, 9, 10}:
         raise RuntimeError(f"revision lost one or more sections: {revised_lengths}")
-    if any(length < 2000 for length in revised_lengths.values()):
+    if any(length < 2200 for length in revised_lengths.values()):
         raise RuntimeError(f"revision over-compressed one or more sections: {revised_lengths}")
 
     final_reviews = await asyncio.gather(
@@ -374,7 +424,7 @@ async def main() -> int:
                 blocking = True
 
     (OUTPUT_DIR / "sections-06-10-fast.md").write_text(revised + "\n", encoding="utf-8")
-    (OUTPUT_DIR / "outline.md").write_text(outline.content + "\n", encoding="utf-8")
+    (OUTPUT_DIR / "outline.md").write_text(outline_text + "\n", encoding="utf-8")
     (OUTPUT_DIR / "reviews.json").write_text(
         json.dumps(
             {"initial": list(reviews), "final": list(final_reviews)},
