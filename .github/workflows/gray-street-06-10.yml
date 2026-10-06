@@ -1,0 +1,101 @@
+name: Gray Street 06-10 NarrativeOS Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-06-10.request"
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    env:
+      NOVEL_DB_PATH: /tmp/gray-street-06-10.db
+      NOVEL_SEED_DEMO: "0"
+
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
+
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
+
+      NARRATIVE_WRITER_PROFILE: AGNES
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA
+      NARRATIVE_NATURAL_READER_PROFILE: AGNES
+      NARRATIVE_NATURAL_READER_FALLBACK_PROFILES: DOTS3,SENSENOVA68,ATRIA
+      NARRATIVE_REASONING_READER_PROFILE: MODELSCOPE
+      NARRATIVE_REASONING_READER_FALLBACK_PROFILES: GLM52,DOTS3,AGNES
+      NARRATIVE_FINAL_REVIEW_PROFILE: SENSENOVA68
+      NARRATIVE_FINAL_REVIEW_FALLBACK_PROFILES: DOTS3,ATRIA,AGNES
+
+      NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: GLM53FLASH
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: AGNES
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_WRITER_RETRY_PROFILE: DOTS3
+      NARRATIVE_ROLE_SCENE_ENRICHER_PROFILE: SENSENOVA68
+      NARRATIVE_ROLE_PROSE_EDITOR_PROFILE: SENSENOVA68
+      NARRATIVE_ROLE_REVISION_AGENT_PROFILE: DOTS3
+
+      NARRATIVE_PROVIDER_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_PROTOCOL: openai-compatible
+      NARRATIVE_PROVIDER_MODEL: deepseek-v4-flash
+      NARRATIVE_PROVIDER_BASE_URL: https://token.sensenova.cn/v1
+      NARRATIVE_PROVIDER_SECRET_NAME: SENSENOVA
+      NARRATIVE_PROVIDER_API_KEY: ${{ secrets.SENSENOVA }}
+
+      NOVEL_AI_REASONING_EFFORT: high
+      NOVEL_AI_MAX_TOKENS: "6500"
+      NOVEL_AI_TIMEOUT_SECONDS: "120"
+      NOVEL_AI_HTTP_RETRIES: "1"
+      NOVEL_AI_RETRY_BASE_SECONDS: "3"
+      NARRATIVE_OUTPUT_DIR: artifacts/gray-street-06-10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements.txt
+
+      - name: Validate production profiles
+        shell: bash
+        run: |
+          test -n "$NARRATIVE_PROFILE_AGNES" || { echo "AGNES profile missing"; exit 1; }
+          test -n "$NARRATIVE_PROFILE_SECRET_AGNES" || { echo "AGNES secret missing"; exit 1; }
+          test -n "$NARRATIVE_PROFILE_MODELSCOPE" || { echo "MODELSCOPE profile missing"; exit 1; }
+          test -n "$NARRATIVE_PROFILE_SECRET_MODELSCOPE" || { echo "MODELSCOPE secret missing"; exit 1; }
+          test -n "$NARRATIVE_PROFILE_SENSENOVA68" || { echo "SENSENOVA68 profile missing"; exit 1; }
+          test -n "$NARRATIVE_PROFILE_SECRET_SENSENOVA68" || { echo "SENSENOVA68 secret missing"; exit 1; }
+          test -n "$NARRATIVE_PROVIDER_API_KEY" || { echo "SENSENOVA default provider secret missing"; exit 1; }
+
+      - name: Run formal Gray Street continuation pipeline
+        run: PYTHONPATH=. python scripts/run_gray_street_06_10.py
+
+      - name: Upload Gray Street artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-06-10-platform
+          path: artifacts/gray-street-06-10
+          if-no-files-found: error
+          retention-days: 14
