@@ -188,6 +188,29 @@ def _extract_outline_section(outline: str, number: int) -> str:
     return outline[start:end].strip()
 
 
+CANONICAL_SECTION_TITLES = {
+    6: "七号箱",
+    7: "第七码头资产处",
+    8: "已死的维尔",
+    9: "旧盐场交易",
+    10: "第二笔",
+}
+
+
+def _normalize_section_heading(number: int, text: str) -> str:
+    cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
+    cleaned = text.strip()
+    # Models may return '# 第十节', '## 第十节', or just '第十节'.
+    # Strip only the first heading-like line; preserve the prose body verbatim.
+    cleaned = re.sub(
+        r"(?s)^\s*#{0,3}\s*第[六七八九十]节[^\n]*\n+",
+        "",
+        cleaned,
+        count=1,
+    ).strip()
+    return f"# 第{cn}节　{CANONICAL_SECTION_TITLES[number]}\n\n{cleaned}".strip()
+
+
 def _section_body_length(text: str) -> int:
     body = re.sub(r"(?m)^#\s*第[六七八九十]节[^\n]*\n?", "", text, count=1)
     return len(body.strip())
@@ -226,7 +249,7 @@ async def _write_one_section(
 标题格式：# 第{cn}节　<标题>。只输出标题与正文。"""
         ),
     )
-    text = result.content.strip()
+    text = _normalize_section_heading(number, result.content)
     if _section_body_length(text) >= 2300:
         return text
 
@@ -243,7 +266,7 @@ async def _write_one_section(
             + "扩到2600—3600中文字符，至少2300字符。只输出本节完整正文。"
         ),
     )
-    return expanded.content.strip()
+    return _normalize_section_heading(number, expanded.content)
 
 
 def _validate_five_sections(text: str) -> dict[int, int]:
@@ -371,7 +394,7 @@ async def main() -> int:
 修订后至少2200中文字符。只输出本节完整正文。"""
             ),
         )
-        return result.content.strip()
+        return _normalize_section_heading(number, result.content)
 
     draft_parts: dict[int, str] = {}
     pattern = re.compile(r"(?m)^# 第([六七八九十])节[^\n]*$")
