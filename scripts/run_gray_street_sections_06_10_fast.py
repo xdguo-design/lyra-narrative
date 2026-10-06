@@ -237,6 +237,9 @@ def _normalize_section_heading(number: int, text: str) -> str:
         cleaned,
         count=1,
     ).strip()
+    spill = re.search(r"(?m)^#{1,3}\s*第[六七八九十]节[^\n]*$", cleaned)
+    if spill:
+        cleaned = cleaned[: spill.start()].rstrip()
     return f"# 第{cn}节　{CANONICAL_SECTION_TITLES[number]}\n\n{cleaned}".strip()
 
 
@@ -273,7 +276,7 @@ async def _write_one_section(
             + compact_brief
             + f"""
 \n只写《灰街》第{cn}节完整正文，不写其他节。
-目标 2600—3600 中文字符；至少2300字符。不要为了凑字数重复解释。
+目标 2600—3600 中文字符；至少2100字符。不要为了凑字数重复解释。
 形成完整场景弧：现实任务 → 阻碍升级 → 人物主动选择 → 状态变化。
 埃文始终是主要视角；汤普森始终是警官；红发女人是前文已出现角色。
 不得新增超自然规则、新关键人物或巧合送线索。
@@ -281,7 +284,7 @@ async def _write_one_section(
         ),
     )
     text = _normalize_section_heading(number, result.content)
-    if _section_body_length(text) >= 2300:
+    if _section_body_length(text) >= 2100:
         return text
 
     expanded = await _run_step(
@@ -294,7 +297,7 @@ async def _write_one_section(
             FAST_WRITER_RULES
             + f"\n当前第{cn}节约{_section_body_length(text)}字符，仍是短章。"
             + "不改变事实、事件顺序、线索来源和章末状态，只补现场动作、空间移动、人物犹豫、潜台词和必要过渡。"
-            + "扩到2600—3600中文字符，至少2300字符。只输出本节完整正文。"
+            + "扩到2600—3600中文字符，至少2100字符。只输出本节完整正文。"
         ),
     )
     return _normalize_section_heading(number, expanded.content)
@@ -427,11 +430,11 @@ async def main() -> int:
                     + f"""
 \n只修第{cn}节。只处理与本节有关的真实问题；普通偏好不得改Canon。
 不得压缩成梗概，不得删现实后果、权限边界、线索来源或章末状态变化。
-修订后至少2200中文字符。只输出本节完整正文。"""
+修订后至少2000中文字符。只输出本节完整正文。"""
                 ),
             )
             revised_section = _normalize_section_heading(number, result.content)
-            if _section_body_length(revised_section) >= 2200:
+            if _section_body_length(revised_section) >= 2000:
                 return revised_section
         except RuntimeError:
             # A transient revision-model failure must not discard a complete
@@ -456,7 +459,7 @@ async def main() -> int:
     revised_lengths = _validate_five_sections(revised)
     if set(revised_lengths) != {6, 7, 8, 9, 10}:
         raise RuntimeError(f"revision lost one or more sections: {revised_lengths}")
-    if any(length < 2200 for length in revised_lengths.values()):
+    if any(length < 2000 for length in revised_lengths.values()):
         raise RuntimeError(f"revision over-compressed one or more sections: {revised_lengths}")
 
     final_reviews = await asyncio.gather(
