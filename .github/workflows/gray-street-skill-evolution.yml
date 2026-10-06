@@ -1,0 +1,94 @@
+name: Gray Street Skill Evolution
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-skill-evolution.request"
+
+permissions:
+  contents: read
+
+jobs:
+  evolve-and-revise:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      NOVEL_DB_PATH: /tmp/gray-street-skill-evolution.db
+      NOVEL_SEED_DEMO: "0"
+      GRAY_STREET_CONTENT_ROOT: content-repo
+
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_GLM52: ${{ vars.GLM52 }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_SENSENOVA: ${{ vars.SENSENOVA }}
+      NARRATIVE_PROFILE_SENSENOVA68: ${{ vars.SENSENOVA68 }}
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_ATRIA: ${{ vars.ATRIA }}
+      NARRATIVE_PROFILE_KIMIK3: ${{ vars.KIMIK3 }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+
+      NARRATIVE_PROFILE_SECRET_GLM53FLASH: ${{ secrets.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_GLM52: ${{ secrets.GLM52 }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA: ${{ secrets.SENSENOVA }}
+      NARRATIVE_PROFILE_SECRET_SENSENOVA68: ${{ secrets.SENSENOVA68 }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_SILICONFLOW: ${{ secrets.SILICONFLOW }}
+      NARRATIVE_PROFILE_SECRET_ATRIA: ${{ secrets.ATRIA }}
+      NARRATIVE_PROFILE_SECRET_KIMIK3: ${{ secrets.KIMIK3 }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+
+      NARRATIVE_WRITER_PROFILE: DOTS3
+      NARRATIVE_WRITER_FALLBACK_PROFILES: ATRIA,MODELSCOPE
+      NARRATIVE_NATURAL_READER_PROFILE: DOTS3
+      NARRATIVE_NATURAL_READER_FALLBACK_PROFILES: ATRIA,MODELSCOPE
+      NARRATIVE_REASONING_READER_PROFILE: DOTS3
+      NARRATIVE_REASONING_READER_FALLBACK_PROFILES: ATRIA,MODELSCOPE
+      NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: ATRIA
+      NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS: "3"
+      NARRATIVE_WRITER_MAX_ROUTE_ATTEMPTS: "3"
+      NOVEL_AI_MAX_TOKENS: "7000"
+      NOVEL_AI_TEMPERATURE: "0.30"
+      NOVEL_AI_TIMEOUT_SECONDS: "240"
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - name: Checkout NarrativeOS
+        uses: actions/checkout@v4
+
+      - name: Checkout Gray Street content
+        uses: actions/checkout@v4
+        with:
+          repository: xdguo-design/slow-world-novel
+          ref: feature/gray-street-platform-revision-20261006
+          path: content-repo
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements-dev.txt
+
+      - name: Skill evolution regression
+        run: |
+          python -m compileall -q app tests scripts/run_gray_street_skill_evolution.py
+          ruff check app tests scripts/run_gray_street_skill_evolution.py
+          pytest -q tests/test_refinement_skill.py
+
+      - name: Run NarrativeOS Gray Street revision
+        run: PYTHONPATH=. python scripts/run_gray_street_skill_evolution.py
+
+      - name: Upload platform artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-skill-evolution
+          path: artifacts/gray-street-skill-evolution
+          if-no-files-found: warn
+          retention-days: 14

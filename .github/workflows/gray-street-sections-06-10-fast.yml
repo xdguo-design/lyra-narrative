@@ -1,0 +1,89 @@
+name: Gray Street Sections 06-10 Fast
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/requests/gray-street-sections-06-10-fast.request"
+
+permissions:
+  contents: read
+
+jobs:
+  fast-batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NOVEL_DB_PATH: /tmp/gray-street-06-10-fast.db
+      NOVEL_SEED_DEMO: "0"
+      GRAY_STREET_CONTENT_ROOT: content-repo
+
+      NARRATIVE_PROFILE_GLM53FLASH: ${{ vars.GLM53FLASH }}
+      NARRATIVE_PROFILE_DOTS3: ${{ vars.DOTS3 }}
+      NARRATIVE_PROFILE_AGNES: ${{ vars.AGNES }}
+      NARRATIVE_PROFILE_MODELSCOPE: ${{ vars.MODELSCOPE }}
+
+      NARRATIVE_PROFILE_SECRET_GLM53FLASH: ${{ secrets.GLM53FLASH }}
+      NARRATIVE_PROFILE_SECRET_GLM: ${{ secrets.GLM }}
+      NARRATIVE_PROFILE_SECRET_DOTS3: ${{ secrets.DOTS3 }}
+      NARRATIVE_PROFILE_SECRET_AGNES: ${{ secrets.AGNES }}
+      NARRATIVE_PROFILE_SECRET_MODELSCOPE: ${{ secrets.MODELSCOPE }}
+
+      NARRATIVE_WRITER_PROFILE: DOTS3
+      NARRATIVE_WRITER_FALLBACK_PROFILES: DOTS3,MODELSCOPE
+      NARRATIVE_NATURAL_READER_PROFILE: DOTS3
+      NARRATIVE_NATURAL_READER_FALLBACK_PROFILES: GLM53FLASH,MODELSCOPE
+      NARRATIVE_REASONING_READER_PROFILE: DOTS3
+      NARRATIVE_REASONING_READER_FALLBACK_PROFILES: GLM53FLASH,MODELSCOPE
+      NARRATIVE_ROLE_CONTINUITY_PLOT_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_CHARACTER_DIALOGUE_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_LANGUAGE_RHYTHM_REVIEWER_PROFILE: DOTS3
+      NARRATIVE_ROLE_BLIND_READER_PROFILE: DOTS3
+      NARRATIVE_ROLE_MASTER_READER_PROFILE: AGNES
+      NARRATIVE_ROLE_COMMERCIAL_READER_FAST_PROFILE: AGNES
+      NARRATIVE_ROLE_BLIND_NATURAL_READER_PROFILE: DOTS3
+      NARRATIVE_ROLE_WRITER_FAST_PROFILE: AGNES
+      NARRATIVE_ROLE_REVISION_FAST_PROFILE: AGNES
+
+      NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS: "2"
+      NARRATIVE_WRITER_MAX_ROUTE_ATTEMPTS: "2"
+      NOVEL_AI_MAX_TOKENS: "6500"
+      NOVEL_AI_TEMPERATURE: "0.34"
+      NOVEL_AI_TIMEOUT_SECONDS: "120"
+      NOVEL_AI_HTTP_RETRIES: "0"
+
+    steps:
+      - name: Checkout NarrativeOS
+        uses: actions/checkout@v4
+
+      - name: Checkout Gray Street content
+        uses: actions/checkout@v4
+        with:
+          repository: xdguo-design/slow-world-novel
+          ref: feature/gray-street-platform-revision-20261006
+          path: content-repo
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install NarrativeOS
+        run: pip install -r requirements-dev.txt
+
+      - name: Static checks
+        run: |
+          python -m compileall -q scripts/run_gray_street_sections_06_10_fast.py
+          ruff check scripts/run_gray_street_sections_06_10_fast.py
+
+      - name: Run fast five-section batch
+        run: PYTHONPATH=. python scripts/run_gray_street_sections_06_10_fast.py
+
+      - name: Upload fast artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gray-street-sections-06-10-fast
+          path: artifacts/gray-street-sections-06-10-fast
+          if-no-files-found: warn
+          retention-days: 14

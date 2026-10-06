@@ -1,0 +1,13 @@
+attempt: 15
+project: gray-street
+sections: 6-10
+mode: sequential-fast-core-gates
+writer_profile: AGNES
+revision_profile: AGNES
+writer_fallback: DOTS3,MODELSCOPE
+reader_roles: continuity,ordinary,commercial-fast,naturalness
+commercial_reader_profile: AGNES
+draft_floor: 1900 chars; target 2600-3600
+revision_floor: 2000 chars
+continuity_gate: strict-with-prior-canon
+notes: borderline complete drafts proceed to Reader+Revision instead of failing pre-review

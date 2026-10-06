@@ -200,15 +200,27 @@ def test_writer_skill_summarizes_all_rejection_causes_without_losing_evidence(
             "SELECT content FROM skills WHERE project_id IS NULL AND name=?",
             (BUILTIN_WRITING_SKILL_NAME,),
         ).fetchone()["content"]
+        durable_reasons = [
+            row["reason"]
+            for row in conn.execute(
+                "SELECT reason FROM builtin_skill_learning_events ORDER BY id"
+            ).fetchall()
+        ]
 
-    assert "【作者 Skill：正式打回经验总结】" in writer
+    assert "【作者 Skill：正式打回经验的全局泛化摘要】" in writer
     assert "人物与对白" in writer
     assert "连续性与事实" in writer
-    assert "刘旺回答过于工整" in writer
-    assert "问卷式盘问" in writer
-    assert "计量算术不成立" in writer
     assert "累计打回 2 次" in writer
-    assert "原始原因与原文样本仍完整保存在" in writer
+    assert "原始打回证据仅保存在" in writer
+
+    # Raw project-specific evidence is durable, but must not leak into the
+    # global Skill consumed by unrelated novels.
+    assert any("刘旺回答过于工整" in reason for reason in durable_reasons)
+    assert any("问卷式盘问" in reason for reason in durable_reasons)
+    assert any("计量算术不成立" in reason for reason in durable_reasons)
+    assert "刘旺" not in writer
+    assert "孙成" not in writer
+    assert "短三斗一升" not in writer
 
 
 

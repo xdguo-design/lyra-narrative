@@ -209,7 +209,7 @@ def test_character_dialogue_reviewer_binds_behavior_and_disclosure_thresholds():
         assert marker in review
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -336,7 +336,7 @@ def test_reader_skill_preserves_unknown_boundary_labels_after_merge():
         assert marker in content
 
 def test_reader_review_skill_v9_adds_narrative_texture_reader_contract():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 13
     content = BUILTIN_READER_REVIEW_SKILL_CONTENT
     required = [
         "Reader D 固定检查维度",
@@ -504,9 +504,9 @@ def test_merged_reviewers_preserve_texture_and_longitudinal_cadence_checks():
 
 
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeline():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 13
 
     combined = (
         f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
@@ -523,9 +523,9 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeli
 
 
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
     assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 13
 
     combined = (
         f"{BUILTIN_WRITING_SKILL_CONTENT}\n"
@@ -546,7 +546,7 @@ def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
 
 
 def test_reader_v11_enforces_spoken_dialogue_mouth_test_in_merged_character_reader():
-    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 13
     combined = (
         BUILTIN_READER_REVIEW_SKILL_CONTENT
         + "\n"
@@ -562,3 +562,33 @@ def test_reader_v11_enforces_spoken_dialogue_mouth_test_in_merged_character_read
     ]:
         assert marker in combined
 
+
+
+def test_gray_street_external_reader_evolution_catches_state_custody_and_rule_samples():
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
+    assert BUILTIN_READER_REVIEW_SKILL_VERSION == 13
+    combined = (
+        BUILTIN_WRITING_SKILL_CONTENT
+        + "\n"
+        + BUILTIN_READER_REVIEW_SKILL_CONTENT
+        + "\n"
+        + Path("app/services/full_novel_pipeline.py").read_text(encoding="utf-8")
+    )
+    for marker in [
+        "状态转移、保管链与可观测规则",
+        "STATE_TRANSITION_LEDGER_GAP",
+        "CUSTODY_CHAIN_GAP",
+        "DOCUMENT_SCOPE_GAP",
+        "OBSERVABLE_RULE_CONSISTENCY_GAP",
+        "REALITY_CONSEQUENCE_GAP",
+        "同一物件不得无解释“离开两次”",
+        "不同文书的记录范围",
+        "可观测样本必须兼容",
+        "挂链断裂本身不影响机芯走时",
+    ]:
+        assert marker in combined
+
+    # False-positive boundary: a document-scope difference is not automatically
+    # a contradiction, and a broken watch chain is not a movement failure.
+    assert "收费收据、内部转移单、授权书、清单字段不同可以成立" in combined
+    assert "不得把表面相关当成硬冲突" in combined
