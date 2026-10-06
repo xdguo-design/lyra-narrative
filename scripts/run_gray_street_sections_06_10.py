@@ -22,6 +22,7 @@ from app.services.workflow_service import (
 OUTPUT_DIR = Path("artifacts/gray-street-sections-06-10")
 CONTENT_ROOT = Path(os.getenv("GRAY_STREET_CONTENT_ROOT", "content-repo"))
 LOCKED_SOURCE = CONTENT_ROOT / "novels/gray-street/versions/sections-01-05-platform-locked.md"
+FALLBACK_SOURCE = CONTENT_ROOT / "novels/gray-street/versions/sections-01-05-reader-input-v1.md"
 BRIEF_PATH = CONTENT_ROOT / "novels/gray-street/plans/sections-06-10-brief.md"
 CANON_PATH = CONTENT_ROOT / "novels/gray-street/bible/project-canon.md"
 
@@ -696,19 +697,59 @@ async def main() -> int:
     init_db()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    if not LOCKED_SOURCE.exists():
-        raise RuntimeError(f"locked sections 1-5 not found: {LOCKED_SOURCE}")
+    source_path = LOCKED_SOURCE if LOCKED_SOURCE.exists() else FALLBACK_SOURCE
+    if not source_path.exists():
+        raise RuntimeError(
+            "sections 1-5 source not found; expected locked or reader-input source"
+        )
     if not BRIEF_PATH.exists():
         raise RuntimeError(f"continuation brief not found: {BRIEF_PATH}")
     if not CANON_PATH.exists():
         raise RuntimeError(f"project canon not found: {CANON_PATH}")
 
-    locked_text = LOCKED_SOURCE.read_text(encoding="utf-8")
+    locked_text = source_path.read_text(encoding="utf-8")
     brief = BRIEF_PATH.read_text(encoding="utf-8")
     canon = CANON_PATH.read_text(encoding="utf-8")
     prior_sections = _split_locked_sections(locked_text)
 
     project_id, new_chapter_ids = _create_project(prior_sections, canon, brief)
+
+    # When the 1-5 platform-lock job is still running, the continuation may
+    # start from the preserved Reader input for prose continuity only. Canon
+    # and the continuation brief override any known stale factual wording.
+    # A later final continuity pass must be rerun against the locked 1-5 file.
+    if source_path != LOCKED_SOURCE:
+        with connect() as conn:
+            m = conn.execute(
+                "INSERT INTO memories(project_id,kind,title,content,source_type,source_ref,confirmed) VALUES(?,?,?,?,?,?,1)",
+                (
+                    project_id,
+                    "continuity",
+                    "1-5来源状态",
+                    (
+                        "当前续写运行使用外部Reader输入版仅作为文风与第5节场景承接。"
+                        "已确认的修订事实以项目Canon和第6-10节约束为最高优先级："
+                        "六年前钥匙仅仓内转柜；九天前才离库；银牌核验/所有权和事务所账目后果继续存在。"
+                    ),
+                    "manual",
+                    "gray-street:source-fallback",
+                ),
+            )
+            conn.execute(
+                "INSERT INTO memory_versions(memory_id,version,kind,title,content,confirmed,note) VALUES(?,?,?,?,?,?,?)",
+                (
+                    m.lastrowid,
+                    1,
+                    "continuity",
+                    "1-5来源状态",
+                    (
+                        "Reader输入版只用于承接；Canon覆盖已知旧稿硬伤。"
+                    ),
+                    1,
+                    "Temporary continuation source guard",
+                ),
+            )
+
     outline_info = await _make_outline(
         project_id,
         prior_sections[-1][2],
@@ -764,7 +805,8 @@ async def main() -> int:
     all_pass = len(results) == 5 and all(not item["final_blocking"] for item in results)
     manifest = {
         "project": "灰街",
-        "source": str(LOCKED_SOURCE),
+        "source": str(source_path),
+        "source_is_platform_locked": source_path == LOCKED_SOURCE,
         "outline_task_id": outline_info["task_id"],
         "outline_provider": outline_info["provider"],
         "outline_model": outline_info["model"],
