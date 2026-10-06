@@ -376,25 +376,34 @@ async def main() -> int:
 
     async def revise_one(section_text: str, number: int) -> str:
         cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
-        result = await _run_step(
-            task_id=task_id,
-            role="revision-fast",
-            stage=f"gray-fast-revision-{number}",
-            mode="polish",
-            content=section_text,
-            instruction=(
-                FAST_WRITER_RULES
-                + "\n\n【本轮多Reader精简问题】\n"
-                + compact_reviews[:7000]
-                + "\n\n【本节冻结大纲】\n"
-                + _extract_outline_section(FAST_OUTLINE, number)
-                + f"""
+        try:
+            result = await _run_step(
+                task_id=task_id,
+                role="revision-fast",
+                stage=f"gray-fast-revision-{number}",
+                mode="polish",
+                content=section_text,
+                instruction=(
+                    FAST_WRITER_RULES
+                    + "\n\n【本轮多Reader精简问题】\n"
+                    + compact_reviews[:7000]
+                    + "\n\n【本节冻结大纲】\n"
+                    + _extract_outline_section(FAST_OUTLINE, number)
+                    + f"""
 \n只修第{cn}节。只处理与本节有关的真实问题；普通偏好不得改Canon。
 不得压缩成梗概，不得删现实后果、权限边界、线索来源或章末状态变化。
 修订后至少2200中文字符。只输出本节完整正文。"""
-            ),
-        )
-        return _normalize_section_heading(number, result.content)
+                ),
+            )
+            revised_section = _normalize_section_heading(number, result.content)
+            if _section_body_length(revised_section) >= 2200:
+                return revised_section
+        except RuntimeError:
+            # A transient revision-model failure must not discard a complete
+            # draft that already passed the length gate. Final readers still
+            # review the preserved draft and can block delivery.
+            pass
+        return section_text
 
     draft_parts: dict[int, str] = {}
     pattern = re.compile(r"(?m)^# 第([六七八九十])节[^\n]*$")
