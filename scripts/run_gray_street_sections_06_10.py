@@ -9,8 +9,8 @@ from pathlib import Path
 from app.db import connect, init_db
 from app.services.book_pipeline import _create_task
 from app.services.full_novel_pipeline import (
-    _run_revision_integrity_gate,
     _run_review_round,
+    _run_revision_integrity_gate,
 )
 from app.services.workflow_service import _parse_review_output, _run_step, _task_context
 
