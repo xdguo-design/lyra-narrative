@@ -1149,3 +1149,70 @@ OBSERVABLE_RULE_CONSISTENCY_GAP
 
 ### 误报边界
 不要为了消除未知而让人物总结完整规则。最小修复是统一已出现的观察结果；机制解释仍可后置，悬疑保留。
+
+
+---
+
+## F054｜原始打回证据被注入全局 Skill，污染另一部作品
+
+### 标签
+CROSS_PROJECT_SKILL_LEAKAGE
+
+### 真实失败
+《灰街》的平台复审上下文里出现了另一部作品的“陈安、赵六、周虎、孙成、县衙粮库”等专名和具体修复指令。原因不是《灰街》项目记忆，而是全局 rejection-learning overlay 把旧项目的原始 reason / suggestion / excerpt 直接拼进了内置 Writer / Reader Skill。
+
+### 为什么失败
+外部反馈应该被“泛化成能力”，而不是被“复制成另一部作品的上下文”。原始事故证据属于审计材料；如果专名、剧情事实、精确数量和定点修法进入全局 Skill，会造成：
+- 新作品 Reviewer 把旧人物当成当前人物；
+- Revision Agent 按旧项目事实误改当前小说；
+- Recheck 把不存在的旧问题当成必须复审的问题；
+- Skill 越学越像混合记忆，而不是可迁移规则。
+
+### 通用判定
+全局 Skill 自动学习层只能继承：
+1. 已归类的通用失败家族；
+2. 稳定标签；
+3. 已泛化的可执行指导。
+
+不得继承：
+- 人物名、地名、作品名；
+- 当前章节专属事实；
+- 原始逐字失败片段；
+- 一次性的定点修复指令；
+- 尚未完成泛化的 unknown/other 事件。
+
+### PASS 示例
+旧项目事件包含“赵六拿着库账造成 CUSTODY_CHAIN_GAP”，全局 Skill 只保留“重要物件的保管/授权状态必须连续”和稳定标签，不出现“赵六”“库账”“县衙”。
+
+### 误报边界
+项目级 Skill / 当前任务合同可以保留本项目专名，因为它本来就只服务当前作品。禁止的是“原始项目证据无隔离地进入全局 Skill”。
+
+---
+
+## F055｜Reviewer 明确 REWRITE_BLOCK，却被解析器降级成 suggestion
+
+### 标签
+REVIEW_GATE_SEVERITY_DOWNGRADE
+
+### 真实失败
+Reviewer 输出明确包含：
+- “严重性：High / 高”
+- “处置级别：REWRITE_BLOCK”
+
+但因为模型使用 Markdown 粗体字段（如 **严重性**：High）或非方括号格式，旧解析器没有正确识别字段，最终把整块问题写入数据库为 `severity=suggestion`。流水线因此把实际存在的 REWRITE_BLOCK 误判成“无 blocking”，产生假 PASS。
+
+### 为什么失败
+结构化 Reviewer 的格式可能有轻微漂移，但 Gate 不能因解析脆弱而“fail open”。尤其模型已经明确声明 REWRITE_BLOCK 时，解析器绝不能把它降级为 suggestion。
+
+### 通用判定
+1. Markdown 粗体字段与普通字段等价；
+2. `处置级别=REWRITE_BLOCK` 强制映射到 `severity=blocking`；
+3. `High/高/Critical` 不得默认降成 suggestion；
+4. 即使常规字段解析失败，只要块内明确含 `REWRITE_BLOCK` 或 `VERDICT: FAIL`，Gate 必须 fail closed；
+5. 解析器回归必须覆盖模型常见格式漂移。
+
+### PASS 示例
+`**处置级别**：REWRITE_BLOCK` → 数据库 finding 必须是 blocking。
+
+### 误报边界
+LOCAL_REWRITE / POLISH 不因关键词“问题”自动升级 blocking；fail closed 只用于明确的模型阻断声明或等价严重性。
