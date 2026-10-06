@@ -79,6 +79,35 @@ FAST_WRITER_RULES = """【NarrativeOS Writer Skill v18 快速执行摘要】
 - 现场每场抓2—3个值钱细节即可，优先人物动作、身体感受、视线和空间关系。
 """
 
+FAST_CONTINUITY_CONTRACT = """【《灰街》6—10节硬连续性合同】
+时间与保管链：
+- 克莱死亡约四天前；埃文是在克莱死后才接触怀表。
+- 第四节下午埃文亲眼见到鲍勃·费恩且与他交谈。因此费恩若在第六节死亡，只能死在埃文离开十三号仓之后，绝不能写“死亡时间在见面之前”。
+- 钥匙：七年前与银牌一起入仓；六年前仅仓内转柜/单独封存，没有离库；克莱死亡前九天，红发女人凭旧授权正式领取离库。
+- 银牌：第五节已由埃文亲手交给米拉，因此后续事务所只能追究“未完成核验/交接/所有权手续”，不能又写银牌仍由埃文持有或已在事务所保险柜。
+- 七号箱不是七码头第七扇铁门。它是资产处登记过的实体保管物。
+人物与机构：
+- 汤普森始终是警官，不是事务所职员、埃文上级、特别监管组代理人或私人打手。
+- 埃文是遗产清算员，不是克莱继承人；不得凭空出现“隐藏遗嘱让埃文继承”。
+- 露西/事务所人员只处理事务所账目和声誉，不掌握警方内部信息，不写成秘密组织成员。
+- 红发女人前文已出现：年轻、红发、戴手套；第四节结尾她在十三号仓二楼窗后出现。后文不得写成黑发。
+维尔线：
+- 第六节只出现“维尔”这个可追查名字，不擅自猜出多个互相冲突的全名。
+- 第七节通过合法旧港务人事/资产档案确认其全名为“艾玛·维尔”，女性，曾与第七码头资产处有关。
+- 第八节确认艾玛·维尔约三年前已经死亡；但克莱死亡前九天附近仍有一份与七号箱有关的记录调用了她留下的旧授权/签章样本。先判定“制度异常”，不直接宣布鬼魂或伪造者身份。
+时代与制度：
+- 世界已有煤气灯、有轨车、打字机、纸质档案、电话、少量汽车；禁止电子监控、加密权限库、数字系统、tactical support等现代词。
+- 埃文查档必须走自己的清算授权、公开档案、公证/港务窗口或证人路径；禁止伪造证件、替换照片、冒充警察、无理由潜入。
+- 警方信息只通过汤普森在权限范围内告知；汤普森不能把完整尸检和内部证据随便交给埃文。
+章节接口：
+- 第六节：现实账务后果 + 七号箱入口 + 费恩死亡（死在埃文离开后）+ 红发女人主动改变局势。
+- 第七节：已知费恩死亡，不要再把死讯当新反转；追七码头资产处，确认艾玛·维尔身份。
+- 第八节：确认维尔已死且近期仍有旧授权被调用；线索合法指向旧盐场。
+- 第九节：旧盐场交易/交接，不重复十三号仓取银牌；米拉有限介入并为隐瞒付代价；若第十节需要字条或钥匙，本节必须明确交接。
+- 第十节：七号箱位置/开启条件与第九节一致；不开“隐藏继承人”新设定；第二笔通过箱内实物/文件落地；汤普森依法行动；用现实后果收尾。
+"""
+
+
 
 
 def _section5(text: str) -> str:
@@ -220,7 +249,7 @@ async def _write_one_section(
     *,
     task_id: int,
     number: int,
-    section5_tail: str,
+    previous_tail: str,
     brief: str,
 ) -> str:
     cn = {6: "六", 7: "七", 8: "八", 9: "九", 10: "十"}[number]
@@ -234,8 +263,10 @@ async def _write_one_section(
         content=section_outline,
         instruction=(
             FAST_WRITER_RULES
-            + "\n\n【第5节交接尾部】\n"
-            + section5_tail[-2600:]
+            + "\n\n"
+            + FAST_CONTINUITY_CONTRACT
+            + "\n\n【上一节承接尾部】\n"
+            + previous_tail[-3600:]
             + "\n\n【本节冻结大纲】\n"
             + section_outline
             + "\n\n【项目续写约束摘录】\n"
@@ -305,17 +336,17 @@ async def main() -> int:
     outline_text = FAST_OUTLINE
     (OUTPUT_DIR / "outline.md").write_text(outline_text + "\n", encoding="utf-8")
 
-    section_drafts = await asyncio.gather(
-        *[
-            _write_one_section(
-                task_id=task_id,
-                number=number,
-                section5_tail=_section5(source_text),
-                brief=brief,
-            )
-            for number in (6, 7, 8, 9, 10)
-        ]
-    )
+    section_drafts: list[str] = []
+    previous_tail = _section5(source_text)
+    for number in (6, 7, 8, 9, 10):
+        section = await _write_one_section(
+            task_id=task_id,
+            number=number,
+            previous_tail=previous_tail,
+            brief=brief,
+        )
+        section_drafts.append(section)
+        previous_tail = section
     draft = "\n\n".join(section.strip() for section in section_drafts).strip()
     draft_lengths = _validate_five_sections(draft)
     if set(draft_lengths) != {6, 7, 8, 9, 10}:
@@ -330,8 +361,10 @@ async def main() -> int:
             "continuity",
             "continuity-plot-reviewer",
             """只审第6-10节的连续性、实体状态、权限、线索来源和前五节接缝。
-重点检查：汤普森机构身份、银牌现实后果、钥匙保管链、红发女人既有伏笔、费恩死亡信息权限、七号箱来源。
-未知超自然机制不是错误，已观测事实冲突才是错误。""",
+重点检查：汤普森机构身份、银牌现实后果、钥匙保管链、红发女人既有伏笔、费恩死亡时间必须晚于埃文见到费恩、
+维尔姓名/性别/死亡时间/近期授权记录、查档合法性、七号箱位置与钥匙交接、时代技术词。
+未知超自然机制不是错误，已观测事实冲突才是错误。
+任何上述跨节事实冲突都判High/REWRITE_BLOCK，不要降成偏好。""",
         ),
         _review(
             task_id,
@@ -385,6 +418,8 @@ async def main() -> int:
                 content=section_text,
                 instruction=(
                     FAST_WRITER_RULES
+                    + "\n\n"
+                    + FAST_CONTINUITY_CONTRACT
                     + "\n\n【本轮多Reader精简问题】\n"
                     + compact_reviews[:7000]
                     + "\n\n【本节冻结大纲】\n"
@@ -450,9 +485,14 @@ async def main() -> int:
     )
 
     blocking = False
-    for output in final_reviews:
+    for index, output in enumerate(final_reviews):
         for finding in _parse_review_output(output, revised):
-            if finding.get("severity") == "blocking":
+            severity = finding.get("severity")
+            if severity == "blocking":
+                blocking = True
+            # Final continuity gate is stricter than taste readers: any
+            # remaining concrete continuity/action-chain finding blocks lock.
+            if index == 0 and severity != "info":
                 blocking = True
 
     (OUTPUT_DIR / "sections-06-10-fast.md").write_text(revised + "\n", encoding="utf-8")
