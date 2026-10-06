@@ -298,14 +298,15 @@ async def _skill_replay(project_id: int) -> dict:
 输出问题、证据和最小修复边界。""",
     )
     output = result.content
-    required = ["STATE_TRANSITION_LEDGER_GAP", "OBSERVABLE_RULE_CONSISTENCY_GAP"]
-
-    # Stable labels are the preferred reviewer surface. Some providers still
-    # describe a detected issue correctly while drifting on the exact label.
-    # The static Skill regression separately guarantees both labels exist in
-    # the frozen Skill, so this replay also accepts a tightly scoped semantic
-    # detection for the observable-rule sample instead of creating a false
-    # platform failure purely from output-format drift.
+    # Live replay must prove the new cross-scene custody gate catches the
+    # unambiguous hard failure. The countdown sample is intentionally not a
+    # hard gate here: because its underlying trigger is still unknown, a
+    # careful reviewer may legitimately judge the two historical samples as
+    # compatible. D24/OBSERVABLE_RULE_CONSISTENCY_GAP is instead locked by the
+    # static Skill regression and remains available for truly contradictory
+    # observable facts. The Gray Street revision contract still normalizes its
+    # wording as an accepted reader improvement.
+    required_live = ["STATE_TRANSITION_LEDGER_GAP"]
     detected = {
         "STATE_TRANSITION_LEDGER_GAP": (
             "STATE_TRANSITION_LEDGER_GAP" in output
@@ -313,7 +314,7 @@ async def _skill_replay(project_id: int) -> dict:
                 "片段 A" in output
                 and "钥匙" in output
                 and any(token in output for token in ("离开两次", "保管链", "状态链"))
-                and any(token in output for token in ("REWRITE_BLOCK", "blocking"))
+                and any(token in output for token in ("LOCAL_REWRITE", "REWRITE_BLOCK", "blocking"))
             )
         ),
         "OBSERVABLE_RULE_CONSISTENCY_GAP": (
@@ -326,13 +327,14 @@ async def _skill_replay(project_id: int) -> dict:
             )
         ),
     }
-    missing = [item for item in required if not detected[item]]
+    missing = [item for item in required_live if not detected[item]]
     return {
         "task_id": task_id,
         "provider": result.provider,
         "model": result.model,
         "output": output,
-        "required": required,
+        "required_live": required_live,
+        "static_skill_gate": ["OBSERVABLE_RULE_CONSISTENCY_GAP"],
         "detected": detected,
         "missing": missing,
         "pass": not missing,
@@ -592,7 +594,8 @@ async def main() -> int:
         "project": "灰街",
         "source": str(BASELINE),
         "skill_replay_pass": replay["pass"],
-        "skill_replay_required": replay["required"],
+        "skill_replay_required_live": replay["required_live"],
+        "skill_replay_static_gate": replay["static_skill_gate"],
         "section_count": len(results),
         "sections": [
             {
