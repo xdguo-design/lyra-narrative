@@ -1,6 +1,7 @@
-attempt: 2
+attempt: 3
 project: gray-street
 sections: 6-10
-mode: fast-batch-platform-write-review-revise-final-gate
+mode: fast-batch-parallel-section-writers-review-revise-final-gate
 reader_roles: continuity,ordinary,commercial,naturalness,dialogue,rhythm
-notes: benchmark rerun after lint fix; measure end-to-end elapsed time
+length_gate: draft>=2200 chars per section; revision>=2000 chars per section
+notes: realistic benchmark - five section writers in parallel, then batch review/revision/final gate
