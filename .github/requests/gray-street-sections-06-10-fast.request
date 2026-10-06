@@ -1,10 +1,11 @@
-attempt: 6
+attempt: 7
 project: gray-street
 sections: 6-10
 mode: deterministic-fast-batch
 writers: parallel-per-section
 writer_profile: AGNES
 revision_profile: AGNES
+writer_fallback: MODELSCOPE
 reader_roles: continuity,ordinary,commercial,naturalness,dialogue,rhythm
 length_gate: draft>=2300 chars per section; revision>=2200 chars per section
-notes: normalize all model headings to canonical section titles before validation
+notes: preserve reviewed draft if one revision provider fails; final readers still gate delivery
