@@ -37,6 +37,118 @@ ACCEPTED_REPAIR_CONTRACT = """【外部 Reader 已确认、且已先进入 Skill
 9. 不重写已经成立的段落，不增加新人物、新规则、新证物或新巧合。
 """
 
+SECTION_REPAIR_CONTRACTS = {
+    "第一节": """【本节外部 Reader 修订合同】
+- 保留现有开场、哈里看不见文字、十二下与 SV-7 结尾。
+- 把停表读数写成唯一可读的约 1:55:32，并明确落在法医凌晨 1—3 点死亡窗口内；必须同时出现时针、分针、秒针语义，不能再用“长针停在十一点”制造歧义。
+- 把掌心中央的圆形旧伤与警方分离怀表造成的新撕裂明确区分为两处伤。
+- 表链断裂不影响机芯走时，禁止把它修成物理矛盾。
+- 除上述点和自动 Reviewer 的真实 blocking 外，尽量原样保留。""",
+    "第二节": """【本节外部 Reader 修订合同】
+- 本节没有外部 Reader 确认的硬伤。
+- 保留修鞋匠先听到“SV-7”才停锤的顺序；不得按误读去重排空间。
+- “四”在本节只是比前夜变浅，仍然显示四。
+- 除自动 Reviewer 的真实 blocking 外，尽量原样保留。""",
+    "第三节": """【本节外部 Reader 修订合同】
+- 保留米拉主动提到“银牌”，以及她最终明确说出“旧盐场”“十三号仓”；这是冻结剧情接口，不因 Reviewer 偏好改成模糊坐标或新增纸条。
+- 克莱的倒计时样本只统一可观测过程：先变浅，之后才变成三；不要解释机制原因，也不要发明“按天/按事件/按债务步数”的完整规则。
+- 保留米拉不讲完整 SV-7 真相的边界。
+- 除上述点和自动 Reviewer 的真实 blocking 外，尽量原样保留。""",
+    "第四节": """【本节外部 Reader 修订合同】
+- 七年前银牌与封存钥匙进入仓储；六年前只能是仓内转柜/转入内库/单独封存，钥匙没有离库；九天前红发女人才正式领取钥匙。
+- 收费收据与内部转移单的字段差异必须有最小范围锚点：收据只记计价主物，钥匙属于附属封存件或等价制度表达。
+- 埃文必须先出示事务所/遗产清算授权。费恩若让银牌离柜，只能明确为实物核验、代理权限或明确违规放行之一；不能三镑直接抹掉“只能本人取”。
+- 必须保留所有权边界：核验不等于所有权转移。
+- 保留红发女人、手套、十四年前授权、SV-7/05、MIRA ALVA 与窗帘后的红发身影。
+- 不解释倒计时机制。""",
+    "第五节": """【本节外部 Reader 修订合同】
+- 把“你撒谎的时候会先看左边”改成只针对本次回答“没有”之前的视线偏移的当场观察，不能凭一次见面归纳长期习惯。
+- 埃文把仍处于遗产/核验链上的银牌交给米拉后，必须保留现实手续后果：核验交接、所有权未转、事务所账目或次日要补手续至少出现一种清楚接口。
+- 保留银牌交给米拉后怀表清空；保留“有些门被锁上……”；保留结尾极淡 SV-7。
+- 不把悬疑机制解释成规则说明书。""",
+}
+
+
+def _section_contract(section_key: str) -> str:
+    return SECTION_REPAIR_CONTRACTS.get(section_key, ACCEPTED_REPAIR_CONTRACT)
+
+
+def _gray_street_contract_failures(section_key: str, text: str) -> list[str]:
+    failures: list[str] = []
+    compact = re.sub(r"\s+", "", text)
+
+    if section_key == "第一节":
+        has_clear_time = any(
+            token in compact
+            for token in (
+                "一点五十五分三十二秒",
+                "1:55:32",
+                "01:55:32",
+                "一点五十五分",
+            )
+        )
+        if not has_clear_time or "时针" not in text or "分针" not in text:
+            failures.append("停表时间没有明确到约1:55:32并区分时针/分针")
+        if "圆形" not in text or not any(
+            token in text for token in ("另造成", "另一处", "两处伤", "新撕裂")
+        ):
+            failures.append("掌心旧圆伤与分离怀表造成的新撕裂没有明确区分")
+
+    elif section_key == "第二节":
+        if "SV-7" not in text or "锤子" not in text:
+            failures.append("修鞋匠与SV-7的既有线索接口被误删")
+        if "四" not in text or not any(token in text for token in ("浅", "淡")):
+            failures.append("第二节缺少“四仍在但字迹变浅”的可观测样本")
+
+    elif section_key == "第三节":
+        if "旧盐场" not in text or "十三号仓" not in text:
+            failures.append("冻结剧情接口“旧盐场/十三号仓”被误删")
+        if not (
+            any(token in text for token in ("变浅", "淡下", "淡了", "浅了"))
+            and "变成三" in text
+        ):
+            failures.append("克莱倒计时样本未统一为“先变浅/变淡，再变成三”")
+        if "按债" in text or "按事件" in text or "按天数规则" in text:
+            failures.append("正文把未知超自然机制过早解释成规则说明")
+
+    elif section_key == "第四节":
+        if "后来钥匙被转走" in compact:
+            failures.append("仍保留“后来钥匙被转走”的双重离库硬伤")
+        if not any(token in text for token in ("转柜", "内库", "单独封存", "内部转存")):
+            failures.append("六年前仓内转柜/单独封存状态没有落地")
+        if "九天前" not in text or "红头发" not in text:
+            failures.append("九天前红发女人正式领取钥匙的锚点缺失")
+        if not (
+            "收据" in text
+            and any(token in text for token in ("计价", "附属封存", "附属件", "主项"))
+        ):
+            failures.append("收费收据与内部转移单的文书范围没有最小锚点")
+        if "核验" not in text:
+            failures.append("银牌离柜没有明确为实物核验")
+        if not any(token in text for token in ("所有权", "不能替", "不是转移", "仍挂在")):
+            failures.append("核验与所有权转移边界没有写清")
+        if not any(token in text for token in ("授权书", "清算授权", "事务所盖章")):
+            failures.append("埃文的遗产清算/核验权限来源没有落地")
+
+    elif section_key == "第五节":
+        if "你撒谎的时候会先看左边" in text:
+            failures.append("仍保留无样本支撑的长期撒谎习惯判断")
+        if not (
+            "没有" in text
+            and "左" in text
+            and any(token in text for token in ("刚才", "之前", "先", "那一下", "目光"))
+        ):
+            failures.append("当场“没有”前视线偏移的观察没有落地")
+        if not (
+            any(token in text for token in ("核验", "交接单", "所有权", "手续"))
+            and any(token in text for token in ("事务所", "账", "明天", "补手续"))
+        ):
+            failures.append("银牌交给米拉后的现实手续/账目后果接口缺失")
+        if "SV-7" not in text:
+            failures.append("第五节结尾SV-7接口被误删")
+
+    return failures
+
 
 def _read_sections(text: str) -> list[tuple[str, str, str]]:
     pattern = re.compile(r"^# (第一节|第二节|第三节|第四节|第五节)[　 ]+(.+?)\s*$", re.M)
@@ -88,12 +200,12 @@ def _create_project(sections: list[tuple[str, str, str]]) -> tuple[int, list[int
             (
                 "continuity",
                 "怀表已观测事实",
-                "第一节夜里怀表显示“四日”；第二节中午仍显示“四日”，但“四”比前夜变浅；第三节米拉说克莱第一次见到时也是四，并称“第二天变成三”；第四节早晨埃文发现数字已经是“三日”。机制原因尚未知。"
+                "第一节夜里怀表显示“四日”；第二节中午仍显示“四日”，但“四”比前夜变浅；克莱旧样本应与此兼容：字迹先变浅/变淡，之后才变成三；第四节早晨埃文发现数字已经是“三日”。机制原因尚未知。"
             ),
             (
                 "continuity",
-                "十三号仓旧稿状态事实",
-                "第四节旧稿写：七年前寄存；六年前转存；三年前补费；克莱死前九天有“取出”；随后又叙述“后来钥匙被转走”，并让费恩确认九天前红发女人拿走钥匙。请只依据正文判断状态链是否连续。"
+                "十三号仓保管链目标事实",
+                "七年前银牌与封存钥匙进入仓储；六年前只是仓内转柜/单独封存，钥匙没有离库；三年前续费；克莱死前九天红发女人才凭授权正式领取钥匙。收费收据可以只记计价主物，内部转移单负责记录附属封存件。"
             ),
             (
                 "continuity",
@@ -254,7 +366,7 @@ async def _review_and_revise_section(
         instruction="\n\n".join(
             [
                 "你是 NarrativeOS Revision Agent。只修当前正文，不续写下一节。",
-                ACCEPTED_REPAIR_CONTRACT,
+                _section_contract(section_key),
                 "自动 Reviewer 第一轮输出：\n" + "\n\n".join(first_outputs),
                 context,
                 """修订纪律：
@@ -272,6 +384,8 @@ async def _review_and_revise_section(
     if not revised:
         raise RuntimeError(f"{section_key} revision returned empty content")
 
+    contract_failures_r1 = _gray_street_contract_failures(section_key, revised)
+
     with connect() as conn:
         conn.execute(
             "UPDATE review_findings SET status='addressed' WHERE task_id=? AND status='open'",
@@ -281,6 +395,31 @@ async def _review_and_revise_section(
             "UPDATE writing_tasks SET revised_content=?,status='reviewed' WHERE id=?",
             (revised, task_id),
         )
+
+    if contract_failures_r1:
+        contract_revision = await _run_step(
+            task_id=task_id,
+            role="revision-agent",
+            stage=f"gray-street-{section_key}-contract-repair",
+            mode="polish",
+            content=revised,
+            instruction="\n\n".join(
+                [
+                    "平台确定性验收发现外部 Reader 修订合同仍未落地。只做最小定点修复，不续写、不扩写。",
+                    _section_contract(section_key),
+                    "未通过的合同项：\n- " + "\n- ".join(contract_failures_r1),
+                    context,
+                    "只输出当前节完整正文。不得改变冻结剧情接口，不得新增规则、人物、物证或巧合。",
+                ]
+            ),
+        )
+        revised = contract_revision.content.strip() or revised
+        contract_failures_r1 = _gray_street_contract_failures(section_key, revised)
+        with connect() as conn:
+            conn.execute(
+                "UPDATE writing_tasks SET revised_content=? WHERE id=?",
+                (revised, task_id),
+            )
 
     second_outputs, second_blocking = await _run_review_round(
         task_id=task_id,
@@ -308,7 +447,7 @@ async def _review_and_revise_section(
                 [
                     "这是同一节的第二次、也是最后一次平台修订。只处理 R2 仍未关闭的 blocking。",
                     "R2 Reviewer：\n" + "\n\n".join(second_outputs),
-                    ACCEPTED_REPAIR_CONTRACT,
+                    _section_contract(section_key),
                     context,
                     "不得扩大重写范围，不得新增设定。只输出当前节完整正文。",
                 ]
@@ -335,6 +474,10 @@ async def _review_and_revise_section(
         )
 
     final_blocking = second_blocking if not third_outputs else third_blocking
+    final_contract_failures = _gray_street_contract_failures(section_key, final)
+    if final_contract_failures:
+        final_blocking = True
+
     with connect() as conn:
         conn.execute(
             "UPDATE writing_tasks SET status=? WHERE id=?",
@@ -356,6 +499,8 @@ async def _review_and_revise_section(
         "revision_r2": final if third_outputs else "",
         "third_outputs": third_outputs,
         "third_blocking": third_blocking,
+        "contract_failures_r1": contract_failures_r1,
+        "final_contract_failures": final_contract_failures,
         "final_blocking": final_blocking,
         "final": final,
     }
@@ -428,6 +573,7 @@ async def main() -> int:
                 "first_blocking": item["first_blocking"],
                 "second_blocking": item["second_blocking"],
                 "third_blocking": item["third_blocking"],
+                "contract_failures": item["final_contract_failures"],
                 "final_blocking": item["final_blocking"],
             }
             for item in results
