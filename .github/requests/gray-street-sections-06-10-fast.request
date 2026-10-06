@@ -1,12 +1,12 @@
-attempt: 13
+attempt: 14
 project: gray-street
 sections: 6-10
 mode: sequential-fast-core-gates
 writer_profile: AGNES
 revision_profile: AGNES
 writer_fallback: DOTS3,MODELSCOPE
-reader_roles: continuity,ordinary,commercial,naturalness
+reader_roles: continuity,ordinary,commercial-fast,naturalness
 commercial_reader_profile: AGNES
 length_gate: draft>=2100 chars per section; revision>=2000 chars per section
 continuity_gate: strict-with-prior-canon
-notes: exact beat sheet; concise commercial reader route to avoid review output-length failure
+notes: exact beat sheet; lightweight commercial reader avoids full master-reader prompt overflow
