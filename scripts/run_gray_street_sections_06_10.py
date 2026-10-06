@@ -334,6 +334,70 @@ def _reader_instruction(kind: str, round_no: int, prior: str = "") -> str:
     )
 
 
+def _condense_review_outputs(outputs: list[str], draft: str, *, limit: int = 9000) -> str:
+    """Keep only actionable review findings; drop verbose reviewer scaffolding."""
+    rows: list[str] = []
+    for source_index, output in enumerate(outputs, start=1):
+        try:
+            findings = _parse_review_output(output, draft)
+        except (ValueError, TypeError):
+            findings = []
+        for finding in findings:
+            if finding.get("severity") == "info":
+                continue
+            summary = str(finding.get("summary") or "").strip()
+            suggestion = str(finding.get("suggestion") or "").strip()
+            excerpt = str(finding.get("excerpt") or "").strip()
+            severity = str(finding.get("severity") or "suggestion")
+            block = [f"[{source_index}] {severity.upper()}: {summary}"]
+            if excerpt:
+                block.append("原文：" + excerpt[:700])
+            if suggestion:
+                block.append("动作：" + suggestion[:1200])
+            rows.append("\n".join(block))
+    text = "\n\n".join(rows).strip()
+    if not text:
+        return "无需要修改的问题。"
+    return text[:limit]
+
+
+def _compact_revision_context(
+    *,
+    section_num: int,
+    outline: str,
+    brief: str,
+    context: str,
+) -> str:
+    section_name = CN_SECTION[section_num]
+    # Do not pass the full task context to Revision Agent: it can contain
+    # many frozen resources and Skill overlays. The role already receives its
+    # own Skill; here we only preserve the current story contract.
+    outline_lines = outline.splitlines()
+    selected: list[str] = []
+    capture = False
+    next_heading = f"## 第{section_num + 1}节" if section_num < 10 else None
+    current_heading = f"## {section_name}"
+    for line in outline_lines:
+        if line.startswith(current_heading):
+            capture = True
+        elif capture and next_heading and line.startswith(next_heading):
+            break
+        if capture:
+            selected.append(line)
+    section_outline = "\n".join(selected).strip() or outline[:4500]
+    brief_tail = brief[-5500:]
+    # Keep only the tail of the generated task context for immediate previous
+    # chapter/canon state; avoid tens of thousands of chars.
+    context_tail = context[-6500:]
+    return "\n\n".join(
+        [
+            f"【{section_name}冻结大纲】\n{section_outline[:6000]}",
+            "【续写硬约束】\n" + brief_tail,
+            "【必要项目状态】\n" + context_tail,
+        ]
+    )[:15000]
+
+
 async def _run_external_readers(
     *,
     task_id: int,
@@ -536,6 +600,12 @@ async def _generate_section(
         round_no=1,
     )
 
+    compact_context = _compact_revision_context(
+        section_num=section_num,
+        outline=outline,
+        brief=brief,
+        context=context,
+    )
     revision = await _run_step(
         task_id=task_id,
         role="revision-agent",
@@ -545,9 +615,11 @@ async def _generate_section(
         instruction="\n\n".join(
             [
                 f"只修《灰街》{section_name}，不续写下一节。",
-                "平台 Reviewer：\n" + "\n\n".join(platform_r1),
-                "三类 Reader：\n" + "\n\n".join(readers_r1),
-                context,
+                compact_context,
+                "【平台 Reviewer 精简问题】\n"
+                + _condense_review_outputs(platform_r1, draft, limit=6500),
+                "【普通/商业/文学 Reader 精简问题】\n"
+                + _condense_review_outputs(readers_r1, draft, limit=6500),
                 """blocking 必须修；LOCAL_REWRITE 只改最小范围。
 普通读者/商业阅读/文学自然度意见如果只是偏好不能改 Canon。
 禁止因修语言删掉关键线索、人物选择、现实后果与章末接口。
@@ -601,10 +673,12 @@ async def _generate_section(
             instruction="\n\n".join(
                 [
                     f"这是《灰街》{section_name}最后一次平台自动修订，只处理R2仍未关闭的blocking。",
-                    "R2平台 Reviewer：\n" + "\n\n".join(platform_r2),
-                    "R2三类 Reader：\n" + "\n\n".join(readers_r2),
-                    "Revision Integrity：\n" + integrity_output,
-                    context,
+                    compact_context,
+                    "【R2平台 Reviewer 精简问题】\n"
+                    + _condense_review_outputs(platform_r2, revised, limit=5500),
+                    "【R2三类 Reader 精简问题】\n"
+                    + _condense_review_outputs(readers_r2, revised, limit=5500),
+                    "【Revision Integrity 摘要】\n" + integrity_output[:5000],
                     "不得扩大重写范围，不得新增规则、人物、证物或巧合。只输出当前节完整正文。",
                 ]
             ),
