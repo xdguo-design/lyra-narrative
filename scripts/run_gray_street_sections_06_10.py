@@ -9,14 +9,10 @@ from pathlib import Path
 from app.db import connect, init_db
 from app.services.book_pipeline import _create_task
 from app.services.full_novel_pipeline import (
-    _run_review_round,
     _run_revision_integrity_gate,
+    _run_review_round,
 )
-from app.services.workflow_service import (
-    _parse_review_output,
-    _run_step,
-    _task_context,
-)
+from app.services.workflow_service import _parse_review_output, _run_step, _task_context
 
 
 OUTPUT_DIR = Path("artifacts/gray-street-sections-06-10")
@@ -58,7 +54,7 @@ High 或 REWRITE_BLOCK 才阻断交付。不要把个人偏好当 blocking。"""
 
 
 def _split_locked_sections(text: str) -> list[tuple[int, str, str]]:
-    pattern = re.compile(r"^# 第([一二三四五])节[　 ]+(.+?)\s*$", re.M)
+    pattern = re.compile(r"^# 第([一二三四五])节[　 ]+(.+?)\s*$", re.MULTILINE)
     number_map = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5}
     matches = list(pattern.finditer(text))
     sections: list[tuple[int, str, str]] = []
@@ -373,7 +369,7 @@ async def _run_external_readers(
                 "model": result.model,
                 "error": "",
             }
-        except Exception as exc:  # platform reviewer failure must fail closed
+        except (RuntimeError, ValueError) as exc:  # platform reviewer failure must fail closed
             return {
                 "ok": False,
                 "kind": kind,
