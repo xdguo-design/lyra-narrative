@@ -273,8 +273,119 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
     return result.content.strip()
 
 
+async def run_continuous_gate_only(req: dict) -> None:
+    """Final blind continuous-read gate for the locked Gray Street chapters."""
+    start = int(req.get("continuous_start") or 1)
+    end = int(req.get("continuous_end") or 10)
+    parts = []
+    for number in range(start, end + 1):
+        path = Path(f"books/gray-street/chapters/{number:02d}.md")
+        if not path.exists():
+            raise FileNotFoundError(f"continuous gate missing locked chapter: {path}")
+        parts.append(path.read_text(encoding="utf-8").strip())
+    combined = "\n\n---\n\n".join(parts)
+
+    configure_provider()
+    os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES"
+    init_db()
+    project_id, chapter_id = create_project()
+    task_id = _create_task(
+        project_id=project_id,
+        chapter_id=chapter_id,
+        goal=f"连续盲读《灰街》第{start}—{end}节并做最终锁稿 Gate。",
+        instruction="只做连续阅读审核，不改正文。必须以当前锁稿正文为证据，禁止引用旧稿或旧轮问题。",
+    )
+
+    reader_specs = [
+        ("blind-reader", "普通读者", "判断十节连续读是否好看、人物是否鲜活、哪里假、哪里想跳过；重点看跨章重复与信息断层。"),
+        ("cadence-character-reader", "商业阅读读者", "判断十节推进、钩子、阶段兑现、人物记忆点和续读欲；不能因为偏爱快节奏而要求碎短句。"),
+        ("blind-natural-reader", "文学自然度读者", "检查AI味、模板句、作者总结、过度工整、对白书面化、场景重复与连续阅读疲劳。"),
+    ]
+
+    async def one(role: str, name: str, focus: str) -> dict:
+        result = await _run_step(
+            task_id=task_id,
+            role=role,
+            stage=f"gray-street-continuous-{start:02d}-{end:02d}",
+            mode="check",
+            content=combined,
+            instruction=f"""你是{name}。{focus}
+请把正文当成第一次从第{start}节连续读到第{end}节，不读取也不相信任何旧审核结论。
+硬检查：
+1. 主角始终是埃文·格雷，雷蒙德·克莱不得与主角身份混淆。
+2. 怀表不得出现前五节未验证的新能力或新规则。
+3. 第6节以后黑色马车不得继续成为固定危险提示器。
+4. 第6—10节不能退回稳定的“查纸→地址→新纸”流水线。
+5. 埃文必须保持基层办事员有限权限，程序既是工具也是阻力。
+6. 第6—10节要形成入口→竞争/限制→现实代价→局部验证→阶段回收，并留下下一阶段明确入口。
+7. 只能引用当前正文中真实存在的逐字/事实证据；旧稿问题不存在于当前稿时必须忽略。
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+若 FAIL，只列真正阻断连续阅读/Canon/因果的硬伤；轻微润色项单列但不得冒充硬伤。""",
+        )
+        return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
+
+    reviews = await asyncio.gather(*(one(*spec) for spec in reader_specs))
+    compact = json.dumps(reviews, ensure_ascii=False)[:16000]
+    master = await _run_step(
+        task_id=task_id,
+        role="master-reader",
+        stage=f"gray-street-continuous-master-{start:02d}-{end:02d}",
+        mode="check",
+        content=combined,
+        instruction=f"""你是《灰街》第{start}—{end}节最终连续阅读总编 Gate。
+你必须亲自核对当前完整正文，再参考三路独立连续读报告；不得按多数票机械决定，也不得把旧稿问题带入当前稿。
+
+硬规则：
+- 真实存在的 Canon/身份/时间/道具/因果冲突 => FAIL。
+- 第6—10节若新增怀表能力、黑车重新高频充当提示器、埃文越权神探化、或五节没有形成阶段闭环 => FAIL。
+- 大量碎短句、持续台词墙、明显AI解释腔达到连续阅读层面的系统性问题 => FAIL。
+- 单纯措辞偏好、可选润色、Reviewer误读、或只存在于旧稿的问题不能阻断。
+- 若某报告 FAIL，必须在当前正文找到可定位证据后才可采纳。
+
+三路报告：
+{compact}
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+随后写【跨章连续性】【人物与权限推进】【6—10阶段闭环】【文风连续阅读】【驳回的误报】【最终结论】。
+""",
+    )
+    master_verdict = verdict(master.content)
+    passed = master_verdict == "PASS"
+    out = OUT_ROOT / f"continuous-{start:02d}-{end:02d}"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "continuous-reader.md").write_text(master.content + "\n", encoding="utf-8")
+    (out / "gate.json").write_text(
+        json.dumps(
+            {
+                "passed": passed,
+                "start": start,
+                "end": end,
+                "reviews": reviews,
+                "aggregate": {
+                    "verdict": master_verdict,
+                    "report": master.content,
+                    "provider": master.provider,
+                    "model": master.model,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(json.dumps({"passed": passed, "continuous": [start, end], "master": master_verdict, "reader_verdicts": {x["name"]: x["verdict"] for x in reviews}}, ensure_ascii=False), flush=True)
+    if not passed:
+        raise RuntimeError(f"continuous gate {start}-{end} failed")
+
+
 async def main() -> None:
     req = json.loads(REQUEST.read_text(encoding="utf-8"))
+    if bool(req.get("continuous_gate_only")):
+        await run_continuous_gate_only(req)
+        return
     chapter_no = int(req["chapter_no"])
     title = str(req.get("title") or TITLES[chapter_no])
     prior_file = Path(req.get("prior_file") or "")
