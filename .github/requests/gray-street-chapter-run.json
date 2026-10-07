@@ -1,12 +1,12 @@
 {
-  "chapter_no": 9,
-  "title": "两天",
-  "prior_file": "books/gray-street/chapters/08.md",
-  "requested_at": "2026-10-07T22:18:00+08:00",
-  "chapter_constraints": "第三次证据 Gate。上一轮 8 个 Reviewer 全部 PASS，总编唯一失败依据是静态短段落比例17.4%。本轮仅合并短段落，剧情、对白、线索、人物位置、措辞事实边界全部保持。必须把克莱的‘两天’保留为其口头/书面主张，不能自动认证为事实。",
-  "attempt": 3,
+  "chapter_no": 10,
+  "title": "弯钩",
+  "prior_file": "books/gray-street/controller/chapter-09-clean-seed-v3.md",
+  "requested_at": "2026-10-07T22:26:00+08:00",
+  "chapter_constraints": "使用控制器清稿作为第10节候选，平台只做证据审核，不自动改稿。必须承接第9节平台PASS稿：克莱书面留下韦德七年前曾短期代管第7号箱，口头说两天；该说法仍只是克莱主张。本节只使用既有证据回收6—10阶段：十月十二/二十九日通行单、十三号仓抢救的航海计时器修理收据及批次残页、完整海关旧清单、同一贸易行印记、赫伯特既有目击内容。通过赫伯特正式签字证言与既有材料交叉，允许形成窄结论：现有材料相互支持韦德曾直接经手与SV-7相关的货物流转，但箱内物、七年前客户及同行人仍未知。章末回到二十九日同行访客被雨水毁掉的弯钩签名。禁止新增神秘能力、黑车出场、新机构、新证物或顶层幕后答案。",
+  "attempt": 1,
   "force_revision": false,
   "disable_auto_revision": true,
-  "seed_file": "books/gray-street/controller/chapter-09-clean-seed-v3.md",
-  "blueprint_file": "books/gray-street/controller/chapter-09-clean-blueprint.md"
+  "seed_file": "books/gray-street/controller/chapter-10-clean-seed-v2.md",
+  "blueprint_file": "books/gray-street/controller/chapter-10-clean-blueprint.md"
 }
