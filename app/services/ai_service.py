@@ -404,7 +404,11 @@ async def assist(
                                 )
                             )
                             if is_writer_retry
-                            else float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180"))
+                            else (
+                                float(os.getenv("NARRATIVE_REVIEW_TIMEOUT_SECONDS", "75"))
+                                if reviewer_route
+                                else float(os.getenv("NOVEL_AI_TIMEOUT_SECONDS", "180"))
+                            )
                         )
                     ),
                 )
