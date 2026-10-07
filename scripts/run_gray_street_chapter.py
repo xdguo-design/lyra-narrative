@@ -210,6 +210,8 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 硬规则：
 - 静态 Gate 失败 => FAIL。
 - 经你核对属实的明显 AI 解释腔、连续裸对白/问卷式对白、人物工具化/场景消失、真正的 Canon/因果/权限/连续性错误 => FAIL。
+- **任何硬伤必须引用当前 content 中真实存在的逐字证据。** Reviewer 若引用上一版、前文章节、系统提示或当前正文不存在的句子/时间/场景，必须标记为 STALE_OR_HALLUCINATED 并驳回，不能据此 FAIL。
+- 对时间线、道具状态、人物行为的指控，先在当前候选正文中找到对应前后两处原句再裁决；找不到两处证据就不是硬伤。
 - 单纯审美偏好、轻微润色项、误判、重复意见不能阻断。
 - 某 Reviewer ERROR 若有其他 Reviewer 覆盖同一维度，且你核对正文无硬伤，可标 COVERED_ERROR；关键维度无人覆盖才 FAIL。
 - 用户明确禁止大量小短句、连续裸对白、“不是A而是B”作者总结。
@@ -381,7 +383,7 @@ async def main() -> None:
             "report": manual_findings,
         })
 
-    if bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]:
+    if (not bool(req.get("disable_auto_revision"))) and (bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]):
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
         text = normalize_novel_output(text)
         if (not _chapter_text_is_usable(text)) or len(text) < 3000:
