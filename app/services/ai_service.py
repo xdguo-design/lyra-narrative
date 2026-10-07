@@ -58,7 +58,7 @@ def _demo(mode: str, content: str, instruction: str = "") -> AssistResult:
     if mode in {"polish", "expand", "patch"}:
         text = content or "演示模式未连接真实模型；当前没有可润色正文."
     elif mode == "check":
-        if "NARRATIVEOS_REVIEW_V1" in instruction:
+        if "NARRATIVEOS_REVIEW_V1" in instruction or "NARRATIVEOS_REVIEW_V2" in instruction:
             text = "NO_ISSUE"
         else:
             text = "演示检查：未发现结构化设定冲突。连接真实模型后会结合当前章节、人物卡和世界观做完整一致性检查。"
