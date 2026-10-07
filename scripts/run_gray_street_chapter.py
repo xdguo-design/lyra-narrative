@@ -413,4 +413,11 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    _entry_request = json.loads(REQUEST.read_text(encoding="utf-8"))
+    _batch_to = int(_entry_request.get("batch_to") or _entry_request.get("chapter_no") or 0)
+    _chapter_no = int(_entry_request.get("chapter_no") or 0)
+    if _batch_to > _chapter_no:
+        from scripts.run_gray_street_07_10_batch import main as batch_main
+        asyncio.run(batch_main())
+    else:
+        asyncio.run(main())
