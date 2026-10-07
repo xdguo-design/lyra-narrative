@@ -263,8 +263,30 @@ async def main() -> None:
 """,
     )
     text = writer.content.strip()
+    # Providers occasionally wrap valid prose in Markdown fences or overshoot the
+    # chapter target so far that the response is cut mid-sentence. Normalize once,
+    # then ask the platform Writer to rebuild the same chapter instead of throwing
+    # away a successful model call before Reader Gate.
+    text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
+    if (not _chapter_text_is_usable(text)) or len(text) > 6500:
+        repair = await _run_step(
+            task_id=task_id,
+            role="writer-retry",
+            stage=f"gray-street-ch{chapter_no:02d}-draft-normalize",
+            mode="continue",
+            content=text,
+            instruction=f"""把当前第{chapter_no}节候选稿重建为可审核的完整正文。
+保留已经写出的核心事件、人物选择、线索边界和前文连续性，不新增世界规则，不改变人物身份。
+硬长度：3200—5200 个中文字符；超过上限必须压缩场景与重复表达，不能截断。
+结尾必须是完整句，以中文句末标点结束。不要 Markdown 代码围栏、不要提纲、不要说明，只输出小说正文。
+继续服从本章冻结功能、最新 Writer Skill 和项目 Canon。""",
+        )
+        text = repair.content.strip()
+        text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
+        text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
     if not _chapter_text_is_usable(text):
-        raise RuntimeError("draft unusable")
+        raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
     reviews = await run_reviews(task_id, text, canon, prior_tail)
     gate = static_gate(text)
