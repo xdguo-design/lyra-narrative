@@ -135,7 +135,7 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
     if re.search(r"(?:并)?不是[^。！？\n]{0,45}(?:而是|只是)", text):
         failures.append("ai-template:not-A-but-B")
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    pure = [bool(re.fullmatch(r"[“\"][^\n]{1,220}[”\"][。！？?!…]*", p)) for p in paras]
+    pure = [bool(re.fullmatch(r"[“\"][^“”\"\n]{1,220}[”\"][。！？?!…]*", p)) for p in paras]
     streak = best = 0
     for flag in pure:
         streak = streak + 1 if flag else 0
