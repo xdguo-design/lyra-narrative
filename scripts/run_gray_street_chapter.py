@@ -296,6 +296,12 @@ async def main() -> None:
     if chapter_no >= 6:
         canon += "\n\n" + POST5_CANON
     chapter_plan = extract_plan(chapter_no)
+    blueprint_file = str(req.get("blueprint_file") or "").strip()
+    if blueprint_file:
+        blueprint_path = Path(blueprint_file)
+        if not blueprint_path.exists():
+            raise FileNotFoundError(f"blueprint_file not found: {blueprint_path}")
+        chapter_plan += "\n\n【控制器场景骨架｜必须执行但不得复述为正文】\n" + blueprint_path.read_text(encoding="utf-8")
     extra_constraints = str(req.get("chapter_constraints") or "").strip()
     if extra_constraints:
         chapter_plan += "\n\n【本次结构级返修追加约束】\n" + extra_constraints
