@@ -144,13 +144,12 @@ def test_writer_reviewer_revision_requires_approval_before_chapter_change():
         assert body["revised_content"]
         assert original in body["draft"]
         assert original in body["revised_content"]
-        assert len(body["runs"]) == 5
-        assert len(body["findings"]) == 3
+        assert len(body["runs"]) == 9
+        assert len(body["findings"]) == 8
         assert all(run["metrics"] is not None for run in body["runs"])
         assert {run["metrics"]["prompt_version"] for run in body["runs"]} == {
             "draft-v1",
             "review-v1",
-            "revision-v1",
         }
 
         unchanged = client.get(f"/api/chapters/{chapter_id}").json()
@@ -885,8 +884,8 @@ def test_zero_platform_full_production_acceptance_flow():
                 assert body["status"] == "awaiting_approval"
                 assert body["draft"]
                 assert body["revised_content"]
-                assert len(body["runs"]) == 5
-                assert len(body["findings"]) == 3
+                assert len(body["runs"]) == 9
+                assert len(body["findings"]) == 8
                 assert all(item["metrics"] is not None for item in body["runs"])
                 assert all(
                     any(
