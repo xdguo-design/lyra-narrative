@@ -101,8 +101,15 @@ def skill_excerpt(task_id: int, limit: int = 12000) -> str:
 
 
 def verdict(text: str) -> str:
-    m = re.search(r"VERDICT\s*[:：]\s*(PASS|FAIL)", text, re.I)
-    return m.group(1).upper() if m else "FAIL"
+    matches = re.findall(r"(?mi)^\s*VERDICT\s*[:：]\s*(PASS|FAIL)\s*$", str(text or ""))
+    values = [item.upper() for item in matches]
+    if not values:
+        return "FAIL"
+    # Conflicting explicit verdicts are themselves an invalid Gate response.
+    # Fail closed instead of trusting the first token and silently passing.
+    if len(set(values)) != 1:
+        return "FAIL"
+    return values[0]
 
 
 def normalize_novel_output(raw: str) -> str:
@@ -183,7 +190,7 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, revi
     async def one(role: str, name: str, focus: str):
         try:
             blind = role in {"blind-reader","cadence-character-reader","blind-natural-reader","character-voice-reviewer","blind-dialogue-reader"}
-            context = prior_tail[-6500:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-4500:])
+            context = prior_tail[-8000:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-9000:])
             result = await _run_step(
                 task_id=task_id,
                 role=role,
@@ -219,7 +226,7 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 - 静态 Gate 失败 => FAIL。
 - 经你核对属实的明显 AI 解释腔、连续裸对白/问卷式对白、人物工具化/场景消失、真正的 Canon/因果/权限/连续性错误 => FAIL。
 - **任何硬伤必须引用当前 content 中真实存在的逐字证据。** Reviewer 若引用上一版、前文章节、系统提示或当前正文不存在的句子/时间/场景，必须标记为 STALE_OR_HALLUCINATED 并驳回，不能据此 FAIL。
-- 对时间线、道具状态、人物行为的指控，先在当前候选正文中找到对应前后两处原句再裁决；找不到两处证据就不是硬伤。
+- 对时间线、道具状态、人物行为的指控，必须在当前候选正文与提供的前文中找到可逐字引用的日期/动作证据再裁决；若前文章节日期没有出现在上下文里，禁止自行推定日期后判 FAIL。
 - 单纯审美偏好、轻微润色项、误判、重复意见不能阻断。
 - 某 Reviewer ERROR 若有其他 Reviewer 覆盖同一维度，且你核对正文无硬伤，可标 COVERED_ERROR；关键维度无人覆盖才 FAIL。
 - 用户明确禁止大量小短句、连续裸对白、“不是A而是B”作者总结。
@@ -235,7 +242,7 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 {compact}
 
 前文尾部：
-{prior_tail[-4500:]}
+{prior_tail[-9000:]}
 
 Canon 摘要：
 {canon[-4500:]}
@@ -308,17 +315,21 @@ async def apply_local_rewrite(
     end = end_start + len(end_anchor)
     original_block = text[start:end]
 
-    result = await _run_step(
-        task_id=task_id,
-        role="revision-agent",
-        stage="gray-street-local-rewrite",
-        mode="polish",
-        content=original_block,
-        instruction=f"""执行严格 LOCAL_REWRITE。只输出给定原文块的完整替换文本，不输出标题、分析、说明或块外正文。
+    literal_replacement = str(spec.get("replacement_text") or "").strip()
+    if literal_replacement:
+        replacement = normalize_novel_output(literal_replacement)
+    else:
+        result = await _run_step(
+            task_id=task_id,
+            role="revision-agent",
+            stage="gray-street-local-rewrite",
+            mode="polish",
+            content=original_block,
+            instruction=f"""执行严格 LOCAL_REWRITE。只输出给定原文块的完整替换文本，不输出标题、分析、说明或块外正文。
 不得扩写成整章，不得新增人物、世界规则、能力、证据来源、关键线索或后续行动。
 必须保留原块内已经成立的事实、人物关系、信息边界和前后接口；只解决本次指定问题。
 保持《灰街》克制、具体、程序型人物的语气；禁止作者心理总结、不是A而是B、空洞意象、侦探式解说。
-替换块长度应与原块同量级，原则上不超过原块的 1.35 倍，也不低于 0.65 倍。
+替换块长度应与原块同量级。
 
 【本次只解决】
 {instruction}
@@ -327,13 +338,13 @@ async def apply_local_rewrite(
 {skill[-4500:]}
 
 【前文尾部】
-{prior_tail[-3500:]}
+{prior_tail[-5500:]}
 
 【Canon】
 {canon[-3500:]}
 """,
-    )
-    replacement = normalize_novel_output(result.content)
+        )
+        replacement = normalize_novel_output(result.content)
     if not replacement:
         raise RuntimeError("local rewrite returned empty content")
     lo = (
