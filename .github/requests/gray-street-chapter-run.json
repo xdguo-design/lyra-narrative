@@ -1,10 +1,12 @@
 {
   "chapter_no": 8,
-  "title": "第八节",
+  "title": "旧账户",
   "prior_file": "books/gray-street/chapters/07.md",
-  "requested_at": "2026-10-07T21:38:00+08:00",
-  "chapter_constraints": "从第7节锁稿后的十一月五日中午继续，不得重演海关阅览。主线只写SV-7程序限制开始影响埃文正常工作与芬奇关系，并通过正式回执得到一个有限新事实：诺斯与维恩此次复核引用的旧客户账户首次登记年份，与SV-7进入海关体系的年份相同。不得给出客户真名，不解释第7号箱内容。禁止黑车、洗衣房布套、银牌重新成为争议物、听证会、卡拉什被硬接成SV-7幕后线索。正文3200—4300中文字符。",
-  "attempt": 1,
+  "requested_at": "2026-10-07T21:49:00+08:00",
+  "chapter_constraints": "使用控制器干净种子稿重新进入平台审核。不得新增第二块怀表、匿名包裹、陌生威胁者、哲学铭文或黑车。核心推进限定为：SV-7进入双签状态→芬奇拒绝继续兜普通业务→埃文被迫先处理现实窗口工作→复核回执确认诺斯与维恩引用的旧客户卷号首次登记年份与SV-7入关年份同为七年前。只能确认旧账户长期存在，不得推导客户身份或最终幕后。",
+  "attempt": 2,
   "force_revision": false,
+  "disable_auto_revision": false,
+  "seed_file": "books/gray-street/controller/chapter-08-clean-seed.md",
   "blueprint_file": "books/gray-street/controller/chapter-08-clean-blueprint.md"
 }
