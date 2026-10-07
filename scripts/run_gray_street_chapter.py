@@ -18,7 +18,7 @@ OUT_ROOT = Path("artifacts/gray-street-chapter-run")
 
 TITLES = {
     2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落",
-    6: "第7号箱", 7: "第七节", 8: "第八节", 9: "第九节", 10: "第十节",
+    6: "第7号箱", 7: "阅览室", 8: "第八节", 9: "第九节", 10: "第十节",
 }
 SECTION_HEADERS = {2: "## 第二节《遗产》", 3: "## 第三节《河灯街》", 4: "## 第四节《十三号仓》", 5: "## 第五节《日落》"}
 
@@ -163,6 +163,12 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
                 failures.append("black-car-reappears-in-scene")
             if re.search(r"霍尔[^。！？\n]{0,55}(?:南桥|跟车|盯车|追车)", text):
                 failures.append("repeat-hall-car-tail")
+        if chapter_no == 7:
+            opening = text[:1400]
+            if re.search(r"(?:律师|代理行)[^。！？\n]{0,80}(?:递交|提交|送来)[^。！？\n]{0,50}(?:暂缓|争议).{0,20}申请", opening):
+                failures.append("chapter6-application-scene-replayed")
+            if "下午四点三十七分" in opening or "四点三十七" in opening:
+                failures.append("chapter6-timestamp-replayed")
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
