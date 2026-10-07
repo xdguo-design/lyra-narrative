@@ -1,11 +1,10 @@
 {
-  "chapter_no": 6,
-  "title": "第7号箱",
-  "prior_file": "books/gray-street/chapters/05.md",
-  "requested_at": "2026-10-07T17:43:00+08:00",
-  "chapter_constraints": "这是第9次平台精修后的8/8 Reader PASS + Master PASS正文，仅做Gate复检。正文内容与事实不得重写；当前文件只把连续裸对白嵌回动作段落，并修正‘霍早’为‘霍尔早’，以满足短段与对白静态Gate。禁止新增剧情、线索、人物、规则或解释。",
-  "attempt": 10,
-  "force_revision": false,
-  "seed_file": "books/gray-street/controller/chapter-06-gate-clean.md",
-  "blueprint_file": "books/gray-street/controller/chapter-06-clean-blueprint.md"
+  "chapter_no": 7,
+  "batch_to": 8,
+  "title": "第七节",
+  "prior_file": "books/gray-street/chapters/06.md",
+  "requested_at": "2026-10-07T17:47:00+08:00",
+  "chapter_constraints": "第6节已经正式通过平台Gate并锁稿：诺斯与维恩受雷蒙德·克莱委托提交暂缓申请；埃文只登记收件、不确认争议范围；贝恩将韦德卷宗收进主管柜，后续移交须主管签名；未签争议清单被律师带走；旧档调阅便笺被贝恩扣到次日。第7节必须从这一现实程序限制继续，不得重演申请送达。重点升级第7号箱的控制/争夺关系，让对手开始利用程序，埃文做一个有代价的选择。不得新增怀表能力，不得使用黑车作为危险提示，不得退回查纸→地址→新纸模板。第7、8节均按最新Writer Skill v19、多读者Gate执行；只有上一节PASS才允许进入下一节。",
+  "attempt": 1,
+  "force_revision": false
 }
