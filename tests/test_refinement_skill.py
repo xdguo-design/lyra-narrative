@@ -11,7 +11,7 @@ from app.services.default_skills import (
 
 
 def test_refinement_skill_v12_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 14
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -209,7 +209,7 @@ def test_character_dialogue_reviewer_binds_behavior_and_disclosure_thresholds():
         assert marker in review
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -504,8 +504,8 @@ def test_merged_reviewers_preserve_texture_and_longitudinal_cadence_checks():
 
 
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeline():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 14
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     combined = (
@@ -523,8 +523,8 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeli
 
 
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
-    assert BUILTIN_WRITING_SKILL_VERSION == 17
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 13
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 14
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     combined = (
@@ -562,3 +562,28 @@ def test_reader_v11_enforces_spoken_dialogue_mouth_test_in_merged_character_read
     ]:
         assert marker in combined
 
+
+
+def test_writing_skill_v18_handles_evidence_density_and_unresolved_clues():
+    assert BUILTIN_WRITING_SKILL_VERSION == 18
+    content = BUILTIN_WRITING_SKILL_CONTENT
+    for marker in [
+        "信息密度、证据重量与未决线索管理",
+        "真实的“呼吸位”",
+        "为什么这么具体",
+        "不得为了“保持存在感”机械回闪",
+        "未决线索进入“已登记/待核/来源不明/暂不纳入正式材料”等状态",
+    ]:
+        assert marker in content
+
+
+def test_refinement_skill_v14_reviews_evidence_density_without_overediting():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 14
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+    for marker in [
+        "阶段 6.95：信息密度与证据重量复核",
+        "生活成本或并行任务",
+        "异常具体数字、时刻、天数、金额或地址",
+        "不得因为“节奏偏慢”轻易重写整章",
+    ]:
+        assert marker in content
