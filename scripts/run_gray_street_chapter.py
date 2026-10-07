@@ -336,7 +336,11 @@ async def apply_local_rewrite(
     replacement = normalize_novel_output(result.content)
     if not replacement:
         raise RuntimeError("local rewrite returned empty content")
-    lo = max(80, int(len(original_block) * 0.65))
+    lo = (
+        max(80, int(len(original_block) * 0.60))
+        if len(original_block) < 500
+        else max(80, int(len(original_block) * 0.65))
+    )
     hi = (
         len(original_block) + 180
         if len(original_block) < 500
