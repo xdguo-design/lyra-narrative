@@ -1,12 +1,10 @@
 {
-  "chapter_no": 7,
-  "title": "阅览室",
-  "prior_file": "books/gray-street/chapters/06.md",
-  "requested_at": "2026-10-07T19:45:00+08:00",
-  "chapter_constraints": "使用控制器清理稿并进行证据型Gate。当前故事结构已获Master PASS，不得重写结构。只验证静态格式和当前正文可定位硬伤。时间线：11月5日早晨事务所→海关馆内阅览→11点后回事务所。唯一新事实：SV-7在七年前原始簿中确有单独转交记录，完整收取方仍不可读。无第二谜题、无怀表新能力、无黑车、无律师现场。",
-  "attempt": 6,
-  "force_revision": false,
-  "disable_auto_revision": true,
-  "seed_file": "books/gray-street/controller/chapter-07-controller-seed-v2.md",
-  "blueprint_file": "books/gray-street/controller/chapter-07-clean-blueprint.md"
+  "chapter_no": 8,
+  "batch_to": 10,
+  "title": "第八节",
+  "prior_file": "books/gray-street/chapters/07.md",
+  "requested_at": "2026-10-07T19:48:00+08:00",
+  "chapter_constraints": "严格承接已经通过平台Gate并锁定的第7节《阅览室》。第7节末状态：SV-7在七年前原始转交簿中确有单独转交记录；完整收取方仍因旧水损/装订遮挡不可读；诺斯与维恩已经先一步对SV-7提交复核通知；埃文已成为馆内阅览指定经办人，名字正式进入海关与事务所记录；芬奇替他覆盖了卡拉什家的窗口工作。第8—10节必须按POST5_GOALS逐节推进：8让现实代价影响既有人物关系并得到一项有限可核实新事实；9用高压现实场景/正面交锋推进，埃文可误判或付代价；10完成6—10小阶段闭环，回收一个问题、确认更大风险并留下个人化入口。每一节独立过8路Reader+Master+静态Gate，PASS后才能作为下一节前文。禁止新增怀表能力，禁止黑车当危险提示，禁止纸→地址→纸循环，禁止复写上一节结尾，禁止人物变信息播报器。",
+  "attempt": 1,
+  "force_revision": false
 }
