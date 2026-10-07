@@ -281,6 +281,75 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
     return result.content.strip()
 
 
+async def apply_local_rewrite(
+    task_id: int,
+    text: str,
+    req: dict,
+    skill: str,
+    canon: str,
+    prior_tail: str,
+) -> str:
+    """Rewrite only an explicitly anchored block and preserve all text outside it byte-for-byte."""
+    spec = req.get("local_rewrite") or {}
+    if not isinstance(spec, dict):
+        raise ValueError("local_rewrite must be an object")
+    start_anchor = str(spec.get("start_anchor") or "")
+    end_anchor = str(spec.get("end_anchor") or "")
+    instruction = str(spec.get("instruction") or "").strip()
+    if not start_anchor or not end_anchor or not instruction:
+        raise ValueError("local_rewrite requires start_anchor, end_anchor and instruction")
+
+    start = text.find(start_anchor)
+    if start < 0:
+        raise ValueError("local_rewrite start_anchor not found")
+    end_start = text.find(end_anchor, start + len(start_anchor))
+    if end_start < 0:
+        raise ValueError("local_rewrite end_anchor not found")
+    end = end_start + len(end_anchor)
+    original_block = text[start:end]
+
+    result = await _run_step(
+        task_id=task_id,
+        role="revision-agent",
+        stage="gray-street-local-rewrite",
+        mode="polish",
+        content=original_block,
+        instruction=f"""执行严格 LOCAL_REWRITE。只输出给定原文块的完整替换文本，不输出标题、分析、说明或块外正文。
+不得扩写成整章，不得新增人物、世界规则、能力、证据来源、关键线索或后续行动。
+必须保留原块内已经成立的事实、人物关系、信息边界和前后接口；只解决本次指定问题。
+保持《灰街》克制、具体、程序型人物的语气；禁止作者心理总结、不是A而是B、空洞意象、侦探式解说。
+替换块长度应与原块同量级，原则上不超过原块的 1.35 倍，也不低于 0.65 倍。
+
+【本次只解决】
+{instruction}
+
+【最新 Writer Skill 摘要】
+{skill[-4500:]}
+
+【前文尾部】
+{prior_tail[-3500:]}
+
+【Canon】
+{canon[-3500:]}
+""",
+    )
+    replacement = normalize_novel_output(result.content)
+    if not replacement:
+        raise RuntimeError("local rewrite returned empty content")
+    lo = max(80, int(len(original_block) * 0.65))
+    hi = max(lo + 1, int(len(original_block) * 1.35))
+    if not (lo <= len(replacement) <= hi):
+        raise RuntimeError(
+            f"local rewrite size drift: original={len(original_block)} replacement={len(replacement)} allowed={lo}-{hi}"
+        )
+
+    patched = text[:start] + replacement + text[end:]
+    # Hard invariant: only the anchored block may change.
+    if patched[:start] != text[:start] or patched[start + len(replacement):] != text[end:]:
+        raise RuntimeError("local rewrite modified text outside anchored block")
+    return patched
+
+
 async def run_continuous_gate_only(req: dict) -> None:
     """Final blind continuous-read gate for the locked Gray Street chapters."""
     start = int(req.get("continuous_start") or 1)
@@ -295,8 +364,8 @@ async def run_continuous_gate_only(req: dict) -> None:
 
     configure_provider()
     os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
-    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "AGNES"
-    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "DOTS3,AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES,DOTS3"
     init_db()
     project_id, chapter_id = create_project()
     task_id = _create_task(
@@ -486,6 +555,12 @@ async def main() -> None:
         text = normalize_novel_output(repair.content)
     if not _chapter_text_is_usable(text):
         raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
+
+    if req.get("local_rewrite"):
+        text = await apply_local_rewrite(task_id, text, req, skill, canon, prior_tail)
+        text = normalize_novel_output(text)
+        if not _chapter_text_is_usable(text):
+            raise RuntimeError("local rewrite produced unusable chapter")
 
     reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
     gate = static_gate(text, chapter_no)
