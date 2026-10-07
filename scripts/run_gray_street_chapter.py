@@ -379,7 +379,20 @@ async def main() -> None:
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
         text = normalize_novel_output(text)
         if not _chapter_text_is_usable(text):
-            raise RuntimeError("revision unusable")
+            repair = await _run_step(
+                task_id=task_id,
+                role="writer-retry",
+                stage=f"gray-street-ch{chapter_no:02d}-revision-normalize",
+                mode="continue",
+                content=text,
+                instruction=f"""把当前返修稿补足为可审核的完整章节正文。
+必须保留返修稿已经修正的连续性、人物关系和场景结构，不得把已删除的硬伤重新写回来。
+硬长度：3000—4600 个中文字符；若当前过短，只通过场景感知、人物反应、利益摩擦和必要动作补足，禁止新增谜题、规则、人物或解释性总结。
+继续服从本章冻结功能、Writer Skill、Canon 和本轮失败证据。只输出完整小说正文。""",
+            )
+            text = normalize_novel_output(repair.content)
+        if not _chapter_text_is_usable(text):
+            raise RuntimeError(f"revision unusable after normalize: chars={len(text)}")
         reviews = await run_reviews(task_id, text, canon, prior_tail)
         gate = static_gate(text, chapter_no)
         aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
