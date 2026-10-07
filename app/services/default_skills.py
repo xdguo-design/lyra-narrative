@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 BUILTIN_WRITING_SKILL_NAME = "中文小说自然叙事"
-BUILTIN_WRITING_SKILL_VERSION = 17
+BUILTIN_WRITING_SKILL_VERSION = 18
 BUILTIN_WRITING_SKILL_PURPOSE = (
     "提升中文小说的场景选择、视角控制、人物声音、句群节奏、细节取舍、潜台词与叙事可读性。"
 )
@@ -28,8 +28,7 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 2. 虚构工程设施、未来设备、特殊结构先用普通中文建立现实形态，再使用专名。先让读者看见“堤坝内部供检修人员进出的通道和钢门”，再称“检修通道”或“检修门”，不能直接写成“海堤上的门”要求读者自行补全。
 3. 写任何现实或半现实场景时，先检查物理位置、进入方式、尺寸关系、用途和人物可接触方式是否成立。读者一旦会自然追问“这里为什么会有这个东西”，作者必须先补足锚点或改写。
 4. 文学性不得覆盖基本事实。拟人、隐喻、概括性意象如果会让具体物体的位置、性质或动作变模糊，宁可不用。
-5. 专业感不能靠发明似是而非的设施。现实中已有对应物时优先使用准确常用名称；确属虚构时，正文必须给出足够的可视化说明。
-
+5. 专业感不能靠发明似是而非的设施。现实中已有对应物时优先使用准确常用名称；确属虚构时，正文必须给出足够的可视化说明。\n6. 时代表达必须服从项目已经建立的技术层级。历史、架空历史、蒸汽/工业时代场景中，禁止无意识混入“数字化档案、数据库、刷卡、屏幕、二维码、电子系统、复印件”等晚于该时代的流程与器物；若剧情确需超时代技术，必须由 Canon 明确许可并承担设定后果。\n7. 处理行政、司法、档案、通信等流程时，先问“这个时代的人实际拿什么纸、钥匙、印章、柜册、抄件、信差或机械设备完成动作”，不得用现代办公动作替换历史动作。\n
 四、陌生术语第一次出现时必须落地
 1. 不默认读者懂行业黑话、学科术语、缩写和系统名。
 2. 能用生活化中文说清楚，就不用术语。
@@ -326,8 +325,7 @@ BUILTIN_WRITING_SKILL_CONTENT = """【NarrativeOS 默认写作 Skill：中文小
 - 对话中是否所有人都在合作提供信息？
 - 本章的动作形态、笑点来源、金手指展示、章尾钩子是否与前章重复？
 - 如果把人物名字替换掉，是否仍像通用模板？
-- 是否存在“意思能猜懂，但正常人第一眼会觉得怪”的句子？
-- 对比/转折两端是否处于同一语义层级？
+- 是否存在“意思能猜懂，但正常人第一眼会觉得怪”的句子？\n- 当前场景的技术、办公流程、通信方式、档案介质是否符合项目时代；是否无意写入晚于时代的现代设施或术语？\n- 对比/转折两端是否处于同一语义层级？
 - 开篇前三段是否把作品气质带偏成错误类型？
 - 这句幽默来自人物/处境，还是作者在抖机灵？
 - 去掉人物名字后，我还能仅凭说法和动作分清主要说话人吗？
@@ -1409,12 +1407,12 @@ Editor Craft Profile 分维度记录：
 
 
 BUILTIN_READER_REVIEW_SKILL_NAME = "小说读者校验流程"
-BUILTIN_READER_REVIEW_SKILL_VERSION = 12
+BUILTIN_READER_REVIEW_SKILL_VERSION = 13
 BUILTIN_READER_REVIEW_SKILL_PURPOSE = (
     "以盲读方式检查首读理解、人物关系、阅读动力和自然中文首读，并把人工漏检持续沉淀为可回归的 Reader 能力。"
 )
 
-BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v12】
+BUILTIN_READER_REVIEW_SKILL_CONTENT = """【NarrativeOS Skill：小说读者校验流程 v13】
 
 定位：
 Reader 不替作者润色，也不解释作者想法。Reader 只回答“正文实际给了读者什么”。
@@ -1455,8 +1453,7 @@ D16 叙事肌理：关键场景是否只有事实骨架，声音/气味/触感/�
 D17 连续动作：同一连续动作是否被机械拆成多个单行短句，导致阅读像分镜脚本而不是小说句群，标签 ACTION_FRAGMENTATION_GAP。
 D18 对话局部身体化：非紧急对白的关键话轮附近，是否完全没有说话者的姿态、视线、手中事或空间反应；若连续出现，优先复用 EMBODIED_DIALOGUE_GAP，不新造重复标签。
 D19 记忆接入摩擦：穿越/原身记忆/失忆恢复是否像资料加载一样顺滑，没有“本人没经历却知道”的认知冲突；标签 MEMORY_INTEGRATION_TOO_SMOOTH。
-D20 口语自然度：不只检查极短回应，也检查所有关键对白是否“能说出口”。语法成立、逻辑正确但真人不这么说，或需要读者先翻译成自然口语才能顺过去，标签 ORALITY_GAP。
-
+D20 口语自然度：不只检查极短回应，也检查所有关键对白是否“能说出口”。语法成立、逻辑正确但真人不这么说，或需要读者先翻译成自然口语才能顺过去，标签 ORALITY_GAP。\nD21 时代技术一致性：历史、架空历史、工业/蒸汽时代及任何明确技术层级的作品，检查办公流程、档案介质、通信、门禁、复制方式、计时、交通和器物是否超出已建立时代。无 Canon 授权却出现“数字化档案、数据库、刷卡/刷开、电子系统、屏幕、二维码、复印件”等，标 ERA_TECH_ANACHRONISM_GAP。\n
 三、正式标签
 INTENTIONAL_UNKNOWN
 READER_GAP
@@ -1467,8 +1464,7 @@ AUTHOR_JOKE_GAP
 MICRO_CONTINUITY_GAP
 COLLOCATION_GAP
 QUANTITY_GAP
-REFERENCE_GAP
-AUTHOR_EFFECT_GAP
+REFERENCE_GAP\nERA_TECH_ANACHRONISM_GAP\nAUTHOR_EFFECT_GAP
 SCENE_TEXTURE_GAP
 ACTION_FRAGMENTATION_GAP
 CHARACTER_ROUGHNESS
@@ -1633,8 +1629,7 @@ C15 主角能动性：一章的关键发现、决定、推进和后果是否几�
 阻断原则：
 - 单个轻微问题：LOCAL_REWRITE / WATCH。
 - 同一场景同时出现两类以上作者痕迹，或调查发动机整体呈“教程关”：REWRITE_BLOCK。
-- KNOWLEDGE_PROVENANCE_GAP / UNSEEDED_CALLBACK_GAP 只要影响关键行动或章末钩子，必须 FAIL。
-- SALIENT_SIGNAL_ORPHAN_GAP 单个可 LOCAL_REWRITE；多个关键异常无人接收则 FAIL。
+- KNOWLEDGE_PROVENANCE_GAP / UNSEEDED_CALLBACK_GAP 只要影响关键行动或章末钩子，必须 FAIL。\n- ERA_TECH_ANACHRONISM_GAP 若出现在关键流程、核心证据、场景出入方式或推动剧情的主要器物上，必须 FAIL；孤立词误用可 LOCAL_REWRITE，但修订后必须复审时代一致性。\n- SALIENT_SIGNAL_ORPHAN_GAP 单个可 LOCAL_REWRITE；多个关键异常无人接收则 FAIL。
 - PROTAGONIST_AGENCY_GAP 以整章判断；不能为了修复而让主角越权或突然全知。
 - 不能为了避免线索阶梯而机械塞假线索；阻力必须来自真实现场和证据边界。
 
