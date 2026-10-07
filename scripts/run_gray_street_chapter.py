@@ -96,6 +96,38 @@ def verdict(text: str) -> str:
     return m.group(1).upper() if m else "FAIL"
 
 
+def normalize_novel_output(raw: str) -> str:
+    """Keep only the novel body from a model response and fail closed on leaked analysis."""
+    text = str(raw or "").strip()
+    text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
+
+    # Some revision models prepend their plan/reasoning before a clearly labeled
+    # final body. Accept only the body after that marker.
+    markers = list(re.finditer(
+        r"(?mi)^#{1,4}\s*(?:润色后正文|修订后正文|最终正文|小说正文|正文)\s*$",
+        text,
+    ))
+    if markers:
+        text = text[markers[-1].end():].strip()
+
+    # Remove one leading chapter heading emitted by the model.
+    text = re.sub(
+        r"(?m)^\s*#{1,4}\s*第[^\n]{0,40}(?:节|章)[^\n]*\n+",
+        "",
+        text,
+        count=1,
+    ).strip()
+
+    leaked = re.search(
+        r"(?mi)^#{1,4}\s*(?:思考过程|分析|分析约束|修改策略|重写策略|修订策略|检查清单|说明)\s*$",
+        text,
+    )
+    if leaked:
+        raise RuntimeError("model leaked analysis/revision notes into novel body")
+    return text
+
+
 def static_gate(text: str, chapter_no: int = 0) -> dict:
     failures = []
     if re.search(r"(?:并)?不是[^。！？\n]{0,45}(?:而是|只是)", text):
@@ -119,6 +151,9 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
         invented_watch = re.findall(r"怀表[^。！？\n]{0,45}(?:发热|升温|变冷|心率|脉搏|定位|预警|危险|共振|导航)", text)
         if invented_watch:
             failures.append("watch-rule-invention:" + "；".join(invented_watch[:3]))
+        meta = re.findall(r"第[一二三四五六七八九十0-9]+节里|上一版|这版稿|当前稿|正文里|本次修订|读者会|作者", text)
+        if meta:
+            failures.append("meta-writing-language:" + "；".join(meta[:4]))
         if chapter_no == 6:
             if re.search(r"(?:街角|街口|门外|路边|河堤|窗外)[^。！？\n]{0,55}(?:黑色马车|黑车|无家徽.{0,6}(?:车|马车))", text):
                 failures.append("black-car-reappears-in-scene")
@@ -267,8 +302,7 @@ async def main() -> None:
         seed_path = Path(seed_file)
         if not seed_path.exists():
             raise FileNotFoundError(f"seed_file not found: {seed_path}")
-        text = seed_path.read_text(encoding="utf-8")
-        text = re.sub(r"^\s*#\s*第[^\n]+\n+", "", text, count=1).strip()
+        text = normalize_novel_output(seed_path.read_text(encoding="utf-8"))
     else:
         writer = await _run_step(
             task_id=task_id,
@@ -292,13 +326,10 @@ async def main() -> None:
 {canon[-8500:]}
 """,
         )
-        text = writer.content.strip()
-    # Providers occasionally wrap valid prose in Markdown fences or overshoot the
-    # chapter target so far that the response is cut mid-sentence. Normalize once,
-    # then ask the platform Writer to rebuild the same chapter instead of throwing
-    # away a successful model call before Reader Gate.
-    text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
-    text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
+        text = normalize_novel_output(writer.content)
+    # Providers occasionally wrap valid prose or overshoot the chapter target.
+    # Normalize once, then ask the platform Writer to rebuild the same chapter
+    # instead of throwing away a successful model call before Reader Gate.
     if (not _chapter_text_is_usable(text)) or len(text) > 6500:
         repair = await _run_step(
             task_id=task_id,
@@ -312,9 +343,7 @@ async def main() -> None:
 结尾必须是完整句，以中文句末标点结束。不要 Markdown 代码围栏、不要提纲、不要说明，只输出小说正文。
 继续服从本章冻结功能、最新 Writer Skill 和项目 Canon。""",
         )
-        text = repair.content.strip()
-        text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
-        text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
+        text = normalize_novel_output(repair.content)
     if not _chapter_text_is_usable(text):
         raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
@@ -338,6 +367,7 @@ async def main() -> None:
 
     if bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]:
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
+        text = normalize_novel_output(text)
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable")
         reviews = await run_reviews(task_id, text, canon, prior_tail)
