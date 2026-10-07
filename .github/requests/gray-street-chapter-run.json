@@ -2,11 +2,11 @@
   "chapter_no": 9,
   "title": "两天",
   "prior_file": "books/gray-street/chapters/08.md",
-  "requested_at": "2026-10-07T22:04:00+08:00",
-  "chapter_constraints": "使用控制器清稿作为候选，平台只做证据审核，不自动改稿。严格承接第8节已锁定状态：SV-7材料实行共同经办/双签；诺斯与维恩旧客户卷号初登年份为七年前。第9节核心冲突限定为雷蒙德·克莱与律师到事务所补充所有权说明，克莱为了把韦德与SV-7所有权切开，留下可核实的窄主张：七年前第7号箱曾在韦德手中短期代管，口头明确为两天。埃文不得当场宣布真相，只把主张和原话留档并让芬奇见证。禁止新增神秘规则、黑车危险提示、秘密组织、第二条谜题。",
-  "attempt": 1,
+  "requested_at": "2026-10-07T22:12:00+08:00",
+  "chapter_constraints": "第二次证据 Gate。剧情、人物与总编上一轮已 PASS，本轮只修复静态短段落比例，不改变事件、线索边界或人物立场。继续保持：克莱留下‘第7号箱七年前曾由韦德短期代管、口头两天’这一主张；埃文只记录并由芬奇见证，不当场认证为事实。禁止新增剧情、神秘规则、黑车、第二条谜题。",
+  "attempt": 2,
   "force_revision": false,
   "disable_auto_revision": true,
-  "seed_file": "books/gray-street/controller/chapter-09-clean-seed.md",
+  "seed_file": "books/gray-street/controller/chapter-09-clean-seed-v2.md",
   "blueprint_file": "books/gray-street/controller/chapter-09-clean-blueprint.md"
 }
