@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 
@@ -695,34 +696,46 @@ async def run_task(task_id: int) -> dict:
         (
             "continuity-reviewer",
             "continuity",
-            "检查人物状态、称谓、时间线、地点、道具和世界规则连续性。列出明确问题与修改建议；没有问题也要明确说明。",
+            "检查人物状态、称谓、时间线、地点、道具和世界规则连续性。列出明确问题与修改建议；没有问题输出 NO_ISSUE。",
         ),
         (
             "plot-reviewer",
             "plot",
-            "检查剧情因果、动机、信息揭示、冲突推进和悬念是否成立。列出阻断项和建议项。",
+            "检查剧情因果、动机、信息揭示、冲突推进和悬念是否成立。只报告可执行问题；没有问题输出 NO_ISSUE。",
         ),
         (
             "style-reviewer",
             "style",
-            "检查叙述视角、节奏、句式、重复表达和语言风格。只给可执行修改意见。",
+            "检查叙述视角、节奏、句式、重复表达、短句堆叠和语言风格。只给可执行修改意见；没有问题输出 NO_ISSUE。",
+        ),
+        (
+            "blind-reader",
+            "reader",
+            "作为普通读者检查是否好读、人物是否鲜活、哪里显假、哪里想跳过。没有明确问题输出 NO_ISSUE。",
+        ),
+        (
+            "cadence-character-reader",
+            "commercial",
+            "作为商业阅读读者检查阅读动力、章节推进、人物记忆点、续读欲，以及是否靠短句硬推。没有明确问题输出 NO_ISSUE。",
+        ),
+        (
+            "blind-natural-reader",
+            "naturalness",
+            "作为文学自然度读者检查 AI 味、模板解释、机械过渡、作者代替读者总结和不自然中文。没有明确问题输出 NO_ISSUE。",
+        ),
+        (
+            "character-voice-reviewer",
+            "character",
+            "检查主要人物是否按自身利益、关系和既有性格行动，声音是否区分，是否沦为剧情工具。没有明确问题输出 NO_ISSUE。",
+        ),
+        (
+            "blind-dialogue-reader",
+            "dialogue",
+            "检查对白是否自然、是否存在台词墙、问卷式轮流、信息倾倒、规章腔，以及对白是否嵌入动作与场景。没有明确问题输出 NO_ISSUE。",
         ),
     ]
 
-    successful_reviews: list[str] = []
-    for reviewer, category, review_instruction in reviewer_specs:
-        try:
-            review = await _run_step(
-                task_id=task_id,
-                role=reviewer,
-                stage="review",
-                mode="check",
-                content=draft_content,
-                instruction="\n\n".join(
-                    item
-                    for item in [
-                        review_instruction,
-                        """NARRATIVEOS_REVIEW_V2
+    review_contract = """NARRATIVEOS_REVIEW_V2
 请严格使用统一审核格式；每个问题一块，多个问题用单独一行 --- 分隔；没有问题只输出 NO_ISSUE。
 【问题标识】R001 起递增
 【审核轮次】INITIAL
@@ -745,14 +758,55 @@ async def run_task(task_id: int) -> dict:
 【建议动作】一到三句可执行修改方向，不得发明新设定
 【复审要求】说明修改后必须重新验证什么
 【复审结果】PENDING
-注意：处置级别与严重性不是一回事；若影响事实、因果或人物意图，不得只判 POLISH。""",
-                        context,
-                    ]
-                    if item
-                ),
+注意：处置级别与严重性不是一回事；若影响事实、因果或人物意图，不得只判 POLISH。"""
+
+    async def run_one_review(spec, content: str, round_name: str = "INITIAL"):
+        reviewer, category, review_instruction = spec
+        instruction = "\n\n".join(
+            item
+            for item in [
+                review_instruction,
+                review_contract.replace("【审核轮次】INITIAL", f"【审核轮次】{round_name}"),
+                context,
+            ]
+            if item
+        )
+        try:
+            review = await _run_step(
+                task_id=task_id,
+                role=reviewer,
+                stage="review" if round_name == "INITIAL" else "targeted-recheck",
+                mode="check",
+                content=content,
+                instruction=instruction,
             )
-        except RuntimeError as exc:
-            with connect() as conn:
+            return {
+                "spec": spec,
+                "content": review.content,
+                "error": None,
+                "findings": _parse_review_output(review.content, content),
+            }
+        except Exception as exc:
+            return {
+                "spec": spec,
+                "content": "",
+                "error": f"{type(exc).__name__}: {exc}",
+                "findings": [],
+            }
+
+    # Quality dimensions stay intact; speed comes from orchestration, not fewer readers.
+    initial_results = await asyncio.gather(
+        *(run_one_review(spec, draft_content) for spec in reviewer_specs)
+    )
+
+    successful_reviews: list[str] = []
+    problem_specs = []
+    review_errors = []
+    with connect() as conn:
+        for item in initial_results:
+            reviewer, category, _ = item["spec"]
+            if item["error"]:
+                review_errors.append(item)
                 conn.execute(
                     """
                     INSERT INTO review_findings(
@@ -763,18 +817,19 @@ async def run_task(task_id: int) -> dict:
                         task_id,
                         reviewer,
                         category,
-                        "warning",
-                        f"Reviewer 执行失败：{exc}",
-                        "可重试该任务；其他 Reviewer 结果仍保留。",
+                        "blocking",
+                        f"Reviewer 执行失败：{item['error']}",
+                        "该质量维度未完成审核，禁止自动放行；重试任务或等待路由 fallback 成功。",
                         "open",
                     ),
                 )
-            continue
+                continue
 
-        successful_reviews.append(f"[{category}] {review.content}")
-        parsed_findings = _parse_review_output(review.content, draft_content)
-        with connect() as conn:
-            for finding in parsed_findings:
+            successful_reviews.append(f"[{category}] {item['content']}")
+            has_problem = any(finding["severity"] != "info" for finding in item["findings"])
+            if has_problem:
+                problem_specs.append(item["spec"])
+            for finding in item["findings"]:
                 cur = conn.execute(
                     """
                     INSERT INTO review_findings(
@@ -806,6 +861,33 @@ async def run_task(task_id: int) -> dict:
                         ),
                     )
 
+    # An unavailable reader is a missing quality dimension, not a reason to rewrite blindly.
+    if review_errors:
+        with connect() as conn:
+            conn.execute(
+                """
+                UPDATE writing_tasks
+                SET status='reviewed',updated_at=CURRENT_TIMESTAMP
+                WHERE id=?
+                """,
+                (task_id,),
+            )
+        return get_task(task_id) or {}
+
+    # If all eight independent readers found no issue, do not introduce a needless
+    # revision pass that can degrade a clean draft.
+    if not problem_specs:
+        with connect() as conn:
+            conn.execute(
+                """
+                UPDATE writing_tasks
+                SET revised_content=?,status='awaiting_approval',updated_at=CURRENT_TIMESTAMP
+                WHERE id=?
+                """,
+                (draft_content, task_id),
+            )
+        return get_task(task_id) or {}
+
     with connect() as conn:
         blocking = conn.execute(
             """
@@ -824,11 +906,10 @@ async def run_task(task_id: int) -> dict:
     revision_instruction = "\n\n".join(
         item
         for item in [
-            "根据 Reviewer 意见修订草稿。保留没有被指出问题的内容，不引入无关新设定。",
+            "根据 Reviewer 的真实问题统一修订草稿。只处理被指出的问题及其必要联动，保留其余已通过内容，不引入无关新设定。",
+            "保持完整段落与自然长短句；禁止为了修问题重新制造台词墙、短句堆叠、作者解释腔或人物工具化。",
             str(task["instruction"] or "").strip(),
-            "Reviewer 意见：\n" + "\n\n".join(successful_reviews)
-            if successful_reviews
-            else "Reviewer 本轮无可用结果；仅做保守润色，不改变事实。",
+            "Reviewer 意见：\n" + "\n\n".join(successful_reviews),
             context,
         ]
         if item
@@ -854,6 +935,94 @@ async def run_task(task_id: int) -> dict:
                 (task_id,),
             )
         return get_task(task_id) or {}
+
+    revised_content = revision.content.strip()
+    if not revised_content:
+        with connect() as conn:
+            conn.execute(
+                "UPDATE writing_tasks SET status='reviewed',updated_at=CURRENT_TIMESTAMP WHERE id=?",
+                (task_id,),
+            )
+        return get_task(task_id) or {}
+
+    # Only dimensions that actually found a problem are re-run. This removes
+    # redundant calls without weakening the original eight-reader gate.
+    recheck_results = await asyncio.gather(
+        *(run_one_review(spec, revised_content, "RECHECK") for spec in problem_specs)
+    )
+
+    recheck_failed = False
+    with connect() as conn:
+        for item in recheck_results:
+            reviewer, category, _ = item["spec"]
+            if item["error"]:
+                recheck_failed = True
+                conn.execute(
+                    """
+                    INSERT INTO review_findings(
+                        task_id,reviewer,category,severity,summary,suggestion,status
+                    ) VALUES(?,?,?,?,?,?,?)
+                    """,
+                    (
+                        task_id,
+                        reviewer,
+                        category,
+                        "blocking",
+                        f"复审执行失败：{item['error']}",
+                        "该问题维度尚未完成复审，禁止自动放行。",
+                        "open",
+                    ),
+                )
+                continue
+
+            remaining = [f for f in item["findings"] if f["severity"] != "info"]
+            if remaining:
+                recheck_failed = True
+                for finding in remaining:
+                    cur = conn.execute(
+                        """
+                        INSERT INTO review_findings(
+                            task_id,reviewer,category,severity,summary,suggestion,status
+                        ) VALUES(?,?,?,?,?,?,?)
+                        """,
+                        (
+                            task_id,
+                            reviewer,
+                            category,
+                            finding["severity"],
+                            "复审仍存在：" + finding["summary"],
+                            finding["suggestion"],
+                            "open",
+                        ),
+                    )
+                    if finding["excerpt"]:
+                        conn.execute(
+                            """
+                            INSERT INTO review_finding_refs(
+                                finding_id,excerpt,start_offset,end_offset
+                            ) VALUES(?,?,?,?)
+                            """,
+                            (
+                                cur.lastrowid,
+                                finding["excerpt"],
+                                finding["start_offset"],
+                                finding["end_offset"],
+                            ),
+                        )
+
+        conn.execute(
+            """
+            UPDATE writing_tasks
+            SET revised_content=?,status=?,updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (
+                revised_content,
+                "reviewed" if recheck_failed else "awaiting_approval",
+                task_id,
+            ),
+        )
+    return get_task(task_id) or {}
 
     with connect() as conn:
         conn.execute(
