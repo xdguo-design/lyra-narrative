@@ -576,7 +576,18 @@ async def main() -> None:
     if not _chapter_text_is_usable(text):
         raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
-    if req.get("local_rewrite"):
+    rewrite_specs = req.get("local_rewrites")
+    if rewrite_specs:
+        if not isinstance(rewrite_specs, list):
+            raise ValueError("local_rewrites must be a list")
+        for rewrite_spec in rewrite_specs:
+            local_req = dict(req)
+            local_req["local_rewrite"] = rewrite_spec
+            text = await apply_local_rewrite(task_id, text, local_req, skill, canon, prior_tail)
+            text = normalize_novel_output(text)
+            if not _chapter_text_is_usable(text):
+                raise RuntimeError("local rewrite produced unusable chapter")
+    elif req.get("local_rewrite"):
         text = await apply_local_rewrite(task_id, text, req, skill, canon, prior_tail)
         text = normalize_novel_output(text)
         if not _chapter_text_is_usable(text):
