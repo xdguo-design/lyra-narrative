@@ -113,7 +113,7 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
     if short_ratio > 0.12:
         failures.append(f"short-paragraph-ratio:{short_ratio:.1%}")
     if chapter_no >= 6:
-        modern_terms = re.findall(r"数字化|电子档案|电子系统|数据库|二维码|刷卡|刷开.{0,8}(?:信物|通行|门)", text)
+        modern_terms = re.findall(r"数字化|电子档案|电子系统|数据库|二维码|刷卡|刷开.{0,8}(?:信物|通行|门)|复印件|时间戳", text)
         if modern_terms:
             failures.append("era-anachronism:" + "；".join(modern_terms[:4]))
         invented_watch = re.findall(r"怀表[^。！？\n]{0,45}(?:发热|升温|变冷|心率|脉搏|定位|预警|危险|共振|导航)", text)
