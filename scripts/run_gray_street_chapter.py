@@ -34,7 +34,7 @@ POST5_CANON = """【第6节以后锁定连续性】
 """
 
 POST5_GOALS = {
-    6: "承接匿名短函和 SV-7 / 第7号箱，把线索迅速变成现实行动或现实冲突；让既有角色或机构主动制造阻力，不得用黑车替代戏。",
+    6: "从第5节最后一封匿名短函送到事务所后的几分钟内直接承接。短函只是一条人为送来的线索，不含新的怀表规则或时间窗口。埃文准备沿既有海关索引继续核实 SV-7 时，必须遭遇由既有人物、既有代理行或既有行政机构造成的现实阻力；对手开始利用程序争夺资料、解释权或处置顺序。关键推进尽量由贝恩、芬奇、霍尔、雷蒙德·克莱/其律师以及已经出现的机构承担。新出现的普通办事人员只能完成岗位动作，禁止突然知道托马斯七年前的秘密、拿出关键齿轮/神秘零件或一口气解释谜底。本节至少完成一项可核实的新事实或状态变化，但不得解释第7号箱本质。",
     7: "让第7号箱的争夺或控制关系升级；埃文必须在有限权限、程序责任和效率之间做一个有代价的选择，对手开始利用程序。",
     8: "把代价推进到人物关系或现实生活；至少一条既有关系被主线真实影响，同时获得一项可核实但不等于总答案的新事实。",
     9: "完成一次高压现实场景或正面交锋；信息来自行动、证人、物证或程序后果，埃文允许误判或付代价，怀表不能自动解题。",
@@ -61,6 +61,10 @@ def extract_plan(chapter_no: int) -> str:
 - 正文以完整段落和自然中长句群为主，禁止大量一句一段、裸对白、问卷式问答和作者总结。
 - 每节必须有现场事件、人物选择或现实阻力，不准整节只查档案。
 - 不新增世界规则，不通过新设定绕开冲突。
+- 世界处于类似十九世纪工业化欧洲的钢铁时代：只使用纸档、印章、钥匙、封条、账册、手写登记、实体柜架、铁路/马车/煤气灯等已经成立的技术层级。禁止“数字化档案、刷卡/刷开信物、电子系统、数据库、屏幕、二维码”等现代设施。
+- 第6节不得让黑色马车、无家徽车辆重新在现场出现，也不得安排霍尔重复执行第5节已经失败的南桥跟车；若必须提到，只能作为一句既成事实回顾。
+- 米拉的银牌已在第5节合法返还并由米拉本人持有，只能作为已发生事实回忆，不能再成为埃文手里的证物或当前待处理物。
+- 匿名短函只写批次号与“SV-7 / 第7号箱”，没有倒计时、行动窗口或神秘指令，不得替它补含义。
 - 第6—10节整体要形成入口→竞争/阻力→代价→局部验证→阶段回收与更危险入口。"""
     text = PLAN.read_text(encoding="utf-8")
     start = text.index(SECTION_HEADERS[chapter_no])
@@ -91,7 +95,7 @@ def verdict(text: str) -> str:
     return m.group(1).upper() if m else "FAIL"
 
 
-def static_gate(text: str) -> dict:
+def static_gate(text: str, chapter_no: int = 0) -> dict:
     failures = []
     if re.search(r"(?:并)?不是[^。！？\n]{0,45}(?:而是|只是)", text):
         failures.append("ai-template:not-A-but-B")
@@ -107,6 +111,18 @@ def static_gate(text: str) -> dict:
     short_ratio = sum(1 for p in prose if len(re.sub(r"\s+", "", p)) <= 28) / max(1, len(prose))
     if short_ratio > 0.12:
         failures.append(f"short-paragraph-ratio:{short_ratio:.1%}")
+    if chapter_no >= 6:
+        modern_terms = re.findall(r"数字化|电子档案|电子系统|数据库|二维码|刷卡|刷开.{0,8}(?:信物|通行|门)", text)
+        if modern_terms:
+            failures.append("era-anachronism:" + "；".join(modern_terms[:4]))
+        invented_watch = re.findall(r"怀表[^。！？\n]{0,45}(?:发热|升温|变冷|心率|脉搏|定位|预警|危险|共振|导航)", text)
+        if invented_watch:
+            failures.append("watch-rule-invention:" + "；".join(invented_watch[:3]))
+        if chapter_no == 6:
+            if re.search(r"(?:街角|街口|门外|路边|河堤|窗外)[^。！？\n]{0,55}(?:黑色马车|黑车|无家徽.{0,6}(?:车|马车))", text):
+                failures.append("black-car-reappears-in-scene")
+            if re.search(r"霍尔[^。！？\n]{0,55}(?:南桥|跟车|盯车|追车)", text):
+                failures.append("repeat-hall-car-tail")
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
@@ -125,7 +141,7 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
 这是章节 Gate，不改正文。{('不要参考世界观说明，只按正文与前文阅读体验判断。' if blind else '必须同时服从冻结 Canon 与前文事实。')}
 只要发现成片小短句、裸对白、问卷式对话、作者解释腔、人物工具化、因果/连续性错误，就 FAIL。
 第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
-之后最多列 5 条最重要逐字证据。
+之后最多列 5 条最重要逐字证据；整份报告控制在 700 个汉字以内，禁止展开长篇复盘。
 参考上下文：
 {context}""",
             )
@@ -227,6 +243,11 @@ async def main() -> None:
     prior_tail = prior_text[-16000:]
 
     configure_provider()
+    # Keep heterogeneous review routing, but permit reliable AGNES fallback when
+    # DOTS3 exhausts its reasoning/output budget before returning visible text.
+    os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES"
     init_db()
     project_id, chapter_id = create_project()
     task_id = _create_task(project_id=project_id, chapter_id=chapter_id, goal=f"生成《灰街》第{chapter_no}节《{title}》并通过短链路 Gate。", instruction="必须通过多读者与专项审核才可进入下一节。")
@@ -289,7 +310,7 @@ async def main() -> None:
         raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
     reviews = await run_reviews(task_id, text, canon, prior_tail)
-    gate = static_gate(text)
+    gate = static_gate(text, chapter_no)
     aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
 
@@ -298,7 +319,7 @@ async def main() -> None:
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable")
         reviews = await run_reviews(task_id, text, canon, prior_tail)
-        gate = static_gate(text)
+        gate = static_gate(text, chapter_no)
         aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
 
