@@ -2,7 +2,7 @@
   "chapter_no": 9,
   "title": "两天",
   "prior_file": "books/gray-street/chapters/08.md",
-  "requested_at": "2026-10-07T23:42:00+08:00",
+  "requested_at": "2026-10-07T23:45:00+08:00",
   "seed_file": "books/gray-street/chapters/09.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
@@ -11,5 +11,6 @@
     "start_anchor": "风铃响了一声，两个人走了。门外没有马车停在窗前，只有一辆送煤的小车从街口经过，轮子碾过石缝里的积水，溅了半墙泥点。",
     "end_anchor": "芬奇核完，在页角签了自己的缩写。",
     "instruction": "外审指出克莱主动说出具体‘两天’后，正文过快滑向后续核验。保持现有事件与对白功能，只增加一个极小的行为停顿，让口头‘两天’与律师书面只写‘短期代管/另行核验’之间的具体度差异被埃文或贝恩以记录动作接住。不得写‘可疑/异常’，不得分析克莱心理，不得新增查证行动，不得新增证据。芬奇仍只负责第二经办和提醒事实边界。"
-  }
+  },
+  "attempt": 3
 }
