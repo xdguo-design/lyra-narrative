@@ -384,7 +384,7 @@ async def main() -> None:
     if bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]:
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
         text = normalize_novel_output(text)
-        if not _chapter_text_is_usable(text):
+        if (not _chapter_text_is_usable(text)) or len(text) < 3000:
             repair = await _run_step(
                 task_id=task_id,
                 role="writer-retry",
@@ -397,7 +397,7 @@ async def main() -> None:
 继续服从本章冻结功能、Writer Skill、Canon 和本轮失败证据。只输出完整小说正文。""",
             )
             text = normalize_novel_output(repair.content)
-        if not _chapter_text_is_usable(text):
+        if (not _chapter_text_is_usable(text)) or len(text) < 2800:
             raise RuntimeError(f"revision unusable after normalize: chars={len(text)}")
         reviews = await run_reviews(task_id, text, canon, prior_tail)
         gate = static_gate(text, chapter_no)
