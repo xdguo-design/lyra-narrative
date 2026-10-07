@@ -411,24 +411,13 @@ async def main() -> None:
 
     configure_provider()
     fast_mode = bool(req.get("fast_mode", False))
-    if fast_mode:
-        for role_key in [
-            "CONTINUITY_REVIEWER",
-            "CHARACTER_DIALOGUE_REVIEWER",
-            "LANGUAGE_RHYTHM_REVIEWER",
-            "BLIND_READER",
-            "CADENCE_CHARACTER_READER",
-            "BLIND_NATURAL_READER",
-            "CHARACTER_VOICE_REVIEWER",
-            "BLIND_DIALOGUE_READER",
-        ]:
-            os.environ[f"NARRATIVE_ROLE_{role_key}_PROFILE"] = "AGNES"
+    # Fast mode changes orchestration only; it must not collapse independent
+    # reader roles onto one provider. Preserve heterogeneous review routing so
+    # quality and provider-level fault tolerance are both retained.
     active_reviewers = REVIEWERS
-    # Keep heterogeneous review routing, but permit reliable AGNES fallback when
-    # DOTS3 exhausts its reasoning/output budget before returning visible text.
     os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
-    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "AGNES"
-    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "DOTS3,AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES,DOTS3"
     init_db()
     project_id, chapter_id = create_project()
     task_id = _create_task(project_id=project_id, chapter_id=chapter_id, goal=f"生成《灰街》第{chapter_no}节《{title}》并通过短链路 Gate。", instruction="必须通过多读者与专项审核才可进入下一节。")
