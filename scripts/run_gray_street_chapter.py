@@ -414,12 +414,16 @@ async def main() -> None:
     if fast_mode:
         for role_key in [
             "CONTINUITY_REVIEWER",
+            "CHARACTER_DIALOGUE_REVIEWER",
+            "LANGUAGE_RHYTHM_REVIEWER",
             "BLIND_READER",
             "CADENCE_CHARACTER_READER",
             "BLIND_NATURAL_READER",
+            "CHARACTER_VOICE_REVIEWER",
+            "BLIND_DIALOGUE_READER",
         ]:
             os.environ[f"NARRATIVE_ROLE_{role_key}_PROFILE"] = "AGNES"
-    active_reviewers = FAST_REVIEWERS if fast_mode else REVIEWERS
+    active_reviewers = REVIEWERS
     # Keep heterogeneous review routing, but permit reliable AGNES fallback when
     # DOTS3 exhausts its reasoning/output budget before returning visible text.
     os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
@@ -497,7 +501,7 @@ async def main() -> None:
     reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
     gate = static_gate(text, chapter_no)
     if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
-        aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all core readers passed.", "provider": "local-consensus", "model": "core-readers"}
+        aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
     else:
         aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
@@ -550,7 +554,7 @@ async def main() -> None:
         reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
         gate = static_gate(text, chapter_no)
         if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
-            aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision.", "provider": "local-consensus", "model": "core-readers"}
+            aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
         else:
             aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
