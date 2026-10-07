@@ -2,11 +2,11 @@
   "chapter_no": 9,
   "title": "两天",
   "prior_file": "books/gray-street/chapters/08.md",
-  "requested_at": "2026-10-07T22:12:00+08:00",
-  "chapter_constraints": "第二次证据 Gate。剧情、人物与总编上一轮已 PASS，本轮只修复静态短段落比例，不改变事件、线索边界或人物立场。继续保持：克莱留下‘第7号箱七年前曾由韦德短期代管、口头两天’这一主张；埃文只记录并由芬奇见证，不当场认证为事实。禁止新增剧情、神秘规则、黑车、第二条谜题。",
-  "attempt": 2,
+  "requested_at": "2026-10-07T22:18:00+08:00",
+  "chapter_constraints": "第三次证据 Gate。上一轮 8 个 Reviewer 全部 PASS，总编唯一失败依据是静态短段落比例17.4%。本轮仅合并短段落，剧情、对白、线索、人物位置、措辞事实边界全部保持。必须把克莱的‘两天’保留为其口头/书面主张，不能自动认证为事实。",
+  "attempt": 3,
   "force_revision": false,
   "disable_auto_revision": true,
-  "seed_file": "books/gray-street/controller/chapter-09-clean-seed-v2.md",
+  "seed_file": "books/gray-street/controller/chapter-09-clean-seed-v3.md",
   "blueprint_file": "books/gray-street/controller/chapter-09-clean-blueprint.md"
 }
