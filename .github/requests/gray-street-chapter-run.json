@@ -4,10 +4,11 @@
   "continuous_gate_only": true,
   "continuous_start": 1,
   "continuous_end": 10,
-  "requested_at": "2026-10-07T22:51:00+08:00",
+  "requested_at": "2026-10-07T22:53:00+08:00",
   "chapter_constraints": "最终连续盲读，只审当前正式锁稿 books/gray-street/chapters/01.md—10.md，不读取旧候选稿。普通读者、商业阅读、文学自然度三路独立审核后，由总编 Gate 汇总。任何旧稿问题若当前正文不存在必须驳回。",
-  "attempt": 8,
+  "attempt": 9,
   "fast_mode": true,
   "force_revision": true,
-  "seed_file": "books/gray-street/controller/chapter-06-attempt6.md"
+  "seed_file": "books/gray-street/controller/chapter-06-attempt6.md",
+  "quality_mode": "full-8-reviewers"
 }
