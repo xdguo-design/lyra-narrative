@@ -262,13 +262,21 @@ async def main() -> None:
         chapter_plan += "\n\n【本次结构级返修追加约束】\n" + extra_constraints
     skill = skill_excerpt(task_id)
 
-    writer = await _run_step(
-        task_id=task_id,
-        role="writer",
-        stage=f"gray-street-ch{chapter_no:02d}-draft",
-        mode="continue",
-        content=prior_tail,
-        instruction=f"""从前文之后写《灰街》第{chapter_no}节《{title}》。只输出本节正文，不复述前文，不写提纲。
+    seed_file = str(req.get("seed_file") or "").strip()
+    if seed_file:
+        seed_path = Path(seed_file)
+        if not seed_path.exists():
+            raise FileNotFoundError(f"seed_file not found: {seed_path}")
+        text = seed_path.read_text(encoding="utf-8")
+        text = re.sub(r"^\s*#\s*第[^\n]+\n+", "", text, count=1).strip()
+    else:
+        writer = await _run_step(
+            task_id=task_id,
+            role="writer",
+            stage=f"gray-street-ch{chapter_no:02d}-draft",
+            mode="continue",
+            content=prior_tail,
+            instruction=f"""从前文之后写《灰街》第{chapter_no}节《{title}》。只输出本节正文，不复述前文，不写提纲。
 目标 3200—4500 个中文字符。
 必须完整实现本章冻结功能，但只揭示这一章应该揭示的信息。
 正文以完整段落和自然中长句群为主；禁止大量一句一段、裸对白、问卷式问答、不是A而是B式作者解释。
@@ -283,8 +291,8 @@ async def main() -> None:
 【项目 Canon】
 {canon[-8500:]}
 """,
-    )
-    text = writer.content.strip()
+        )
+        text = writer.content.strip()
     # Providers occasionally wrap valid prose in Markdown fences or overshoot the
     # chapter target so far that the response is cut mid-sentence. Normalize once,
     # then ask the platform Writer to rebuild the same chapter instead of throwing
@@ -314,8 +322,21 @@ async def main() -> None:
     gate = static_gate(text, chapter_no)
     aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
+    fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
+    if fail_count >= 4:
+        aggregate["verdict"] = "FAIL"
+        aggregate["consensus_override"] = f"{fail_count} independent readers returned FAIL; Master PASS cannot override broad disagreement."
 
-    if aggregate["verdict"] != "PASS" or not gate["pass"]:
+    manual_findings = str(req.get("manual_findings") or "").strip()
+    if manual_findings:
+        failed.append({
+            "name": "controller-manual-adjudication",
+            "role": "controller",
+            "verdict": "FAIL",
+            "report": manual_findings,
+        })
+
+    if bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]:
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable")
@@ -323,6 +344,10 @@ async def main() -> None:
         gate = static_gate(text, chapter_no)
         aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
+        fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
+        if fail_count >= 4:
+            aggregate["verdict"] = "FAIL"
+            aggregate["consensus_override"] = f"{fail_count} independent readers returned FAIL after revision."
 
     passed = gate["pass"] and aggregate["verdict"] == "PASS"
     out = OUT_ROOT / f"chapter-{chapter_no:02d}"
