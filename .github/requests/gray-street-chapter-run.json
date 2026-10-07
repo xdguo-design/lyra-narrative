@@ -2,10 +2,11 @@
   "chapter_no": 7,
   "title": "阅览室",
   "prior_file": "books/gray-street/chapters/06.md",
-  "requested_at": "2026-10-07T19:35:00+08:00",
-  "chapter_constraints": "使用控制器清理后的完整种子稿，只允许依据Reader Gate做必要返修，不得重写第6节，不得新增第二谜题。时间必须单向推进：早晨事务所→海关馆内阅览→11点后回事务所。唯一新事实：SV-7在七年前原始簿中确有单独转交记录，完整收取方仍不可读。人物对白保持短、自然、具体；芬奇有自己的窗口工作；贝恩用具体归档动作表达程序责任。无怀表新能力、无黑车、无律师现场、无神秘附件/指纹悬疑。",
-  "attempt": 4,
+  "requested_at": "2026-10-07T19:40:00+08:00",
+  "chapter_constraints": "使用控制器清理后的完整种子稿。总编只允许基于当前正文中可逐字定位的证据判硬伤；旧版、前文或Reviewer幻觉引用不得阻断。时间线：早晨事务所→海关馆内阅览→11点后回事务所。唯一新事实：SV-7在七年前原始簿中确有单独转交记录，完整收取方仍不可读。无第二谜题、无怀表新能力、无黑车、无律师现场。",
+  "attempt": 5,
   "force_revision": false,
+  "disable_auto_revision": true,
   "seed_file": "books/gray-street/controller/chapter-07-controller-seed-v2.md",
   "blueprint_file": "books/gray-street/controller/chapter-07-clean-blueprint.md"
 }
