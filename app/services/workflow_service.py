@@ -761,7 +761,7 @@ async def run_task(task_id: int) -> dict:
 注意：处置级别与严重性不是一回事；若影响事实、因果或人物意图，不得只判 POLISH。"""
 
     async def run_one_review(spec, content: str, round_name: str = "INITIAL"):
-        reviewer, category, review_instruction = spec
+        reviewer, _category, review_instruction = spec
         instruction = "\n\n".join(
             item
             for item in [
@@ -786,7 +786,7 @@ async def run_task(task_id: int) -> dict:
                 "error": None,
                 "findings": _parse_review_output(review.content, content),
             }
-        except Exception as exc:
+        except RuntimeError as exc:
             return {
                 "spec": spec,
                 "content": "",
