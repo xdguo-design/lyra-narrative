@@ -337,7 +337,12 @@ async def apply_local_rewrite(
     if not replacement:
         raise RuntimeError("local rewrite returned empty content")
     lo = max(80, int(len(original_block) * 0.65))
-    hi = max(lo + 1, int(len(original_block) * 1.35))
+    hi = (
+        len(original_block) + 180
+        if len(original_block) < 500
+        else int(len(original_block) * 1.35)
+    )
+    hi = max(lo + 1, hi)
     if not (lo <= len(replacement) <= hi):
         raise RuntimeError(
             f"local rewrite size drift: original={len(original_block)} replacement={len(replacement)} allowed={lo}-{hi}"
