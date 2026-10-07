@@ -53,6 +53,13 @@ REVIEWERS = [
     ("blind-dialogue-reader", "对白读者", "检查台词是否自然、具身体和空间感，是否存在脚本式问答、信息倾倒和规章腔。"),
 ]
 
+FAST_REVIEWERS = [
+    ("continuity-reviewer", "连续性与剧情", "只拦截真实的时间、道具、知识来源、权限、因果与前后章接口错误。"),
+    ("blind-reader", "普通读者", "判断是否好读、哪里假、哪里想跳过、人物是否像活人。"),
+    ("cadence-character-reader", "商业读者", "检查推进、续读欲、人物记忆点与是否靠短句硬推。"),
+    ("blind-natural-reader", "文学自然度读者", "检查AI味、模板解释、机械过渡、过于工整和不自然中文。"),
+]
+
 
 def extract_plan(chapter_no: int) -> str:
     if chapter_no >= 6:
@@ -172,7 +179,7 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
-async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
+async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None):
     async def one(role: str, name: str, focus: str):
         try:
             blind = role in {"blind-reader","cadence-character-reader","blind-natural-reader","character-voice-reviewer","blind-dialogue-reader"}
@@ -194,7 +201,8 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
             return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
         except Exception as exc:
             return {"name": name, "role": role, "verdict": "ERROR", "report": "", "error": f"{type(exc).__name__}: {exc}"}
-    return await asyncio.gather(*(one(*spec) for spec in REVIEWERS))
+    reviewer_specs = reviewers or REVIEWERS
+    return await asyncio.gather(*(one(*spec) for spec in reviewer_specs))
 
 
 async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dict, canon: str, prior_tail: str, chapter_no: int) -> dict:
@@ -252,7 +260,7 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
         instruction=f"""根据真实 Gate 失败证据统一重写当前章节。不是逐句打补丁；允许重组场景和话轮，但不得改变冻结章节功能、前文事实或提前泄露后续。
 正文用完整段落和自然中长句群；禁止裸对白、问卷式问答、规章背诵、不是A而是B式作者总结、人物工具化。
 不能用机械补动作作弊。
-只输出完整正文。
+只输出完整正文。硬长度 3000—4200 个中文字符；宁可合并重复动作和对白，也不能压缩成章节梗概。
 
 【本章冻结功能】
 {chapter_plan}
@@ -402,6 +410,16 @@ async def main() -> None:
     prior_tail = prior_text[-16000:]
 
     configure_provider()
+    fast_mode = bool(req.get("fast_mode", False))
+    if fast_mode:
+        for role_key in [
+            "CONTINUITY_REVIEWER",
+            "BLIND_READER",
+            "CADENCE_CHARACTER_READER",
+            "BLIND_NATURAL_READER",
+        ]:
+            os.environ[f"NARRATIVE_ROLE_{role_key}_PROFILE"] = "AGNES"
+    active_reviewers = FAST_REVIEWERS if fast_mode else REVIEWERS
     # Keep heterogeneous review routing, but permit reliable AGNES fallback when
     # DOTS3 exhausts its reasoning/output budget before returning visible text.
     os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
@@ -476,9 +494,12 @@ async def main() -> None:
     if not _chapter_text_is_usable(text):
         raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
-    reviews = await run_reviews(task_id, text, canon, prior_tail)
+    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
     gate = static_gate(text, chapter_no)
-    aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
+    if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
+        aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all core readers passed.", "provider": "local-consensus", "model": "core-readers"}
+    else:
+        aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
     fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
     if fail_count >= 4:
@@ -512,9 +533,26 @@ async def main() -> None:
             text = normalize_novel_output(repair.content)
         if (not _chapter_text_is_usable(text)) or len(text) < 2800:
             raise RuntimeError(f"revision unusable after normalize: chars={len(text)}")
-        reviews = await run_reviews(task_id, text, canon, prior_tail)
+        if not _chapter_text_is_usable(text) or len(text) < 2800:
+            repair = await _run_step(
+                task_id=task_id,
+                role="writer-retry",
+                stage=f"gray-street-ch{chapter_no:02d}-revision-normalize",
+                mode="continue",
+                content=text,
+                instruction=f"""把修订稿补足为完整章节正文，保留现有正确结构与事实，不新增线索、规则或人物。
+硬长度 3000—4200 中文字符；补足场景中的人物反应、空间、工作阻力与必要过渡，禁止用解释性总结灌字数。
+只输出小说正文。""",
+            )
+            text = normalize_novel_output(repair.content)
+        if not _chapter_text_is_usable(text):
+            raise RuntimeError("revision unusable after normalize")
+        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
         gate = static_gate(text, chapter_no)
-        aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
+        if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
+            aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision.", "provider": "local-consensus", "model": "core-readers"}
+        else:
+            aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
         fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
         if fail_count >= 4:
