@@ -221,7 +221,17 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, revi
 
 
 async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dict, canon: str, prior_tail: str, chapter_no: int) -> dict:
-    compact = json.dumps(reviews, ensure_ascii=False)[:22000]
+    # Keep all eight decisions and actionable evidence; omit duplicated metadata
+    # so Master can spend its token budget judging the full current chapter.
+    compact = json.dumps([
+        {
+            "name": item.get("name"),
+            "verdict": item.get("verdict"),
+            "report": str(item.get("report") or "")[:650],
+            "error": item.get("error"),
+        }
+        for item in reviews
+    ], ensure_ascii=False)[:8500]
     result = await _run_step(
         task_id=task_id,
         role="master-reader",
@@ -250,10 +260,10 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 {compact}
 
 前文尾部：
-{prior_tail[-9000:]}
+{prior_tail[-5200:]}
 
 Canon 摘要：
-{canon[-4500:]}
+{canon[-3000:]}
 """,
     )
     return {
