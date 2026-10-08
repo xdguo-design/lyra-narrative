@@ -1,7 +1,12 @@
 {
-  "continuous_gate_only": true,
-  "continuous_start": 1,
-  "continuous_end": 10,
-  "requested_at": "2026-10-08T15:39:00+08:00",
-  "quality_mode": "post-external-review-continuous"
+  "chapter_no": 11,
+  "title": "认签",
+  "prior_file": "books/gray-street/chapters/10.md",
+  "requested_at": "2026-10-08T15:50:00+08:00",
+  "attempt": 2,
+  "blueprint_file": "books/gray-street/controller/chapter-11-blueprint.md",
+  "fast_mode": true,
+  "quality_mode": "full-8-reviewers",
+  "chapter_constraints": "上轮因静态Gate(not-A-but-B、碎段落)和鞋铺/帮忙跑腿因果不成立被Master判FAIL。本轮严格使用更新的第11节控制器：禁止鞋铺、送修鞋、卡拉什担保顺路借口、重复杯子梗、不是A而是B和作者总结。唯一主冲突在旧检货房活人现场，埃文主动行动、受阻并付出现实代价，最多得到一项可核实边界信息。Nov7接Nov6；七年前‘两天’只属克莱主张。",
+  "force_revision": false
 }
