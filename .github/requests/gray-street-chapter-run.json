@@ -2,11 +2,12 @@
   "chapter_no": 12,
   "title": "背面",
   "prior_file": "books/gray-street/chapters/11.md",
-  "requested_at": "2026-10-08T21:18:00+08:00",
-  "attempt": 2,
+  "requested_at": "2026-10-08T21:24:00+08:00",
+  "attempt": 3,
   "blueprint_file": "books/gray-street/controller/chapter-12-blueprint.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
   "disable_auto_revision": true,
-  "chapter_constraints": "请遵守冻结蓝图：3200-4500中文字符，先落实11月7日晚代班报送和旧鞋的真实代价，再在11月8日以米拉个人产权、洗衣行生计和收购人的现实压力推动主线。米拉自愿到事务所，不被动提供万能线索；她提及买方要求查看背面三行南陆文，只能作为当事人口述。不能复活怀表倒数、加新法术、安排匿名信巧合，也不能变成连续查纸流程。必须有人物的实际选择与场景后果，结尾不是纸面特写。保持8路完整审核；FAIL阻断晋级。"
+  "chapter_constraints": "外审定位后的第12节受控候选稿，必须保留小说完整场景并由8路独立审核。正文篇幅3200—4500字；第11节五份夜间报送确有当日截止，未完成项次日上午仍需由埃文本人补办；纸面不能归档即当作办结。银牌第5节已完成13:42合法返还，原物始终由米拉持有，不得再放入事务所主管柜；埃文只出具合法摘录。再购者要求看牌背三行南陆字只是米拉口述，不能预设法术、真相或将窄木箱等同银牌。保留洗衣行现实压力、米拉自己选择辨认母亲文字、埃文夜班与伤脚后果，不增加便利文书线索。禁止解释性口号和不是A而是B，禁作者总结式章尾。任何Reviewer FAIL由Master证据复核，静态失败和四路以上FAIL不得被Master放行。",
+  "seed_file": "books/gray-street/controller/chapter-12-controlled-candidate.md"
 }
