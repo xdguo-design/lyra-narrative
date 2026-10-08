@@ -3,6 +3,8 @@ name: Gray Street Chapter Short Pipeline
 on:
   workflow_dispatch:
   push:
+    branches-ignore:
+      - dev
     paths:
       - ".github/requests/gray-street-chapter-run.json"
 

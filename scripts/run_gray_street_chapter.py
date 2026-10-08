@@ -18,7 +18,8 @@ OUT_ROOT = Path("artifacts/gray-street-chapter-run")
 
 TITLES = {
     2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落",
-    6: "第7号箱", 7: "阅览室", 8: "第八节", 9: "第九节", 10: "第十节",
+    6: "第7号箱", 7: "阅览室", 8: "旧账户", 9: "两天", 10: "弯钩",
+    11: "认签",
 }
 SECTION_HEADERS = {2: "## 第二节《遗产》", 3: "## 第三节《河灯街》", 4: "## 第四节《十三号仓》", 5: "## 第五节《日落》"}
 
@@ -40,6 +41,7 @@ POST5_GOALS = {
     8: "把代价推进到人物关系或现实生活；至少一条既有关系被主线真实影响，同时获得一项可核实但不等于总答案的新事实。",
     9: "完成一次高压现实场景或正面交锋；信息来自行动、证人、物证或程序后果，埃文允许误判或付代价，怀表不能自动解题。",
     10: "完成第6—10节小阶段闭环：回收一个明确问题，确认一层更大风险，并留下更个人化的下一阶段入口；章尾不用总结句。",
+    11: "进入第11节：接11月6日下午末尾埃文主动要查‘弯钩’。主行动必须发生在可感知的真实场所和人物对抗中，避免新的一整节只是翻资料。主角用既有程序权责选择如何核对10月29日旧检货房同行签名；能取得一个可核实的边界信息，却不能凭模糊签名直接获得完整身份。对手可能通过程序/人际损耗形成压力，埃文至少为主动行动付出一次现实代价。不得把7年前‘代管两天’同最近10月12日/29日两次来访混成同一时间段。保持怪谈世界的心理压迫与现实异样气氛，但不新增怀表能力或凭空让普通挂钟显灵。结尾以具体场景中不可逆的行动、人际冲突或现实代价收束，不以又一行新纸张作结。",
 }
 
 REVIEWERS = [
@@ -65,7 +67,7 @@ def extract_plan(chapter_no: int) -> str:
     if chapter_no >= 6:
         return POST5_CANON + "\n\n【本节功能】\n" + POST5_GOALS[chapter_no] + """
 
-【第6—10节共同硬规则】
+【第6节起共同硬规则】
 - 正文以完整段落和自然中长句群为主，禁止大量一句一段、裸对白、问卷式问答和作者总结。
 - 每节必须有现场事件、人物选择或现实阻力，不准整节只查档案。
 - 不新增世界规则，不通过新设定绕开冲突。
@@ -75,7 +77,7 @@ def extract_plan(chapter_no: int) -> str:
 - 匿名短函只写批次号与“SV-7 / 第7号箱”，没有倒计时、行动窗口或神秘指令，不得替它补含义。
 - 第5节最后一句已经完成“信差递函→埃文看到内容”。第6节严禁再次写“信差把/递来/搁下短函”、再次第一次检查短函字迹、再次第一次抄入卷宗。可以从“信差刚离开、短函已压在卷宗上”之后开始。
 - 第6节不新增命名海关官员承担关键说明，不让新NPC通过长对白讲权限、法律或关键历史；程序阻力尽量通过克莱律师的正式文书、贝恩的短判断、芬奇手头既有公务和埃文的具体登记动作发生。
-- 第6—10节整体要形成入口→竞争/阻力→代价→局部验证→阶段回收与更危险入口。"""
+- 第6—10节已完成入口→程序竞争→有限验证。第11节起必须产生新的行动型阻力与个人代价，不可继续五节相同的纸面模板。"""
     text = PLAN.read_text(encoding="utf-8")
     start = text.index(SECTION_HEADERS[chapter_no])
     next_candidates = [text.find(h, start + 1) for n, h in SECTION_HEADERS.items() if n > chapter_no]
@@ -186,11 +188,12 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
-async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None):
+async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None, chapter_no: int = 0):
     async def one(role: str, name: str, focus: str):
         try:
             blind = role in {"blind-reader","cadence-character-reader","blind-natural-reader","character-voice-reviewer","blind-dialogue-reader"}
-            context = prior_tail[-8000:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-9000:])
+            context = prior_tail[-5500:] if blind else (canon[-6500:] + "\n\n" + prior_tail[-6000:])
+            current_label = f"第{chapter_no}节" if chapter_no else "本次待审节"
             result = await _run_step(
                 task_id=task_id,
                 role=role,
@@ -198,12 +201,17 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, revi
                 mode="check",
                 content=text,
                 instruction=f"""你是{name}。{focus}
+【章节边界硬约束】
+你当前只审核{current_label}，不是前面的章节。传入 content 的整份文本就是唯一的【当前正文】；下面的“参考上下文”都是【前文章节】，禁止把前文任何一段当成本章叙述。
+如果主张 FAIL，每条必须逐字引用当前正文中至少一处完整连续短片段，并交代它出现在本章哪个场景；引用不到当前正文，则不得据此FAIL。
+时间线/道具冲突需要同时指出当前正文的具体原句及前文的冲突原句；仅凭章节序号的推测，或看错前文时间，都不得判FAIL。
+角色的不同称谓（太太/老妇人）不得单独构成FAIL；正常的共同经办手续不得无证据推定为违法越权。
+发现足以影响连续性、因果、人物行为、语言自然度、阅读吸引力的确切问题，仍然必须FAIL，不能为了通过而忽略真实问题。
 这是章节 Gate，不改正文。{('不要参考世界观说明，只按正文与前文阅读体验判断。' if blind else '必须同时服从冻结 Canon 与前文事实。')}
-只要发现成片小短句、裸对白、问卷式对话、作者解释腔、人物工具化、因果/连续性错误，就 FAIL。
-第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
-之后最多列 5 条最重要逐字证据；整份报告控制在 700 个汉字以内，禁止展开长篇复盘。
-参考上下文：
-{context}""",
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL；只写一个判定。随后最多列5条最重要、可查的本章逐字证据；报告控制在700汉字以内。
+==== 仅供跨章核对的前文（绝不是当前正文）====
+{context}
+==== 前文结束。你要审核的当前正文为本次 content 中的{current_label} ====""",
             )
             return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
         except Exception as exc:
@@ -213,7 +221,17 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, revi
 
 
 async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dict, canon: str, prior_tail: str, chapter_no: int) -> dict:
-    compact = json.dumps(reviews, ensure_ascii=False)[:22000]
+    # Keep all eight decisions and actionable evidence; omit duplicated metadata
+    # so Master can spend its token budget judging the full current chapter.
+    compact = json.dumps([
+        {
+            "name": item.get("name"),
+            "verdict": item.get("verdict"),
+            "report": str(item.get("report") or "")[:650],
+            "error": item.get("error"),
+        }
+        for item in reviews
+    ], ensure_ascii=False)[:8500]
     result = await _run_step(
         task_id=task_id,
         role="master-reader",
@@ -242,10 +260,10 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 {compact}
 
 前文尾部：
-{prior_tail[-9000:]}
+{prior_tail[-5200:]}
 
 Canon 摘要：
-{canon[-4500:]}
+{canon[-3000:]}
 """,
     )
     return {
@@ -593,7 +611,7 @@ async def main() -> None:
         if not _chapter_text_is_usable(text):
             raise RuntimeError("local rewrite produced unusable chapter")
 
-    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers, chapter_no)
     gate = static_gate(text, chapter_no)
     if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
         aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
@@ -646,7 +664,7 @@ async def main() -> None:
             text = normalize_novel_output(repair.content)
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable after normalize")
-        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers, chapter_no)
         gate = static_gate(text, chapter_no)
         if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
             aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
