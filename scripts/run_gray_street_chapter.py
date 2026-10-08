@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 from pathlib import Path
 
@@ -15,8 +16,31 @@ REQUEST = Path(".github/requests/gray-street-chapter-run.json")
 PLAN = Path("books/gray-street/arc/ch01-05-plan.md")
 OUT_ROOT = Path("artifacts/gray-street-chapter-run")
 
-TITLES = {2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落"}
+TITLES = {
+    2: "遗产", 3: "河灯街", 4: "十三号仓", 5: "日落",
+    6: "第7号箱", 7: "阅览室", 8: "第八节", 9: "第九节", 10: "第十节",
+}
 SECTION_HEADERS = {2: "## 第二节《遗产》", 3: "## 第三节《河灯街》", 4: "## 第四节《十三号仓》", 5: "## 第五节《日落》"}
+
+POST5_CANON = """【第6节以后锁定连续性】
+- 主角是埃文·格雷（EVAN GREY）；雷蒙德·克莱是外部遗产主张人/代理层人物。两人绝不能混淆。
+- 第5节已经完成第一笔归还：米拉·阿尔瓦合法收回母亲萨维娜的银牌；怀表上的数字1与“四日，日落以前，归还第一笔”消失，内盖只剩 EVAN GREY，走速恢复正常。
+- 第5节章末：埃文收到匿名短函，只写同一海关总批次号与“SV-7 / 第7号箱”，并被铅笔重重画圈。第6节必须从这个状态自然接上。
+- 怀表截至第5节只验证过：异常走时/停止、内盖文字与数字自行出现或消失、靠近银牌时密跳。禁止新增心率同步、温度变化、自动定位、危险预警、读心、污染识别、共振导航等新能力或新规则。
+- 埃文是基层办事员，不是警察、侦探或打手；靠程序、记录、有限权限、人情与现实跑动推进，可以受阻、误判和付代价。
+- 黑色马车/无标车辆在前五节已经达到直接出场上限，第6节起必须明显降频，不能继续当固定危险提示器。
+- 禁止复制“查纸→地址→新纸”的单一推进。程序既要帮助埃文，也要造成延误、责任或被对手反利用。
+- 家庭成员玛格丽特、露西已经建立；只有当主线现实成本真正碰到家庭时才进入，禁止硬插。
+- 托马斯·韦德已经死亡，只能通过旧账、遗留行为和他人记忆继续塑造，不能复活或留下万能说明书。
+"""
+
+POST5_GOALS = {
+    6: "从第5节最后一句之后的几分钟直接承接：信差已经把匿名短函交到埃文手里，埃文已经看见同一批次号与“SV-7 / 第7号箱”，不能重演送信、第一次拆看或第一次抄进卷宗。短函只是一条人为送来的线索，不含新的怀表规则或时间窗口。第6节的主要冲突收束为一条：代理方利用正式程序试图暂缓十三号仓相关遗物的后续处理，埃文必须在没有越权的前提下决定如何接收、登记、保留异议并守住下一步。优先使用贝恩、芬奇、雷蒙德·克莱/其律师以及已经出现的代理行；不要再新增一个海关官员进门长篇讲权限。若需要海关信息，只能通过已有索引摘录、正式来函或一句岗位性通知体现。本节至少完成一项可核实的新状态变化，但不得解释第7号箱本质。",
+    7: "让第7号箱的争夺或控制关系升级；埃文必须在有限权限、程序责任和效率之间做一个有代价的选择，对手开始利用程序。",
+    8: "把代价推进到人物关系或现实生活；至少一条既有关系被主线真实影响，同时获得一项可核实但不等于总答案的新事实。",
+    9: "完成一次高压现实场景或正面交锋；信息来自行动、证人、物证或程序后果，埃文允许误判或付代价，怀表不能自动解题。",
+    10: "完成第6—10节小阶段闭环：回收一个明确问题，确认一层更大风险，并留下更个人化的下一阶段入口；章尾不用总结句。",
+}
 
 REVIEWERS = [
     ("continuity-reviewer", "连续性与剧情", "检查时间地点、道具、人物知识来源、权限、因果、线索顺序和前后章接口。"),
@@ -29,8 +53,29 @@ REVIEWERS = [
     ("blind-dialogue-reader", "对白读者", "检查台词是否自然、具身体和空间感，是否存在脚本式问答、信息倾倒和规章腔。"),
 ]
 
+FAST_REVIEWERS = [
+    ("continuity-reviewer", "连续性与剧情", "只拦截真实的时间、道具、知识来源、权限、因果与前后章接口错误。"),
+    ("blind-reader", "普通读者", "判断是否好读、哪里假、哪里想跳过、人物是否像活人。"),
+    ("cadence-character-reader", "商业读者", "检查推进、续读欲、人物记忆点与是否靠短句硬推。"),
+    ("blind-natural-reader", "文学自然度读者", "检查AI味、模板解释、机械过渡、过于工整和不自然中文。"),
+]
+
 
 def extract_plan(chapter_no: int) -> str:
+    if chapter_no >= 6:
+        return POST5_CANON + "\n\n【本节功能】\n" + POST5_GOALS[chapter_no] + """
+
+【第6—10节共同硬规则】
+- 正文以完整段落和自然中长句群为主，禁止大量一句一段、裸对白、问卷式问答和作者总结。
+- 每节必须有现场事件、人物选择或现实阻力，不准整节只查档案。
+- 不新增世界规则，不通过新设定绕开冲突。
+- 世界处于类似十九世纪工业化欧洲的钢铁时代：只使用纸档、印章、钥匙、封条、账册、手写登记、实体柜架、铁路/马车/煤气灯等已经成立的技术层级。禁止“数字化档案、刷卡/刷开信物、电子系统、数据库、屏幕、二维码”等现代设施。
+- 第6节不得让黑色马车、无家徽车辆重新在现场出现，也不得安排霍尔重复执行第5节已经失败的南桥跟车；若必须提到，只能作为一句既成事实回顾。
+- 米拉的银牌已在第5节合法返还并由米拉本人持有，只能作为已发生事实回忆，不能再成为埃文手里的证物或当前待处理物。
+- 匿名短函只写批次号与“SV-7 / 第7号箱”，没有倒计时、行动窗口或神秘指令，不得替它补含义。
+- 第5节最后一句已经完成“信差递函→埃文看到内容”。第6节严禁再次写“信差把/递来/搁下短函”、再次第一次检查短函字迹、再次第一次抄入卷宗。可以从“信差刚离开、短函已压在卷宗上”之后开始。
+- 第6节不新增命名海关官员承担关键说明，不让新NPC通过长对白讲权限、法律或关键历史；程序阻力尽量通过克莱律师的正式文书、贝恩的短判断、芬奇手头既有公务和埃文的具体登记动作发生。
+- 第6—10节整体要形成入口→竞争/阻力→代价→局部验证→阶段回收与更危险入口。"""
     text = PLAN.read_text(encoding="utf-8")
     start = text.index(SECTION_HEADERS[chapter_no])
     next_candidates = [text.find(h, start + 1) for n, h in SECTION_HEADERS.items() if n > chapter_no]
@@ -56,16 +101,55 @@ def skill_excerpt(task_id: int, limit: int = 12000) -> str:
 
 
 def verdict(text: str) -> str:
-    m = re.search(r"VERDICT\s*[:：]\s*(PASS|FAIL)", text, re.I)
-    return m.group(1).upper() if m else "FAIL"
+    matches = re.findall(r"(?mi)^\s*VERDICT\s*[:：]\s*(PASS|FAIL)\s*$", str(text or ""))
+    values = [item.upper() for item in matches]
+    if not values:
+        return "FAIL"
+    # Conflicting explicit verdicts are themselves an invalid Gate response.
+    # Fail closed instead of trusting the first token and silently passing.
+    if len(set(values)) != 1:
+        return "FAIL"
+    return values[0]
 
 
-def static_gate(text: str) -> dict:
+def normalize_novel_output(raw: str) -> str:
+    """Keep only the novel body from a model response and fail closed on leaked analysis."""
+    text = str(raw or "").strip()
+    text = re.sub(r"^\s*\`\`\`(?:markdown|md|text)?\s*", "", text, flags=re.I)
+    text = re.sub(r"\s*\`\`\`\s*$", "", text).strip()
+
+    # Some revision models prepend their plan/reasoning before a clearly labeled
+    # final body. Accept only the body after that marker.
+    markers = list(re.finditer(
+        r"(?mi)^#{1,4}\s*(?:润色后正文|修订后正文|最终正文|小说正文|正文)\s*$",
+        text,
+    ))
+    if markers:
+        text = text[markers[-1].end():].strip()
+
+    # Remove one leading chapter heading emitted by the model.
+    text = re.sub(
+        r"(?m)^\s*#{1,4}\s*第[^\n]{0,40}(?:节|章)[^\n]*\n+",
+        "",
+        text,
+        count=1,
+    ).strip()
+
+    leaked = re.search(
+        r"(?mi)^#{1,4}\s*(?:思考过程|分析|分析约束|修改策略|重写策略|修订策略|检查清单|说明)\s*$",
+        text,
+    )
+    if leaked:
+        raise RuntimeError("model leaked analysis/revision notes into novel body")
+    return text
+
+
+def static_gate(text: str, chapter_no: int = 0) -> dict:
     failures = []
     if re.search(r"(?:并)?不是[^。！？\n]{0,45}(?:而是|只是)", text):
         failures.append("ai-template:not-A-but-B")
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
-    pure = [bool(re.fullmatch(r"[“\"][^\n]{1,220}[”\"][。！？?!…]*", p)) for p in paras]
+    pure = [bool(re.fullmatch(r"[“\"][^“”\"\n]{1,220}[”\"][。！？?!…]*", p)) for p in paras]
     streak = best = 0
     for flag in pure:
         streak = streak + 1 if flag else 0
@@ -76,14 +160,37 @@ def static_gate(text: str) -> dict:
     short_ratio = sum(1 for p in prose if len(re.sub(r"\s+", "", p)) <= 28) / max(1, len(prose))
     if short_ratio > 0.12:
         failures.append(f"short-paragraph-ratio:{short_ratio:.1%}")
+    if chapter_no >= 6:
+        modern_terms = re.findall(r"数字化|电子档案|电子系统|数据库|二维码|刷卡|刷开.{0,8}(?:信物|通行|门)|复印件|时间戳", text)
+        if modern_terms:
+            failures.append("era-anachronism:" + "；".join(modern_terms[:4]))
+        invented_watch = re.findall(r"怀表[^。！？\n]{0,45}(?:发热|升温|变冷|心率|脉搏|定位|预警|危险|共振|导航)", text)
+        if invented_watch:
+            failures.append("watch-rule-invention:" + "；".join(invented_watch[:3]))
+        meta = re.findall(r"第[一二三四五六七八九十0-9]+节里|上一版|这版稿|当前稿|正文里|本次修订|读者会|作者", text)
+        if meta:
+            failures.append("meta-writing-language:" + "；".join(meta[:4]))
+        if chapter_no == 6:
+            if re.search(r"^(?:.|\n){0,500}(?:信差[^。！？\n]{0,50}(?:递来|递给|把[^。！？\n]{0,20}短函(?:搁|放|递)|短函[^。！？\n]{0,20}(?:搁|递|放)在))", text):
+                failures.append("chapter5-ending-replayed")
+            if re.search(r"(?:街角|街口|门外|路边|河堤|窗外)[^。！？\n]{0,55}(?:黑色马车|黑车|无家徽.{0,6}(?:车|马车))", text):
+                failures.append("black-car-reappears-in-scene")
+            if re.search(r"霍尔[^。！？\n]{0,55}(?:南桥|跟车|盯车|追车)", text):
+                failures.append("repeat-hall-car-tail")
+        if chapter_no == 7:
+            opening = text[:1400]
+            if re.search(r"(?:律师|代理行)[^。！？\n]{0,80}(?:递交|提交|送来)[^。！？\n]{0,50}(?:暂缓|争议).{0,20}申请", opening):
+                failures.append("chapter6-application-scene-replayed")
+            if "下午四点三十七分" in opening or "四点三十七" in opening:
+                failures.append("chapter6-timestamp-replayed")
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
-async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
+async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None):
     async def one(role: str, name: str, focus: str):
         try:
             blind = role in {"blind-reader","cadence-character-reader","blind-natural-reader","character-voice-reviewer","blind-dialogue-reader"}
-            context = prior_tail[-6500:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-4500:])
+            context = prior_tail[-8000:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-9000:])
             result = await _run_step(
                 task_id=task_id,
                 role=role,
@@ -94,14 +201,15 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str):
 这是章节 Gate，不改正文。{('不要参考世界观说明，只按正文与前文阅读体验判断。' if blind else '必须同时服从冻结 Canon 与前文事实。')}
 只要发现成片小短句、裸对白、问卷式对话、作者解释腔、人物工具化、因果/连续性错误，就 FAIL。
 第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
-之后最多列 5 条最重要逐字证据。
+之后最多列 5 条最重要逐字证据；整份报告控制在 700 个汉字以内，禁止展开长篇复盘。
 参考上下文：
 {context}""",
             )
             return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
         except Exception as exc:
             return {"name": name, "role": role, "verdict": "ERROR", "report": "", "error": f"{type(exc).__name__}: {exc}"}
-    return await asyncio.gather(*(one(*spec) for spec in REVIEWERS))
+    reviewer_specs = reviewers or REVIEWERS
+    return await asyncio.gather(*(one(*spec) for spec in reviewer_specs))
 
 
 async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dict, canon: str, prior_tail: str, chapter_no: int) -> dict:
@@ -117,6 +225,8 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 硬规则：
 - 静态 Gate 失败 => FAIL。
 - 经你核对属实的明显 AI 解释腔、连续裸对白/问卷式对白、人物工具化/场景消失、真正的 Canon/因果/权限/连续性错误 => FAIL。
+- **任何硬伤必须引用当前 content 中真实存在的逐字证据。** Reviewer 若引用上一版、前文章节、系统提示或当前正文不存在的句子/时间/场景，必须标记为 STALE_OR_HALLUCINATED 并驳回，不能据此 FAIL。
+- 对时间线、道具状态、人物行为的指控，必须在当前候选正文与提供的前文中找到可逐字引用的日期/动作证据再裁决；若前文章节日期没有出现在上下文里，禁止自行推定日期后判 FAIL。
 - 单纯审美偏好、轻微润色项、误判、重复意见不能阻断。
 - 某 Reviewer ERROR 若有其他 Reviewer 覆盖同一维度，且你核对正文无硬伤，可标 COVERED_ERROR；关键维度无人覆盖才 FAIL。
 - 用户明确禁止大量小短句、连续裸对白、“不是A而是B”作者总结。
@@ -132,7 +242,7 @@ async def aggregate_gate(task_id: int, text: str, reviews: list[dict], gate: dic
 {compact}
 
 前文尾部：
-{prior_tail[-4500:]}
+{prior_tail[-9000:]}
 
 Canon 摘要：
 {canon[-4500:]}
@@ -157,7 +267,7 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
         instruction=f"""根据真实 Gate 失败证据统一重写当前章节。不是逐句打补丁；允许重组场景和话轮，但不得改变冻结章节功能、前文事实或提前泄露后续。
 正文用完整段落和自然中长句群；禁止裸对白、问卷式问答、规章背诵、不是A而是B式作者总结、人物工具化。
 不能用机械补动作作弊。
-只输出完整正文。
+只输出完整正文。硬长度 3000—4200 个中文字符；宁可合并重复动作和对白，也不能压缩成章节梗概。
 
 【本章冻结功能】
 {chapter_plan}
@@ -178,33 +288,258 @@ async def revise(task_id: int, text: str, chapter_plan: str, canon: str, skill: 
     return result.content.strip()
 
 
-async def main() -> None:
-    req = json.loads(REQUEST.read_text(encoding="utf-8"))
-    chapter_no = int(req["chapter_no"])
-    title = TITLES[chapter_no]
-    prior_file = Path(req["prior_file"])
-    prior_text = prior_file.read_text(encoding="utf-8")
-    prior_tail = prior_text[-12000:]
+async def apply_local_rewrite(
+    task_id: int,
+    text: str,
+    req: dict,
+    skill: str,
+    canon: str,
+    prior_tail: str,
+) -> str:
+    """Rewrite only an explicitly anchored block and preserve all text outside it byte-for-byte."""
+    spec = req.get("local_rewrite") or {}
+    if not isinstance(spec, dict):
+        raise ValueError("local_rewrite must be an object")
+    start_anchor = str(spec.get("start_anchor") or "")
+    end_anchor = str(spec.get("end_anchor") or "")
+    instruction = str(spec.get("instruction") or "").strip()
+    if not start_anchor or not end_anchor or not instruction:
+        raise ValueError("local_rewrite requires start_anchor, end_anchor and instruction")
+
+    start = text.find(start_anchor)
+    if start < 0:
+        raise ValueError("local_rewrite start_anchor not found")
+    end_start = text.find(end_anchor, start + len(start_anchor))
+    if end_start < 0:
+        raise ValueError("local_rewrite end_anchor not found")
+    end = end_start + len(end_anchor)
+    original_block = text[start:end]
+
+    literal_replacement = str(spec.get("replacement_text") or "").strip()
+    if literal_replacement:
+        replacement = normalize_novel_output(literal_replacement)
+    else:
+        result = await _run_step(
+            task_id=task_id,
+            role="revision-agent",
+            stage="gray-street-local-rewrite",
+            mode="polish",
+            content=original_block,
+            instruction=f"""执行严格 LOCAL_REWRITE。只输出给定原文块的完整替换文本，不输出标题、分析、说明或块外正文。
+不得扩写成整章，不得新增人物、世界规则、能力、证据来源、关键线索或后续行动。
+必须保留原块内已经成立的事实、人物关系、信息边界和前后接口；只解决本次指定问题。
+保持《灰街》克制、具体、程序型人物的语气；禁止作者心理总结、不是A而是B、空洞意象、侦探式解说。
+替换块长度应与原块同量级。
+
+【本次只解决】
+{instruction}
+
+【最新 Writer Skill 摘要】
+{skill[-4500:]}
+
+【前文尾部】
+{prior_tail[-5500:]}
+
+【Canon】
+{canon[-3500:]}
+""",
+        )
+        replacement = normalize_novel_output(result.content)
+    if not replacement:
+        raise RuntimeError("local rewrite returned empty content")
+    lo = (
+        max(80, int(len(original_block) * 0.60))
+        if len(original_block) < 500
+        else max(80, int(len(original_block) * 0.65))
+    )
+    hi = (
+        len(original_block) + 180
+        if len(original_block) < 500
+        else int(len(original_block) * 1.35)
+    )
+    hi = max(lo + 1, hi)
+    if not (lo <= len(replacement) <= hi):
+        raise RuntimeError(
+            f"local rewrite size drift: original={len(original_block)} replacement={len(replacement)} allowed={lo}-{hi}"
+        )
+
+    patched = text[:start] + replacement + text[end:]
+    # Hard invariant: only the anchored block may change.
+    if patched[:start] != text[:start] or patched[start + len(replacement):] != text[end:]:
+        raise RuntimeError("local rewrite modified text outside anchored block")
+    return patched
+
+
+async def run_continuous_gate_only(req: dict) -> None:
+    """Final blind continuous-read gate for the locked Gray Street chapters."""
+    start = int(req.get("continuous_start") or 1)
+    end = int(req.get("continuous_end") or 10)
+    parts = []
+    for number in range(start, end + 1):
+        path = Path(f"books/gray-street/chapters/{number:02d}.md")
+        if not path.exists():
+            raise FileNotFoundError(f"continuous gate missing locked chapter: {path}")
+        parts.append(path.read_text(encoding="utf-8").strip())
+    combined = "\n\n---\n\n".join(parts)
 
     configure_provider()
+    os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "DOTS3,AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES,DOTS3"
+    init_db()
+    project_id, chapter_id = create_project()
+    task_id = _create_task(
+        project_id=project_id,
+        chapter_id=chapter_id,
+        goal=f"连续盲读《灰街》第{start}—{end}节并做最终锁稿 Gate。",
+        instruction="只做连续阅读审核，不改正文。必须以当前锁稿正文为证据，禁止引用旧稿或旧轮问题。",
+    )
+
+    reader_specs = [
+        ("blind-reader", "普通读者", "判断十节连续读是否好看、人物是否鲜活、哪里假、哪里想跳过；重点看跨章重复与信息断层。"),
+        ("cadence-character-reader", "商业阅读读者", "判断十节推进、钩子、阶段兑现、人物记忆点和续读欲；不能因为偏爱快节奏而要求碎短句。"),
+        ("blind-natural-reader", "文学自然度读者", "检查AI味、模板句、作者总结、过度工整、对白书面化、场景重复与连续阅读疲劳。"),
+    ]
+
+    async def one(role: str, name: str, focus: str) -> dict:
+        result = await _run_step(
+            task_id=task_id,
+            role=role,
+            stage=f"gray-street-continuous-{start:02d}-{end:02d}",
+            mode="check",
+            content=combined,
+            instruction=f"""你是{name}。{focus}
+请把正文当成第一次从第{start}节连续读到第{end}节，不读取也不相信任何旧审核结论。
+硬检查：
+1. 主角始终是埃文·格雷，雷蒙德·克莱不得与主角身份混淆。
+2. 怀表不得出现前五节未验证的新能力或新规则。
+3. 第6节以后黑色马车不得继续成为固定危险提示器。
+4. 第6—10节不能退回稳定的“查纸→地址→新纸”流水线。
+5. 埃文必须保持基层办事员有限权限，程序既是工具也是阻力。
+6. 第6—10节要形成入口→竞争/限制→现实代价→局部验证→阶段回收，并留下下一阶段明确入口。
+7. 只能引用当前正文中真实存在的逐字/事实证据；旧稿问题不存在于当前稿时必须忽略。
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+若 FAIL，只列真正阻断连续阅读/Canon/因果的硬伤；轻微润色项单列但不得冒充硬伤。""",
+        )
+        return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
+
+    reviews = await asyncio.gather(*(one(*spec) for spec in reader_specs))
+    compact = json.dumps(reviews, ensure_ascii=False)[:16000]
+    master = await _run_step(
+        task_id=task_id,
+        role="master-reader",
+        stage=f"gray-street-continuous-master-{start:02d}-{end:02d}",
+        mode="check",
+        content=combined,
+        instruction=f"""你是《灰街》第{start}—{end}节最终连续阅读总编 Gate。
+你必须亲自核对当前完整正文，再参考三路独立连续读报告；不得按多数票机械决定，也不得把旧稿问题带入当前稿。
+
+硬规则：
+- 真实存在的 Canon/身份/时间/道具/因果冲突 => FAIL。
+- 第6—10节若新增怀表能力、黑车重新高频充当提示器、埃文越权神探化、或五节没有形成阶段闭环 => FAIL。
+- 大量碎短句、持续台词墙、明显AI解释腔达到连续阅读层面的系统性问题 => FAIL。
+- 单纯措辞偏好、可选润色、Reviewer误读、或只存在于旧稿的问题不能阻断。
+- 若某报告 FAIL，必须在当前正文找到可定位证据后才可采纳。
+
+三路报告：
+{compact}
+
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
+随后写【跨章连续性】【人物与权限推进】【6—10阶段闭环】【文风连续阅读】【驳回的误报】【最终结论】。
+""",
+    )
+    master_verdict = verdict(master.content)
+    passed = master_verdict == "PASS"
+    out = OUT_ROOT / f"continuous-{start:02d}-{end:02d}"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "continuous-reader.md").write_text(master.content + "\n", encoding="utf-8")
+    (out / "gate.json").write_text(
+        json.dumps(
+            {
+                "passed": passed,
+                "start": start,
+                "end": end,
+                "reviews": reviews,
+                "aggregate": {
+                    "verdict": master_verdict,
+                    "report": master.content,
+                    "provider": master.provider,
+                    "model": master.model,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(json.dumps({"passed": passed, "continuous": [start, end], "master": master_verdict, "reader_verdicts": {x["name"]: x["verdict"] for x in reviews}}, ensure_ascii=False), flush=True)
+    if not passed:
+        raise RuntimeError(f"continuous gate {start}-{end} failed")
+
+
+async def main() -> None:
+    req = json.loads(REQUEST.read_text(encoding="utf-8"))
+    if bool(req.get("continuous_gate_only")):
+        await run_continuous_gate_only(req)
+        return
+    chapter_no = int(req["chapter_no"])
+    title = str(req.get("title") or TITLES[chapter_no])
+    prior_file = Path(req.get("prior_file") or "")
+    prior_parts = []
+    for number in range(1, chapter_no):
+        path = Path(f"books/gray-street/chapters/{number:02d}.md")
+        if path.exists():
+            prior_parts.append(path.read_text(encoding="utf-8"))
+    if prior_file and prior_file.exists() and not any(str(prior_file).endswith(f"/{number:02d}.md") for number in range(1, chapter_no)):
+        prior_parts.append(prior_file.read_text(encoding="utf-8"))
+    if not prior_parts:
+        raise FileNotFoundError("no prior Gray Street chapters found")
+    prior_text = "\n\n".join(prior_parts)
+    prior_tail = prior_text[-16000:]
+
+    configure_provider()
+    fast_mode = bool(req.get("fast_mode", False))
+    # Fast mode changes orchestration only; it must not collapse independent
+    # reader roles onto one provider. Preserve heterogeneous review routing so
+    # quality and provider-level fault tolerance are both retained.
+    active_reviewers = REVIEWERS
+    os.environ["NARRATIVE_REVIEW_MAX_ROUTE_ATTEMPTS"] = "2"
+    os.environ["NARRATIVE_NATURAL_READER_FALLBACK_PROFILES"] = "DOTS3,AGNES"
+    os.environ["NARRATIVE_REASONING_READER_FALLBACK_PROFILES"] = "AGNES,DOTS3"
     init_db()
     project_id, chapter_id = create_project()
     task_id = _create_task(project_id=project_id, chapter_id=chapter_id, goal=f"生成《灰街》第{chapter_no}节《{title}》并通过短链路 Gate。", instruction="必须通过多读者与专项审核才可进入下一节。")
     keep_generation_skills_lean(task_id)
     canon = CANON_PATH.read_text(encoding="utf-8")
+    if chapter_no >= 6:
+        canon += "\n\n" + POST5_CANON
     chapter_plan = extract_plan(chapter_no)
+    blueprint_file = str(req.get("blueprint_file") or "").strip()
+    if blueprint_file:
+        blueprint_path = Path(blueprint_file)
+        if not blueprint_path.exists():
+            raise FileNotFoundError(f"blueprint_file not found: {blueprint_path}")
+        chapter_plan += "\n\n【控制器场景骨架｜必须执行但不得复述为正文】\n" + blueprint_path.read_text(encoding="utf-8")
     extra_constraints = str(req.get("chapter_constraints") or "").strip()
     if extra_constraints:
         chapter_plan += "\n\n【本次结构级返修追加约束】\n" + extra_constraints
     skill = skill_excerpt(task_id)
 
-    writer = await _run_step(
-        task_id=task_id,
-        role="writer",
-        stage=f"gray-street-ch{chapter_no:02d}-draft",
-        mode="continue",
-        content=prior_tail,
-        instruction=f"""从前文之后写《灰街》第{chapter_no}节《{title}》。只输出本节正文，不复述前文，不写提纲。
+    seed_file = str(req.get("seed_file") or "").strip()
+    if seed_file:
+        seed_path = Path(seed_file)
+        if not seed_path.exists():
+            raise FileNotFoundError(f"seed_file not found: {seed_path}")
+        text = normalize_novel_output(seed_path.read_text(encoding="utf-8"))
+    else:
+        writer = await _run_step(
+            task_id=task_id,
+            role="writer",
+            stage=f"gray-street-ch{chapter_no:02d}-draft",
+            mode="continue",
+            content=prior_tail,
+            instruction=f"""从前文之后写《灰街》第{chapter_no}节《{title}》。只输出本节正文，不复述前文，不写提纲。
 目标 3200—4500 个中文字符。
 必须完整实现本章冻结功能，但只揭示这一章应该揭示的信息。
 正文以完整段落和自然中长句群为主；禁止大量一句一段、裸对白、问卷式问答、不是A而是B式作者解释。
@@ -219,40 +554,109 @@ async def main() -> None:
 【项目 Canon】
 {canon[-8500:]}
 """,
-    )
-    text = writer.content.strip()
+        )
+        text = normalize_novel_output(writer.content)
+    # Providers occasionally wrap valid prose or overshoot the chapter target.
+    # Normalize once, then ask the platform Writer to rebuild the same chapter
+    # instead of throwing away a successful model call before Reader Gate.
+    if (not _chapter_text_is_usable(text)) or len(text) > 6500:
+        repair = await _run_step(
+            task_id=task_id,
+            role="writer-retry",
+            stage=f"gray-street-ch{chapter_no:02d}-draft-normalize",
+            mode="continue",
+            content=text,
+            instruction=f"""把当前第{chapter_no}节候选稿重建为可审核的完整正文。
+保留已经写出的核心事件、人物选择、线索边界和前文连续性，不新增世界规则，不改变人物身份。
+硬长度：3200—5200 个中文字符；超过上限必须压缩场景与重复表达，不能截断。
+结尾必须是完整句，以中文句末标点结束。不要 Markdown 代码围栏、不要提纲、不要说明，只输出小说正文。
+继续服从本章冻结功能、最新 Writer Skill 和项目 Canon。""",
+        )
+        text = normalize_novel_output(repair.content)
     if not _chapter_text_is_usable(text):
-        raise RuntimeError("draft unusable")
+        raise RuntimeError(f"draft unusable after normalize: chars={len(text)} tail={text[-80:]!r}")
 
-    reviews = await run_reviews(task_id, text, canon, prior_tail)
-    gate = static_gate(text)
-    if gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
-        aggregate = {
-            "verdict": "PASS",
-            "report": "UNANIMOUS_PASS: static gate and all 8 independent readers passed; Master call skipped by workflow optimization.",
-            "provider": "local-consensus",
-            "model": "eight-reader-consensus",
-        }
+    rewrite_specs = req.get("local_rewrites")
+    if rewrite_specs:
+        if not isinstance(rewrite_specs, list):
+            raise ValueError("local_rewrites must be a list")
+        for rewrite_spec in rewrite_specs:
+            local_req = dict(req)
+            local_req["local_rewrite"] = rewrite_spec
+            text = await apply_local_rewrite(task_id, text, local_req, skill, canon, prior_tail)
+            text = normalize_novel_output(text)
+            if not _chapter_text_is_usable(text):
+                raise RuntimeError("local rewrite produced unusable chapter")
+    elif req.get("local_rewrite"):
+        text = await apply_local_rewrite(task_id, text, req, skill, canon, prior_tail)
+        text = normalize_novel_output(text)
+        if not _chapter_text_is_usable(text):
+            raise RuntimeError("local rewrite produced unusable chapter")
+
+    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+    gate = static_gate(text, chapter_no)
+    if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
+        aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
     else:
         aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
     failed = [x for x in reviews if x["verdict"] != "PASS"]
+    fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
+    if fail_count >= 4:
+        aggregate["verdict"] = "FAIL"
+        aggregate["consensus_override"] = f"{fail_count} independent readers returned FAIL; Master PASS cannot override broad disagreement."
 
-    if aggregate["verdict"] != "PASS" or not gate["pass"]:
+    manual_findings = str(req.get("manual_findings") or "").strip()
+    if manual_findings:
+        failed.append({
+            "name": "controller-manual-adjudication",
+            "role": "controller",
+            "verdict": "FAIL",
+            "report": manual_findings,
+        })
+
+    if (not bool(req.get("disable_auto_revision"))) and (bool(req.get("force_revision")) or aggregate["verdict"] != "PASS" or not gate["pass"]):
         text = await revise(task_id, text, chapter_plan, canon, skill, prior_tail, failed, gate)
+        text = normalize_novel_output(text)
+        if (not _chapter_text_is_usable(text)) or len(text) < 3000:
+            repair = await _run_step(
+                task_id=task_id,
+                role="writer-retry",
+                stage=f"gray-street-ch{chapter_no:02d}-revision-normalize",
+                mode="continue",
+                content=text,
+                instruction=f"""把当前返修稿补足为可审核的完整章节正文。
+必须保留返修稿已经修正的连续性、人物关系和场景结构，不得把已删除的硬伤重新写回来。
+硬长度：3000—4600 个中文字符；若当前过短，只通过场景感知、人物反应、利益摩擦和必要动作补足，禁止新增谜题、规则、人物或解释性总结。
+继续服从本章冻结功能、Writer Skill、Canon 和本轮失败证据。只输出完整小说正文。""",
+            )
+            text = normalize_novel_output(repair.content)
+        if (not _chapter_text_is_usable(text)) or len(text) < 2800:
+            raise RuntimeError(f"revision unusable after normalize: chars={len(text)}")
+        if not _chapter_text_is_usable(text) or len(text) < 2800:
+            repair = await _run_step(
+                task_id=task_id,
+                role="writer-retry",
+                stage=f"gray-street-ch{chapter_no:02d}-revision-normalize",
+                mode="continue",
+                content=text,
+                instruction=f"""把修订稿补足为完整章节正文，保留现有正确结构与事实，不新增线索、规则或人物。
+硬长度 3000—4200 中文字符；补足场景中的人物反应、空间、工作阻力与必要过渡，禁止用解释性总结灌字数。
+只输出小说正文。""",
+            )
+            text = normalize_novel_output(repair.content)
         if not _chapter_text_is_usable(text):
-            raise RuntimeError("revision unusable")
-        reviews = await run_reviews(task_id, text, canon, prior_tail)
-        gate = static_gate(text)
-        if gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
-            aggregate = {
-                "verdict": "PASS",
-                "report": "UNANIMOUS_PASS after revision: static gate and all 8 independent readers passed; Master call skipped.",
-                "provider": "local-consensus",
-                "model": "eight-reader-consensus",
-            }
+            raise RuntimeError("revision unusable after normalize")
+        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+        gate = static_gate(text, chapter_no)
+        if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
+            aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
         else:
             aggregate = await aggregate_gate(task_id, text, reviews, gate, canon, prior_tail, chapter_no)
         failed = [x for x in reviews if x["verdict"] != "PASS"]
+        fail_count = sum(1 for x in reviews if x["verdict"] == "FAIL")
+        if fail_count >= 4:
+            aggregate["verdict"] = "FAIL"
+            aggregate["consensus_override"] = f"{fail_count} independent readers returned FAIL after revision."
 
     passed = gate["pass"] and aggregate["verdict"] == "PASS"
     out = OUT_ROOT / f"chapter-{chapter_no:02d}"
@@ -265,4 +669,11 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    _entry_request = json.loads(REQUEST.read_text(encoding="utf-8"))
+    _batch_to = int(_entry_request.get("batch_to") or _entry_request.get("chapter_no") or 0)
+    _chapter_no = int(_entry_request.get("chapter_no") or 0)
+    if _batch_to > _chapter_no:
+        from scripts.run_gray_street_07_10_batch import main as batch_main
+        asyncio.run(batch_main())
+    else:
+        asyncio.run(main())
