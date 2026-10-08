@@ -2,11 +2,11 @@
   "chapter_no": 11,
   "title": "认签",
   "prior_file": "books/gray-street/chapters/10.md",
-  "requested_at": "2026-10-08T15:50:00+08:00",
-  "attempt": 2,
+  "requested_at": "2026-10-08T16:05:00+08:00",
+  "attempt": 3,
   "blueprint_file": "books/gray-street/controller/chapter-11-blueprint.md",
-  "fast_mode": true,
   "quality_mode": "full-8-reviewers",
-  "chapter_constraints": "上轮因静态Gate(not-A-but-B、碎段落)和鞋铺/帮忙跑腿因果不成立被Master判FAIL。本轮严格使用更新的第11节控制器：禁止鞋铺、送修鞋、卡拉什担保顺路借口、重复杯子梗、不是A而是B和作者总结。唯一主冲突在旧检货房活人现场，埃文主动行动、受阻并付出现实代价，最多得到一项可核实边界信息。Nov7接Nov6；七年前‘两天’只属克莱主张。",
-  "force_revision": false
+  "fast_mode": true,
+  "disable_auto_revision": true,
+  "chapter_constraints": "第11节必须有完整小说正文3600—4500汉字，过长过短均不算成功，绝不可用大篇幅分析或修订提纲代替。旧检货房现场的人际阻力和行动代价必须成立；不得靠弱鞋声准确定位鞋铺或店主、不得把杂务设计为巧合顺路。禁止不是A而是B、句子隔行短段、作者替读者说破推理。保留8路审核，若失败保留完整Gate候选供锚点局部返修，不做整章自动Revision。"
 }
