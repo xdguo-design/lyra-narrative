@@ -2,12 +2,12 @@
   "chapter_no": 11,
   "title": "认签",
   "prior_file": "books/gray-street/chapters/10.md",
-  "requested_at": "2026-10-08T14:58:00+08:00",
-  "attempt": 4,
+  "requested_at": "2026-10-08T21:00:00+08:00",
+  "attempt": 5,
   "blueprint_file": "books/gray-street/controller/chapter-11-blueprint.md",
-  "quality_mode": "full-8-reviewers",
+  "seed_file": "books/gray-street/controller/chapter-11-controlled-candidate.md",
   "fast_mode": true,
-  "disable_auto_revision": false,
-  "chapter_constraints": "第11节《认签》，日期11月7日，3200—4500中文字符。正文要真实发生一件面对面冲突，让埃文在权限内主动查验弯钩签名，但不能立即认出名字。继承第1—10节锁稿。第三稿审核失败，禁止沿用第三稿的这些失真桥段：芬奇拿卡拉什家蓝封皮让埃文去税务窗口却又带去废仓、用芬奇的钝剪刀交换线索、灰衣男人主动讲黑色纸条并烧掉、冰冷炉子与诡异灰烬、无因果来源的鞋声辨认、九点半与十点半自相矛盾的交易、矫饰通感心理总结。不要增加黑纸条、便利线索或匿名见证人。只保留旧检货房现存负责人/工人与埃文围绕原始访客记录的真实利益冲突：负责人因怕担责拒绝为弯钩作证，埃文不能强迫；通过正式具名询问或留下申请，确认只能核保管链不能核签字身份，付出一个现实代价（例如耽误本职工作导致芬奇不再无偿替班，或需自担有据可查的外勤手续）。独立人物动机、自然场景、实质性失手，不依靠巧合。不能把十月12/29与七年前两天混同。不新增怀表能力和普通挂钟异常。自然完整段落，严禁空洞比喻和“不是A而是B”句式。8路完整审核，未PASS不可晋级。",
-  "manual_findings": ""
+  "quality_mode": "full-8-reviewers",
+  "disable_auto_revision": true,
+  "chapter_constraints": "这是一份控制器生成的完整候选稿，交由平台八路独立读者作事实、商业、人物、文学与对白审查。目标3200—4500中文字符。第11节发生于11月7日；十月29日距11月7日不说具体天数。原始簿保管、抄件与外勤询问权限不得混淆。人物不能靠巧合认出弯钩，普雷斯拒绝为身份作证是他承担现实工作风险的选择，埃文失手但换取了明确的调查边界，晚上承担与芬奇交换班次的真实代价。不新增怀表能力、纸条、线索或宏大解释。每个Reviewer必须有有效VERDICT；静态和所有读者共识无问题才可以跳过Master，任何疑议走Master；失败即阻断正式锁稿。"
 }
