@@ -11,7 +11,7 @@ from app.services.default_skills import (
 
 
 def test_refinement_skill_v12_defines_executable_edit_levels():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 15
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
 
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     required = [
@@ -209,7 +209,7 @@ def test_character_dialogue_reviewer_binds_behavior_and_disclosure_thresholds():
         assert marker in review
 
 def test_writing_skill_v15_adds_escalation_and_character_progression_gates():
-    assert BUILTIN_WRITING_SKILL_VERSION == 19
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
     content = BUILTIN_WRITING_SKILL_CONTENT
     required = [
         "作家能力：选材、视角与叙事取舍",
@@ -504,8 +504,8 @@ def test_merged_reviewers_preserve_texture_and_longitudinal_cadence_checks():
 
 
 def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeline():
-    assert BUILTIN_WRITING_SKILL_VERSION == 19
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 15
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     combined = (
@@ -523,8 +523,8 @@ def test_reader_v9_blocks_investigation_worksheet_gap_in_skill_and_merged_pipeli
 
 
 def test_reader_v10_catches_provenance_signal_agency_and_unseeded_callback():
-    assert BUILTIN_WRITING_SKILL_VERSION == 19
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 15
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
     assert BUILTIN_READER_REVIEW_SKILL_VERSION == 12
 
     combined = (
@@ -565,7 +565,7 @@ def test_reader_v11_enforces_spoken_dialogue_mouth_test_in_merged_character_read
 
 
 def test_writing_skill_v18_handles_evidence_density_and_unresolved_clues():
-    assert BUILTIN_WRITING_SKILL_VERSION == 19
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
     content = BUILTIN_WRITING_SKILL_CONTENT
     for marker in [
         "信息密度、证据重量与未决线索管理",
@@ -578,7 +578,7 @@ def test_writing_skill_v18_handles_evidence_density_and_unresolved_clues():
 
 
 def test_refinement_skill_v14_reviews_evidence_density_without_overediting():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 15
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     for marker in [
         "阶段 6.95：信息密度与证据重量复核",
@@ -590,7 +590,7 @@ def test_refinement_skill_v14_reviews_evidence_density_without_overediting():
 
 
 def test_writing_skill_v19_adjudicates_stale_external_reviews():
-    assert BUILTIN_WRITING_SKILL_VERSION == 19
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
     content = BUILTIN_WRITING_SKILL_CONTENT
     for marker in [
         "外审事实裁决、证据对账与长线类型承诺",
@@ -605,7 +605,7 @@ def test_writing_skill_v19_adjudicates_stale_external_reviews():
 
 
 def test_refinement_skill_v15_requires_current_text_before_external_review_edits():
-    assert BUILTIN_REFINEMENT_SKILL_VERSION == 15
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
     content = BUILTIN_REFINEMENT_SKILL_CONTENT
     for marker in [
         "阶段 6.96：外审事实裁决与跨章对账",
@@ -613,5 +613,28 @@ def test_refinement_skill_v15_requires_current_text_before_external_review_edits
         "只有一端来自旧审稿摘要时",
         "残缺原始记录",
         "修改范围之外的正文视为冻结",
+    ]:
+        assert marker in content
+
+
+def test_writing_skill_v20_checks_weak_evidence_routes():
+    assert BUILTIN_WRITING_SKILL_VERSION == 20
+    content = BUILTIN_WRITING_SKILL_CONTENT
+    for marker in [
+        "弱证据不能自动成为精准追查路线",
+        "顺路",
+        "某日恰好送修",
+        "他意识到这意味着",
+    ]:
+        assert marker in content
+
+
+def test_refinement_skill_v16_checks_causal_evidence_gaps():
+    assert BUILTIN_REFINEMENT_SKILL_VERSION == 16
+    content = BUILTIN_REFINEMENT_SKILL_CONTENT
+    for marker in [
+        "阶段 6.96：线索强度、行动路线与巧合门禁",
+        "CAUSALITY_EVIDENCE_GAP",
+        "直接推姓名",
     ]:
         assert marker in content
