@@ -11,3 +11,18 @@ def test_scoped_canon_trims_chapter_one_execution_lock_for_later_chapters():
     canon = "全局设定\n## 第一节《怀表》冻结目标\n第一节专属内容\n"
     assert scoped_canon(canon, 2) == "全局设定\n"
     assert scoped_canon(canon, 1) == canon
+
+
+def test_post_eleven_chapter_uses_controller_blueprint_fallback():
+    from scripts.run_gray_street_chapter import extract_plan
+
+    plan = extract_plan(12)
+    assert "遵循请求指定的控制器蓝图" in plan
+    assert "第6节起共同硬规则" in plan
+    assert "埃文·格雷" in plan
+
+
+def test_existing_chapter_goals_remain_unchanged():
+    from scripts.run_gray_street_chapter import extract_plan
+
+    assert "弯钩" in extract_plan(11)
