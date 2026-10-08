@@ -65,7 +65,7 @@ FAST_REVIEWERS = [
 
 def extract_plan(chapter_no: int) -> str:
     if chapter_no >= 6:
-        return POST5_CANON + "\n\n【本节功能】\n" + POST5_GOALS[chapter_no] + """
+        return POST5_CANON + "\n\n【本节功能】\n" + POST5_GOALS.get(chapter_no, "遵循请求指定的控制器蓝图，保留现有世界规则、连续性与质量门禁；必须推进人物行动、现实代价及主线。") + """
 
 【第6节起共同硬规则】
 - 正文以完整段落和自然中长句群为主，禁止大量一句一段、裸对白、问卷式问答和作者总结。
@@ -502,7 +502,7 @@ async def main() -> None:
         await run_continuous_gate_only(req)
         return
     chapter_no = int(req["chapter_no"])
-    title = str(req.get("title") or TITLES[chapter_no])
+    title = str(req.get("title") or TITLES.get(chapter_no, f"第{chapter_no}节"))
     prior_file = Path(req.get("prior_file") or "")
     prior_parts = []
     for number in range(1, chapter_no):
