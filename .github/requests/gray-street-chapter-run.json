@@ -1,13 +1,12 @@
 {
-  "chapter_no": 11,
-  "title": "认签",
-  "prior_file": "books/gray-street/chapters/10.md",
-  "requested_at": "2026-10-08T21:00:00+08:00",
-  "attempt": 5,
-  "blueprint_file": "books/gray-street/controller/chapter-11-blueprint.md",
-  "seed_file": "books/gray-street/controller/chapter-11-controlled-candidate.md",
+  "chapter_no": 12,
+  "title": "背面",
+  "prior_file": "books/gray-street/chapters/11.md",
+  "requested_at": "2026-10-08T21:13:00+08:00",
+  "attempt": 1,
+  "blueprint_file": "books/gray-street/controller/chapter-12-blueprint.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
   "disable_auto_revision": true,
-  "chapter_constraints": "这是一份控制器生成的完整候选稿，交由平台八路独立读者作事实、商业、人物、文学与对白审查。目标3200—4500中文字符。第11节发生于11月7日；十月29日距11月7日不说具体天数。原始簿保管、抄件与外勤询问权限不得混淆。人物不能靠巧合认出弯钩，普雷斯拒绝为身份作证是他承担现实工作风险的选择，埃文失手但换取了明确的调查边界，晚上承担与芬奇交换班次的真实代价。不新增怀表能力、纸条、线索或宏大解释。每个Reviewer必须有有效VERDICT；静态和所有读者共识无问题才可以跳过Master，任何疑议走Master；失败即阻断正式锁稿。"
+  "chapter_constraints": "请遵守冻结蓝图：3200-4500中文字符，先落实11月7日晚代班报送和旧鞋的真实代价，再在11月8日以米拉个人产权、洗衣行生计和收购人的现实压力推动主线。米拉自愿到事务所，不被动提供万能线索；她提及买方要求查看背面三行南陆文，只能作为当事人口述。不能复活怀表倒数、加新法术、安排匿名信巧合，也不能变成连续查纸流程。必须有人物的实际选择与场景后果，结尾不是纸面特写。保持8路完整审核；FAIL阻断晋级。"
 }
