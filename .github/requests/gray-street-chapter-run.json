@@ -1,17 +1,17 @@
 {
-  "chapter_no": 9,
-  "title": "两天",
-  "prior_file": "books/gray-street/chapters/08.md",
-  "requested_at": "2026-10-08T14:55:00+08:00",
-  "seed_file": "books/gray-street/chapters/09.md",
+  "chapter_no": 8,
+  "title": "旧账户",
+  "prior_file": "books/gray-street/chapters/07.md",
+  "requested_at": "2026-10-08T14:59:00+08:00",
+  "seed_file": "books/gray-street/chapters/08.md",
   "disable_auto_revision": true,
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
-  "chapter_constraints": "不改动既有剧情，只修时间词；雷蒙德仍为活人，七年前代管两天与今年十月来访不是同一事。",
+  "chapter_constraints": "只修正今早/昨晚时间词。不得改动其余正文。reviewer必须引用当前第8节证据。",
   "local_rewrite": {
-    "start_anchor": "前门风铃响时，他正拿指甲刮面包上的硬边。",
-    "end_anchor": "直到贝恩从主管柜前转过身才摘帽。",
-    "instruction": "修第9节前日/昨日时间指代，仅替换此前随克莱来所的律师指代，不碰昨日复核申请的真实状态。",
-    "replacement_text": "前门风铃响时，他正拿指甲刮面包上的硬边。雷蒙德·克莱先走进来，前日那名律师跟在后面。克莱今天没有戴那双过分干净的手套，右手拄着手杖，左手夹着一只薄文件夹。他进门后看见埃文，脚步没停，直到贝恩从主管柜前转过身才摘帽。"
+    "start_anchor": "贝恩把摘录装进新纸夹后，没有立刻锁回柜里。",
+    "end_anchor": "现在诺斯与维恩递了复核通知，咱们换做法。”",
+    "instruction": "更正错写的‘昨晚’，其他原文逐字保留。",
+    "replacement_text": "贝恩把摘录装进新纸夹后，没有立刻锁回柜里。他抽出一张空白的内部登记纸，在页头写下“共同经办”，下面划出两个签名位置。“以后这几张纸，你一个人不动。”他说。埃文正把铅笔收回笔盒，手停了一下，问馆内抄件算不算。贝恩把纸推到他面前：“算。调阅、抄录、外送、补充说明，都要第二个人看见。你上午能一个人去，是因为今早的许可只写到馆内阅览。现在诺斯与维恩递了复核通知，咱们换做法。”"
   }
 }
