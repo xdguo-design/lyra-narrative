@@ -188,11 +188,12 @@ def static_gate(text: str, chapter_no: int = 0) -> dict:
     return {"pass": not failures, "failures": failures, "short_ratio": short_ratio, "dialogue_streak": best}
 
 
-async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None):
+async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, reviewers=None, chapter_no: int = 0):
     async def one(role: str, name: str, focus: str):
         try:
             blind = role in {"blind-reader","cadence-character-reader","blind-natural-reader","character-voice-reviewer","blind-dialogue-reader"}
-            context = prior_tail[-8000:] if blind else (canon[-6500:] + "\n\n前文尾部：\n" + prior_tail[-9000:])
+            context = prior_tail[-5500:] if blind else (canon[-6500:] + "\n\n" + prior_tail[-6000:])
+            current_label = f"第{chapter_no}节" if chapter_no else "本次待审节"
             result = await _run_step(
                 task_id=task_id,
                 role=role,
@@ -200,12 +201,17 @@ async def run_reviews(task_id: int, text: str, canon: str, prior_tail: str, revi
                 mode="check",
                 content=text,
                 instruction=f"""你是{name}。{focus}
+【章节边界硬约束】
+你当前只审核{current_label}，不是前面的章节。传入 content 的整份文本就是唯一的【当前正文】；下面的“参考上下文”都是【前文章节】，禁止把前文任何一段当成本章叙述。
+如果主张 FAIL，每条必须逐字引用当前正文中至少一处完整连续短片段，并交代它出现在本章哪个场景；引用不到当前正文，则不得据此FAIL。
+时间线/道具冲突需要同时指出当前正文的具体原句及前文的冲突原句；仅凭章节序号的推测，或看错前文时间，都不得判FAIL。
+角色的不同称谓（太太/老妇人）不得单独构成FAIL；正常的共同经办手续不得无证据推定为违法越权。
+发现足以影响连续性、因果、人物行为、语言自然度、阅读吸引力的确切问题，仍然必须FAIL，不能为了通过而忽略真实问题。
 这是章节 Gate，不改正文。{('不要参考世界观说明，只按正文与前文阅读体验判断。' if blind else '必须同时服从冻结 Canon 与前文事实。')}
-只要发现成片小短句、裸对白、问卷式对话、作者解释腔、人物工具化、因果/连续性错误，就 FAIL。
-第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL。
-之后最多列 5 条最重要逐字证据；整份报告控制在 700 个汉字以内，禁止展开长篇复盘。
-参考上下文：
-{context}""",
+第一行严格输出 VERDICT: PASS 或 VERDICT: FAIL；只写一个判定。随后最多列5条最重要、可查的本章逐字证据；报告控制在700汉字以内。
+==== 仅供跨章核对的前文（绝不是当前正文）====
+{context}
+==== 前文结束。你要审核的当前正文为本次 content 中的{current_label} ====""",
             )
             return {"name": name, "role": role, "verdict": verdict(result.content), "report": result.content, "provider": result.provider, "model": result.model}
         except Exception as exc:
@@ -595,7 +601,7 @@ async def main() -> None:
         if not _chapter_text_is_usable(text):
             raise RuntimeError("local rewrite produced unusable chapter")
 
-    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+    reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers, chapter_no)
     gate = static_gate(text, chapter_no)
     if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
         aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
@@ -648,7 +654,7 @@ async def main() -> None:
             text = normalize_novel_output(repair.content)
         if not _chapter_text_is_usable(text):
             raise RuntimeError("revision unusable after normalize")
-        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers)
+        reviews = await run_reviews(task_id, text, canon, prior_tail, active_reviewers, chapter_no)
         gate = static_gate(text, chapter_no)
         if fast_mode and gate["pass"] and all(x["verdict"] == "PASS" for x in reviews):
             aggregate = {"verdict": "PASS", "report": "FAST_CONSENSUS_PASS after revision: static gate and all 8 readers passed.", "provider": "local-consensus", "model": "core-readers"}
