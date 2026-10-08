@@ -1,11 +1,7 @@
 {
-  "chapter_no": 11,
-  "title": "认签",
-  "prior_file": "books/gray-street/chapters/10.md",
-  "requested_at": "2026-10-08T15:30:00+08:00",
-  "blueprint_file": "books/gray-street/controller/chapter-11-blueprint.md",
-  "fast_mode": true,
-  "quality_mode": "full-8-reviewers",
-  "chapter_constraints": "开篇十一月七日，埃文主动查今年十月二十九日旧检货房同行者签名（只剩弯钩）；不把此人等同克莱，不把七年前代管两天与今年十月两次通行混成一段时间。要有人、身体、地点、明确利害冲突、代价与现实动作，不用连续查纸、查地址、新纸模板。前10节证据和人物已经冻结，严禁幻觉性道具魔法、怀表新能力、黑车刷屏。风格自然中长段落，对话嵌入动作，结尾不用纸面特写。",
-  "force_revision": false
+  "continuous_gate_only": true,
+  "continuous_start": 1,
+  "continuous_end": 10,
+  "requested_at": "2026-10-08T15:39:00+08:00",
+  "quality_mode": "post-external-review-continuous"
 }
