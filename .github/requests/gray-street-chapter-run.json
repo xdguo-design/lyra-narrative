@@ -2,11 +2,12 @@
   "chapter_no": 13,
   "title": "不识字的人",
   "prior_file": "books/gray-street/chapters/12.md",
-  "requested_at": "2026-10-09T09:21:00+08:00",
-  "attempt": 1,
+  "requested_at": "2026-10-09T09:25:00+08:00",
+  "attempt": 2,
   "blueprint_file": "books/gray-street/controller/chapter-13-blueprint.md",
+  "seed_file": "books/gray-street/controller/chapter-13-controlled-candidate.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
   "disable_auto_revision": true,
-  "chapter_constraints": "要求原创小说正文3200—4500字，严格依第13节控制器蓝图。不得银牌脱离米拉，不得获得整段万能译文，不得埃文越权公证；以米拉11月8日晚去南陆旧街的受阻与11月9日现实选择为核心，推进人物之间利益对立与行动代价。埃文11月7日夜班退件见证补办须有交代。写自然完整段落、人物不工具化、有现场风险与关系变化，避免第二个连续的纸张办事章。保持所有8路审核，不PASS不晋级。"
+  "chapter_constraints": "第13节已按首轮七路FAIL证据完整重构。严格检查11月9日时间与第12节银牌产权、米拉赠埃文裹脚旧布、芬奇赠伞两条流转线：本章不要再倒置或循环旧布/伞。埃文补办伤残补助见证材料必须合法且注明补办日期。米拉在11月8日晚上独自访问南陆旧街受阻，11月9日下班后邀请埃文以私人身份在外见证，原物始终由她掌控；不得官方公证/越权、不得翻译全段、不得给银牌新超自然能力。老移民的读法仅个人口述；第三行刀口为肉眼线索而非已确证年代或意图。检查对话人物声音、节奏、无重复动作、无作者总结。Gate全8路独立审核，重大FAIL严格阻断，只有有证据的Master复核可裁决争议。"
 }
