@@ -2,12 +2,12 @@
   "chapter_no": 13,
   "title": "不识字的人",
   "prior_file": "books/gray-street/chapters/12.md",
-  "requested_at": "2026-10-09T09:31:00+08:00",
-  "attempt": 3,
+  "requested_at": "2026-10-09T09:38:00+08:00",
+  "attempt": 4,
   "blueprint_file": "books/gray-street/controller/chapter-13-blueprint.md",
   "seed_file": "books/gray-street/controller/chapter-13-controlled-candidate.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
   "disable_auto_revision": true,
-  "chapter_constraints": "严格审查最新版seed_file完整3419字正文。保留第12节银牌由米拉持有、她赠埃文裹脚布、芬奇赠伞；本章不再移动二者。本节发生于11月9日，旧退件发生11月7日傍晚，11月9日上午补见证、下午另记补录章，不抹去原退件日期。米拉11月8日晚独自去旧街找人受阻，11月9日下午邀请埃文自费私人同行见证；她只在自己掌上向伊芙拉展示银牌，绝不交付过夜；读字只是个人不确定口述，不形成魔法规则。第五节返还合法完成。全8路独立Reviewer，≥4票FAIL必须直接阻断；Master只能对证据充分的少数异议裁决。静态检查任何失败禁止放行，失败不得晋级正式章节。"
+  "chapter_constraints": "全8路审查最新版chapter13控制器候选，长度约3465字。关键事实：11月8日米拉**原计划**晚间去南陆街但因洗衣行突然加班未成行，11月9日按时完成工作，下午约埃文下班后以私人身份首次一起赴旧街；没有带工作帆布袋，没有离岗拖欠工单。银牌始终在米拉衣内袋，只在米拉自己掌上短暂供人辨认，不交给第三者保管。埃文11月9日上午补11月7日晚退件的见证栏、下午以原退件日期另盖补录章；同日自费2便士补缝鞋底，脚伤并未痊愈。不引入新港区或跳跃日期。伊芙拉只说明字形/读音不确定，未整段翻译，无新神秘规则，第三行划痕仅可观察。监督人物经济动机、生活空间、代词、文本自然度，>=4路FAIL直接阻断，Master不可越过，STATIC必须PASS。"
 }
