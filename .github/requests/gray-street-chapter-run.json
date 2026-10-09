@@ -1,13 +1,13 @@
 {
-  "chapter_no": 13,
-  "title": "不识字的人",
-  "prior_file": "books/gray-street/chapters/12.md",
-  "requested_at": "2026-10-09T09:42:00+08:00",
-  "attempt": 5,
-  "blueprint_file": "books/gray-street/controller/chapter-13-blueprint.md",
-  "seed_file": "books/gray-street/controller/chapter-13-controlled-candidate.md",
-  "fast_mode": true,
+  "chapter_no": 14,
+  "title": "改口",
+  "prior_file": "books/gray-street/chapters/13.md",
+  "requested_at": "2026-10-09T09:55:00+08:00",
+  "attempt": 2,
+  "blueprint_file": "books/gray-street/controller/chapter-14-blueprint.md",
   "quality_mode": "full-8-reviewers",
+  "fast_mode": true,
   "disable_auto_revision": true,
-  "chapter_constraints": "请按第13节第三次受控候选最新版校准，不忽视现存问题，但不能把前文未展示的下班活动当成不可能。十一月八日晚米拉原打算去旧街，但洗衣行多来布件导致未去成；十一月九日下午她如常做完活后才约埃文，下班自费赴南陆街，原物始终在她掌中。埃文十一月七日晚退件，九日上午补签后下午正式以补录章回联，不变造原接收日；他已花2便士补鞋，脚伤未愈。阅读体验不允许AI式自我解释，不允许越权公证、万能译文、便利线索，不允许随意抹销工作代价。保持八路独立审核与4路FAIL硬阻断，争议由Master引用两侧确切原句裁决。"
+  "chapter_constraints": "完整3311字第14节受控正文供8路独立审核。11月10日赫伯特出于自身过秤生计、误把10月12和29两次窄木箱说成同一只，主动申请更正；第10节原签字证言不能删除或倒签，只能追加由本人签署的补充说明，未经证明不确认是SV-7、箱内物或弯钩身份。埃文对旧检货房只能在公共车道核视线，贝恩仅限许可；普雷斯不给进海关或强迫职工证言。埃文因临时走访耽误原窗口家属，真实负责处理延误，不额外用钥匙生成谜题；芬奇不替班。霍尔当日外勤无新证言，后续递交补页不得擅改警署原物保管链。人物要独立、没有新神秘规则、语言中长段落、无台词墙/不是A而是B、无解释性总结；审稿不能用前文未展示事件判硬冲突，需准确引用两侧互斥证据。4路及以上FAIL不可Master放行。",
+  "seed_file": "books/gray-street/controller/chapter-14-controlled-candidate.md"
 }
