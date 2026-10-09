@@ -26,3 +26,13 @@ def test_existing_chapter_goals_remain_unchanged():
     from scripts.run_gray_street_chapter import extract_plan
 
     assert "弯钩" in extract_plan(11)
+
+
+def test_short_gate_requires_grounded_temporal_conflicts():
+    from pathlib import Path
+
+    source = Path("scripts/run_gray_street_chapter.py").read_text(encoding="utf-8")
+    assert "跨章时间缺口的判断" in source
+    assert "不因“前文未写”而自动构成硬伤" in source
+    assert "同一时刻互斥工作" in source
+    assert "任何确切问题" not in source
