@@ -1,13 +1,12 @@
 {
-  "chapter_no": 13,
-  "title": "不识字的人",
-  "prior_file": "books/gray-street/chapters/12.md",
-  "requested_at": "2026-10-09T09:42:00+08:00",
-  "attempt": 5,
-  "blueprint_file": "books/gray-street/controller/chapter-13-blueprint.md",
-  "seed_file": "books/gray-street/controller/chapter-13-controlled-candidate.md",
-  "fast_mode": true,
+  "chapter_no": 14,
+  "title": "改口",
+  "prior_file": "books/gray-street/chapters/13.md",
+  "requested_at": "2026-10-09T09:50:00+08:00",
+  "attempt": 1,
+  "blueprint_file": "books/gray-street/controller/chapter-14-blueprint.md",
   "quality_mode": "full-8-reviewers",
+  "fast_mode": true,
   "disable_auto_revision": true,
-  "chapter_constraints": "请按第13节第三次受控候选最新版校准，不忽视现存问题，但不能把前文未展示的下班活动当成不可能。十一月八日晚米拉原打算去旧街，但洗衣行多来布件导致未去成；十一月九日下午她如常做完活后才约埃文，下班自费赴南陆街，原物始终在她掌中。埃文十一月七日晚退件，九日上午补签后下午正式以补录章回联，不变造原接收日；他已花2便士补鞋，脚伤未愈。阅读体验不允许AI式自我解释，不允许越权公证、万能译文、便利线索，不允许随意抹销工作代价。保持八路独立审核与4路FAIL硬阻断，争议由Master引用两侧确切原句裁决。"
+  "chapter_constraints": "请严格依第14节控制器写3200—4500中文字符小说：赫伯特自主主动澄清第10节两次箱子证言的证明力，10月12与29不能凭外观相似得出同一只箱，更不能推出SV-7身份；这次必须有现场劳动场景、人物与工作关系的对抗和真实代价，避开新线索巧合与连续查纸，保留贝恩、芬奇、霍尔权责边界及第13节已锁事实。不要写一个便利货主或掌握真相的路人。严禁怀表新能力、台词墙、短句连排、作者解释腔；8路审核和静态规则，任何硬伤拦截。"
 }
