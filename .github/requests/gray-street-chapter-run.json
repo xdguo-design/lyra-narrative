@@ -2,12 +2,12 @@
   "chapter_no": 13,
   "title": "不识字的人",
   "prior_file": "books/gray-street/chapters/12.md",
-  "requested_at": "2026-10-09T09:38:00+08:00",
-  "attempt": 4,
+  "requested_at": "2026-10-09T09:42:00+08:00",
+  "attempt": 5,
   "blueprint_file": "books/gray-street/controller/chapter-13-blueprint.md",
   "seed_file": "books/gray-street/controller/chapter-13-controlled-candidate.md",
   "fast_mode": true,
   "quality_mode": "full-8-reviewers",
   "disable_auto_revision": true,
-  "chapter_constraints": "全8路审查最新版chapter13控制器候选，长度约3465字。关键事实：11月8日米拉**原计划**晚间去南陆街但因洗衣行突然加班未成行，11月9日按时完成工作，下午约埃文下班后以私人身份首次一起赴旧街；没有带工作帆布袋，没有离岗拖欠工单。银牌始终在米拉衣内袋，只在米拉自己掌上短暂供人辨认，不交给第三者保管。埃文11月9日上午补11月7日晚退件的见证栏、下午以原退件日期另盖补录章；同日自费2便士补缝鞋底，脚伤并未痊愈。不引入新港区或跳跃日期。伊芙拉只说明字形/读音不确定，未整段翻译，无新神秘规则，第三行划痕仅可观察。监督人物经济动机、生活空间、代词、文本自然度，>=4路FAIL直接阻断，Master不可越过，STATIC必须PASS。"
+  "chapter_constraints": "请按第13节第三次受控候选最新版校准，不忽视现存问题，但不能把前文未展示的下班活动当成不可能。十一月八日晚米拉原打算去旧街，但洗衣行多来布件导致未去成；十一月九日下午她如常做完活后才约埃文，下班自费赴南陆街，原物始终在她掌中。埃文十一月七日晚退件，九日上午补签后下午正式以补录章回联，不变造原接收日；他已花2便士补鞋，脚伤未愈。阅读体验不允许AI式自我解释，不允许越权公证、万能译文、便利线索，不允许随意抹销工作代价。保持八路独立审核与4路FAIL硬阻断，争议由Master引用两侧确切原句裁决。"
 }
