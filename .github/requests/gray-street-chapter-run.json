@@ -2,11 +2,12 @@
   "chapter_no": 14,
   "title": "改口",
   "prior_file": "books/gray-street/chapters/13.md",
-  "requested_at": "2026-10-09T09:50:00+08:00",
-  "attempt": 1,
+  "requested_at": "2026-10-09T09:55:00+08:00",
+  "attempt": 2,
   "blueprint_file": "books/gray-street/controller/chapter-14-blueprint.md",
   "quality_mode": "full-8-reviewers",
   "fast_mode": true,
   "disable_auto_revision": true,
-  "chapter_constraints": "请严格依第14节控制器写3200—4500中文字符小说：赫伯特自主主动澄清第10节两次箱子证言的证明力，10月12与29不能凭外观相似得出同一只箱，更不能推出SV-7身份；这次必须有现场劳动场景、人物与工作关系的对抗和真实代价，避开新线索巧合与连续查纸，保留贝恩、芬奇、霍尔权责边界及第13节已锁事实。不要写一个便利货主或掌握真相的路人。严禁怀表新能力、台词墙、短句连排、作者解释腔；8路审核和静态规则，任何硬伤拦截。"
+  "chapter_constraints": "完整3311字第14节受控正文供8路独立审核。11月10日赫伯特出于自身过秤生计、误把10月12和29两次窄木箱说成同一只，主动申请更正；第10节原签字证言不能删除或倒签，只能追加由本人签署的补充说明，未经证明不确认是SV-7、箱内物或弯钩身份。埃文对旧检货房只能在公共车道核视线，贝恩仅限许可；普雷斯不给进海关或强迫职工证言。埃文因临时走访耽误原窗口家属，真实负责处理延误，不额外用钥匙生成谜题；芬奇不替班。霍尔当日外勤无新证言，后续递交补页不得擅改警署原物保管链。人物要独立、没有新神秘规则、语言中长段落、无台词墙/不是A而是B、无解释性总结；审稿不能用前文未展示事件判硬冲突，需准确引用两侧互斥证据。4路及以上FAIL不可Master放行。",
+  "seed_file": "books/gray-street/controller/chapter-14-controlled-candidate.md"
 }
